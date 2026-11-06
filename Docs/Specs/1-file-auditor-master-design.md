@@ -358,7 +358,8 @@ back, field by field, to its default; other values are kept. Window size and pos
 ## 9. Code shape
 
 One project, `Source/FileAuditor/`, organised by folder (namespaces mirror folders). Only the `.csproj` and `app.manifest` sit at the project root; `Assets/` holds the
-icon artwork. The code folders are:
+app icon, and `Assets/Win95Icons/` the Windows 95 icon set. Dialogue icons are taken from that set (`error32.gif`, `warning32.png`, `question32.png`), never drawn in
+XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj`. The code folders are:
 
 - `Startup/` — `App` and `Program`.
 - `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`) and `Groups/` (a `UserControl` per group box: Database, File Index
