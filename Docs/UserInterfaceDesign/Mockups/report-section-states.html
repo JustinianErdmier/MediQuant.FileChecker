@@ -44,10 +44,10 @@
 <h2>Report section: four states</h2>
 <p class="subtitle">Location and File name are read-only previews built from your choices, until the custom box is ticked.</p>
 
-<div class="state"><h3>1. First run (whole window): Project Stage = Final, no Checker Stage, no Project Folder</h3>
+<div class="state"><h3>1. First run (whole window): Project Stage = Final, no Audit Stage, no Project Folder</h3>
 <p class="subtitle">The parts that aren't filled in yet show as &lt;placeholders&gt; in the preview, and Start stays disabled until they are.</p></div>
 <div class="w98">
-  <div class="tb"><span>File Checker</span><span class="ctl"><span>_</span><span>□</span><span>×</span></span></div>
+  <div class="tb"><span>File Auditor</span><span class="ctl"><span>_</span><span>□</span><span>×</span></span></div>
   <div class="menu"><span><u>F</u>ile</span><span><u>H</u>elp</span></div>
   <fieldset><legend>Database</legend>
     <div class="row"><label><u>S</u>erver:</label><div class="tx"></div></div>
@@ -63,11 +63,11 @@
     <div class="row"><label>Pro<u>j</u>ect folder:</label><div class="tx short ph">D12345</div></div>
     <div class="radios">
       <fieldset><legend>Project Stage</legend><span><i class="rad"></i>S<u>a</u>mple</span><span><i class="rad on"></i>Fi<u>n</u>al</span></fieldset>
-      <fieldset><legend>Checker Stage</legend><span><i class="rad"></i>Interi<u>m</u></span><span><i class="rad"></i>F<u>i</u>nal</span></fieldset>
+      <fieldset><legend>Audit Stage</legend><span><i class="rad"></i>Interi<u>m</u></span><span><i class="rad"></i>F<u>i</u>nal</span></fieldset>
     </div>
     <div class="row"><span class="chk"></span><u>U</u>se a custom report location and file name</div>
     <div class="row"><label><u>L</u>ocation:</label><div class="tx ro">U:\Projects\&lt;Project Folder&gt;\DE\Final\</div><div class="btn dis">B<u>r</u>owse...</div></div>
-    <div class="row"><label>File na<u>m</u>e:</label><div class="tx ro">FileCheckerReport_&lt;Checker Stage&gt;.txt</div></div>
+    <div class="row"><label>File na<u>m</u>e:</label><div class="tx ro">FileAuditorReport_&lt;Audit Stage&gt;.txt</div></div>
   </fieldset>
   <fieldset><legend>Progress</legend>
     <div class="grid">
@@ -84,39 +84,39 @@
   <div class="sb"><div style="flex:1">Ready</div><div style="width:60px"></div></div>
 </div>
 
-<div class="state"><h3>2. Project Stage = Final, Checker Stage = Final, Project Folder = D12345</h3></div>
+<div class="state"><h3>2. Project Stage = Final, Audit Stage = Final, Project Folder = D12345</h3></div>
 <div class="w98 frag"><fieldset><legend>Report</legend>
   <div class="row"><label>Pro<u>j</u>ect folder:</label><div class="tx short">D12345</div></div>
   <div class="radios">
     <fieldset><legend>Project Stage</legend><span><i class="rad"></i>S<u>a</u>mple</span><span><i class="rad on"></i>Fi<u>n</u>al</span></fieldset>
-    <fieldset><legend>Checker Stage</legend><span><i class="rad"></i>Interi<u>m</u></span><span><i class="rad on"></i>F<u>i</u>nal</span></fieldset>
+    <fieldset><legend>Audit Stage</legend><span><i class="rad"></i>Interi<u>m</u></span><span><i class="rad on"></i>F<u>i</u>nal</span></fieldset>
   </div>
   <div class="row"><span class="chk"></span><u>U</u>se a custom report location and file name</div>
   <div class="row"><label><u>L</u>ocation:</label><div class="tx ro">U:\Projects\D12345\DE\Final\</div><div class="btn dis">B<u>r</u>owse...</div></div>
-  <div class="row"><label>File na<u>m</u>e:</label><div class="tx ro">FileCheckerReport_Final.txt</div></div>
+  <div class="row"><label>File na<u>m</u>e:</label><div class="tx ro">FileAuditorReport_Final.txt</div></div>
 </fieldset></div>
 
-<div class="state"><h3>3. Project Stage = Sample: Checker Stage locked to Interim</h3></div>
+<div class="state"><h3>3. Project Stage = Sample: Audit Stage locked to Interim</h3></div>
 <div class="w98 frag"><fieldset><legend>Report</legend>
   <div class="row"><label>Pro<u>j</u>ect folder:</label><div class="tx short">D12345</div></div>
   <div class="radios">
     <fieldset><legend>Project Stage</legend><span><i class="rad on"></i>S<u>a</u>mple</span><span><i class="rad"></i>Fi<u>n</u>al</span></fieldset>
-    <fieldset class="dis"><legend>Checker Stage</legend><span><i class="rad ro on"></i>Interim</span><span><i class="rad ro"></i>Final</span></fieldset>
+    <fieldset class="dis"><legend>Audit Stage</legend><span><i class="rad ro on"></i>Interim</span><span><i class="rad ro"></i>Final</span></fieldset>
   </div>
   <div class="row"><span class="chk"></span><u>U</u>se a custom report location and file name</div>
   <div class="row"><label><u>L</u>ocation:</label><div class="tx ro">U:\Projects\D12345\DE\Sample\</div><div class="btn dis">B<u>r</u>owse...</div></div>
-  <div class="row"><label>File na<u>m</u>e:</label><div class="tx ro">FileCheckerReport_Interim.txt</div></div>
+  <div class="row"><label>File na<u>m</u>e:</label><div class="tx ro">FileAuditorReport_Interim.txt</div></div>
 </fieldset></div>
 
 <div class="state"><h3>4. Custom location ticked</h3>
-<p class="subtitle">Location is empty and editable, Browse... picks a folder, and File name defaults to FileCheckerReport.txt. Project folder and both stage groups are disabled here. That's my guess, so tell me if they should stay active.</p></div>
+<p class="subtitle">Location is empty and editable, Browse... picks a folder, and File name defaults to FileAuditorReport.txt. Project folder and both stage groups are disabled here. That's my guess, so tell me if they should stay active.</p></div>
 <div class="w98 frag"><fieldset><legend>Report</legend>
   <div class="row"><label class="dis">Pro<u>j</u>ect folder:</label><div class="tx short ro dis">D12345</div></div>
   <div class="radios">
     <fieldset class="dis"><legend>Project Stage</legend><span><i class="rad ro"></i>Sample</span><span><i class="rad ro on"></i>Final</span></fieldset>
-    <fieldset class="dis"><legend>Checker Stage</legend><span><i class="rad ro"></i>Interim</span><span><i class="rad ro on"></i>Final</span></fieldset>
+    <fieldset class="dis"><legend>Audit Stage</legend><span><i class="rad ro"></i>Interim</span><span><i class="rad ro on"></i>Final</span></fieldset>
   </div>
   <div class="row"><span class="chk">✓</span><u>U</u>se a custom report location and file name</div>
   <div class="row"><label><u>L</u>ocation:</label><div class="tx"></div><div class="btn">B<u>r</u>owse...</div></div>
-  <div class="row"><label>File na<u>m</u>e:</label><div class="tx">FileCheckerReport.txt</div></div>
+  <div class="row"><label>File na<u>m</u>e:</label><div class="tx">FileAuditorReport.txt</div></div>
 </fieldset></div>

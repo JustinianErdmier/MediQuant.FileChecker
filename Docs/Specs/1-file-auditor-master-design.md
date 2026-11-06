@@ -90,7 +90,8 @@ A single, **fixed-size** window (not resizable, no maximise button; minimise and
 input and button has an access key (underlined letter, Alt+letter); access keys are unique within the window. Tab order runs top to bottom, left to right.
 
 Layout, top to bottom. The approved mock-ups are [`main-window-layout.html`](../UserInterfaceDesign/Mockups/main-window-layout.html) and
-[`report-section-states.html`](../UserInterfaceDesign/Mockups/report-section-states.html); the latter's state 1 predates the Interim default for Audit Stage.
+[`report-section-states.html`](../UserInterfaceDesign/Mockups/report-section-states.html). They are a design reference only: the latter's state 1 predates the Interim
+default for Audit Stage, and both predate the final Report-file rows and the access keys. The XAML and this section are the contract.
 
 ```text
 ┌ File Auditor ─────────────────────────────────────── _ × ┐

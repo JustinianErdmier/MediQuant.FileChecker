@@ -205,7 +205,7 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
   long FoundCount, IReadOnlyList<CheckResult> Problems)` — `Problems` holds only Missing and Unverified results, so a million-row run does not keep every Found row in
   memory; Checked = `FoundCount + Problems.Count`.
 - Produces: `static string ReportBuilder.Build(AuditReport report)`; `static ErrorOr<Success> ReportWriter.Write(string fullPath, string content)`.
-- Produces: `static class ReportErrors` — `Error FolderMissing(string folder)`, `Error Unwritable(string detail)`.
+- Produces: `static class ReportErrors` — `Error FolderMissing(string folder)` (later removed; see ledger), `Error Unwritable(string detail)`.
 
 - [x] **Step 1:** `Build` produces SDD §7 exactly: header block with label column padded to 17 characters; `ID column: (none)`; `Empty files: Reported as missing` /
   `Not reported`; Project lines omitted for custom; `Result: Completed` / `Stopped by user` / `Failed — <message>`; Summary with `N0` counts and `Not checked:` only

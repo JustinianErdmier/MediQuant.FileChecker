@@ -52,12 +52,15 @@ Taken by the user, not rulings.
 
 ### Final review wave (this milestone)
 
-- **MUST fix — `DriveNotFoundException` mapping.** The exception carries HResult `0x80070003`, so the code switch in `Win32ErrorMapper` maps it to
+- **FIXED in `e6e30f7` — MUST fix — `DriveNotFoundException` mapping.** The exception carries HResult `0x80070003`, so the code switch in `Win32ErrorMapper` maps it to
   *Missing: does not exist* before the type switch is reached. That is the one path toward the anti-goal (reporting "missing" when the truth is "could not check"). Test
   `ex is DriveNotFoundException` first.
-- **Component longer than 255 characters** → *Unverified: path too long* (ruling R10), by a pre-check ahead of the OS call.
+- **FIXED in `e6e30f7` — component longer than 255 characters** → *Unverified: path too long* (ruling R10), by a pre-check ahead of the OS call.
+- **FIXED in `e6e30f7` — unwritable report folder.** Pre-flight now probes the folder by creating and removing the report's temporary file and stops the run with an error
+  dialogue before any row is read (`ReportErrors.FolderNotWritable`).
 - **Attribute bracket spacing.** `[ObservableProperty]` and `[RelayCommand]` are unspaced, against the `[ STAThread ]` convention.
-- **`"Server": null` in `settings.json`** deserialises into a non-nullable `string` because `RespectNullableAnnotations` is off; triage and decide.
+- **FIXED in `e6e30f7` — `"Server": null` in `settings.json`** deserialised into a non-nullable `string` because `RespectNullableAnnotations` is off, and crashed start-up.
+  `SettingsStore.Load` now replaces null strings and undefined enum values with their defaults.
 
 ### For the user
 
