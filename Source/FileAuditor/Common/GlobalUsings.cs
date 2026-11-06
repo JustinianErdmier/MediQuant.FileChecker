@@ -14,6 +14,7 @@ global using System.Text.Json.Serialization;
 global using System.Threading;
 global using System.Threading.Channels;
 global using System.Threading.Tasks;
+
 global using Avalonia;
 global using Avalonia.Controls;
 global using Avalonia.Controls.ApplicationLifetimes;
@@ -22,11 +23,16 @@ global using Avalonia.Markup.Xaml;
 global using Avalonia.Platform.Storage;
 global using Avalonia.Threading;
 global using Avalonia.VisualTree;
+
 global using Classic.Avalonia.Theme;
+
 global using CommunityToolkit.Mvvm.ComponentModel;
 global using CommunityToolkit.Mvvm.Input;
+
 global using ErrorOr;
+
 global using Microsoft.Data.SqlClient;
+
 global using FileAuditor.Common.Errors;
 global using FileAuditor.Common.Extensions;
 global using FileAuditor.Common.Serialisation;

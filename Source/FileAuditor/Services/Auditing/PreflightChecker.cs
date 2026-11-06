@@ -1,14 +1,10 @@
 namespace FileAuditor.Services.Auditing;
 
-/// <summary>
-///     The checks that run when Start is pressed, before the database is touched (SDD §6.1). Each failure or declined confirmation is explained in a dialogue.
-/// </summary>
+/// <summary>The checks that run when Start is pressed, before the database is touched (SDD §6.1). Each failure or declined confirmation is explained in a dialogue.</summary>
 /// <param name="dialogues">Shows the errors and confirmations.</param>
 public sealed class PreflightChecker(DialogueService dialogues)
 {
-    /// <summary>
-    ///     Runs the checks in order: identifiers, custom file name, custom location form, report folder, existing report.
-    /// </summary>
+    /// <summary>Runs the checks in order: identifiers, custom file name, custom location form, report folder, existing report.</summary>
     /// <param name="settings">The settings to audit with.</param>
     /// <returns>The resolved report path when the run may start; <see langword="null" /> when a check failed or the user declined (the user has been told).</returns>
     public async Task<ReportPath?> RunAsync(AppSettings settings)
@@ -22,10 +18,11 @@ public sealed class PreflightChecker(DialogueService dialogues)
             return null;
         }
 
-        if (!settings.UseCustomReportLocation && !IsSingleFolderName(settings.ProjectFolder.Trim()))
+        if (!settings.UseCustomReportLocation
+            && !IsSingleFolderName(settings.ProjectFolder.Trim()))
         {
-            await dialogues.ShowErrorAsync(
-                $"The project folder must be a single folder name, not a path, and must not contain characters that are not allowed:\n{settings.ProjectFolder.Trim()}");
+            await
+                dialogues.ShowErrorAsync($"The project folder must be a single folder name, not a path, and must not contain characters that are not allowed:\n{settings.ProjectFolder.Trim()}");
 
             return null;
         }
@@ -43,8 +40,8 @@ public sealed class PreflightChecker(DialogueService dialogues)
 
             if (!Path.IsPathFullyQualified(report.Directory))
             {
-                await dialogues.ShowErrorAsync(
-                    $"The report location must be a full path, such as C:\\Reports or \\\\server\\share\\Reports:\n{PathText.Breakable(report.Directory)}");
+                await
+                    dialogues.ShowErrorAsync($"The report location must be a full path, such as C:\\Reports or \\\\server\\share\\Reports:\n{PathText.Breakable(report.Directory)}");
 
                 return null;
             }
@@ -60,7 +57,8 @@ public sealed class PreflightChecker(DialogueService dialogues)
                 return null;
             }
 
-            if (!await dialogues.ConfirmAsync($"The report folder does not exist:\n{PathText.Breakable(report.Directory)}\n\nDo you want to create it?", "_Create Folder"))
+            if (!await dialogues.ConfirmAsync($"The report folder does not exist:\n{PathText.Breakable(report.Directory)}\n\nDo you want to create it?",
+                                              confirmText: "_Create Folder"))
             {
                 return null;
             }
@@ -90,12 +88,13 @@ public sealed class PreflightChecker(DialogueService dialogues)
             // An existing read-only report would pass the folder probe but fail at the final move, after the whole table had been checked.
             if (await Task.Run(() => IsReadOnly(report.FullPath)))
             {
-                await dialogues.ShowErrorAsync(ReportErrors.ReadOnly(report.FullPath).Description);
+                await dialogues.ShowErrorAsync(ReportErrors.ReadOnly(report.FullPath)
+                                                           .Description);
 
                 return null;
             }
 
-            if (!await dialogues.ConfirmAsync($"The report already exists:\n{PathText.Breakable(report.FullPath)}\n\nDo you want to overwrite it?", "_Overwrite"))
+            if (!await dialogues.ConfirmAsync($"The report already exists:\n{PathText.Breakable(report.FullPath)}\n\nDo you want to overwrite it?", confirmText: "_Overwrite"))
             {
                 return null;
             }
@@ -108,7 +107,11 @@ public sealed class PreflightChecker(DialogueService dialogues)
         => folder.Length > 0
            && folder is not ("." or "..")
            && !Path.IsPathRooted(folder)
-           && folder.IndexOfAny(['\\', '/']) < 0
+           && folder.IndexOfAny([
+               '\\',
+               '/'
+           ])
+           < 0
            && folder.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
 
     // Creates and immediately removes the temporary file that ReportWriter uses, so the probe leaves nothing behind.
@@ -116,7 +119,7 @@ public sealed class PreflightChecker(DialogueService dialogues)
     {
         try
         {
-            using FileStream probe = new(report.FullPath + ".tmp", FileMode.Create, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose);
+            using FileStream probe = new(report.FullPath + ".tmp", FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 1, FileOptions.DeleteOnClose);
 
             return Result.Success;
         }
@@ -130,7 +133,8 @@ public sealed class PreflightChecker(DialogueService dialogues)
     {
         try
         {
-            return File.GetAttributes(path).HasFlag(FileAttributes.ReadOnly);
+            return File.GetAttributes(path)
+                       .HasFlag(FileAttributes.ReadOnly);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {

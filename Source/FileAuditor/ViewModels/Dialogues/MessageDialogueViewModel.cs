@@ -1,8 +1,6 @@
 namespace FileAuditor.ViewModels.Dialogues;
 
-/// <summary>
-///     The content of a message dialogue: a message, an icon, an action button and an optional escape button.
-/// </summary>
+/// <summary>The content of a message dialogue: a message, an icon, an action button and an optional escape button.</summary>
 /// <param name="Message">The message text; may span several lines.</param>
 /// <param name="Icon">The icon to show.</param>
 /// <param name="PrimaryText">The action button's text; an underscore marks its access key.</param>
@@ -11,19 +9,18 @@ public sealed record MessageDialogueViewModel(string Message, DialogueIcon Icon,
 {
     /// <summary>Initialises a new instance with placeholder content, for the XAML designer.</summary>
     public MessageDialogueViewModel()
-        : this("The report folder does not exist.", DialogueIcon.Warning, "_Create Folder", "Cancel")
-    {
-    }
+        : this(Message: "The report folder does not exist.", DialogueIcon.Warning, PrimaryText: "_Create Folder", SecondaryText: "Cancel")
+    { }
+
+    /// <summary>Gets a value indicating whether the escape button is shown.</summary>
+    public bool HasSecondary => SecondaryText is not null;
 
     /// <summary>Gets a value indicating whether to show the error icon.</summary>
     public bool IsError => Icon == DialogueIcon.Error;
 
-    /// <summary>Gets a value indicating whether to show the warning icon.</summary>
-    public bool IsWarning => Icon == DialogueIcon.Warning;
-
     /// <summary>Gets a value indicating whether to show the question icon.</summary>
     public bool IsQuestion => Icon == DialogueIcon.Question;
 
-    /// <summary>Gets a value indicating whether the escape button is shown.</summary>
-    public bool HasSecondary => SecondaryText is not null;
+    /// <summary>Gets a value indicating whether to show the warning icon.</summary>
+    public bool IsWarning => Icon == DialogueIcon.Warning;
 }

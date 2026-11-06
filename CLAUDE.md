@@ -29,8 +29,8 @@ Work is organised into **epics** (e.g. `Epic-1-MVP`) made of numbered **mileston
   `**Date:** YYYY-MM-DD` line under the title. Each plan is an executable task list. **Tick each task's checkbox (`- [ ]` → `- [x]`) in the plan file as it is completed**,
   as part of working the plan — not in a clean-up pass afterwards.
 - **Plan ledgers:** under `Docs/Ledgers/<Epic>/`, named `milestone-<N>-ledger.md`, one per plan. Write the ledger *while* executing — it is the recovery map if context is
-  lost — and clean it into a readable document when the plan finishes. It must record, at minimum: every **ruling** taken without the user and what it costs if wrong;
-  **defects found in the plan itself**; **outstanding items** grouped by when they should be revisited; and any **incidents**.
+  lost — and clean it into a readable document when the plan finishes. It must record, at minimum: every **ruling** taken without the user and what it costs if wrong; **defects
+  found in the plan itself**; **outstanding items** grouped by when they should be revisited; and any **incidents**.
 - **Keep the solution view in sync:** [`MediQuant.FileAuditor.slnx`](./MediQuant.FileAuditor.slnx) lists every file under `Docs/` (in the top-level `/Docs/…` solution
   folders, which mirror the on-disk path — never under `/SolutionItems/`) and the root-level files under `/SolutionItems/`. **Whenever such a file is created, renamed,
   moved or deleted, update the `.slnx` to match** in the same commit, keeping milestone documents in milestone order. The user reads these documents through Rider's
@@ -50,12 +50,12 @@ Drive every plan with `superpowers:subagent-driven-development`. **Default to it
   silently inherits the session's.
 - **Commit each task automatically** as it completes. Do not ask for per-task approval, and do not wait for a review of the work before committing — the task review happens
   against the committed diff. Say so in every implementer dispatch, or implementers following *Git commits* below will leave their work uncommitted.
-- **Run semi-silently.** Do not narrate each task. Surface only: a real problem, a decision that needs the user's judgement, and anything the user must act on themselves.
-  **Report once, at the end**, with what was built, the commits, the build position, and the rulings taken on their behalf.
+- **Run semi-silently.** Do not narrate each task. Surface only: a real problem, a decision that needs the user's judgement, and anything the user must act on themselves. **Report
+  once, at the end**, with what was built, the commits, the build position, and the rulings taken on their behalf.
 - **Verify by building and by using the app.** There are no tests, so a task is verified by a clean build plus, for anything visible, running the app
   (`dotnet run --project Source/FileAuditor/FileAuditor.csproj`, or the `run` skill) and driving it as a user would — clicking through states and dialogues with computer use
-  (desktop control, the `mcp__computer-use__*` tools) and taking screenshots — without asking first. Close the app when done: a running app holds the build output (see
-  *Build file-lock errors*) and counts as background work left running. There is no sample database in the repository; when a flow needs SQL Server and none is reachable,
+  (desktop control, the `mcp__computer-use__*` tools) and taking screenshots — without asking first. Close the app when done: a running app holds the build output (see *Build
+  file-lock errors*) and counts as background work left running. There is no sample database in the repository; when a flow needs SQL Server and none is reachable,
   verify the UI states, pre-flight checks and dialogues, and say plainly in the ledger what could not be exercised.
 - **Fix review follow-ups before the PR.** After the final whole-branch review, run further reviewed fix waves for defects, polish, stale docs, mock-up mismatches and spec
   text that contradicts the implementation, rather than shipping them as a "known gaps" list. Stop once a wave's re-review has no Critical or Important findings. Only

@@ -1,21 +1,18 @@
 namespace FileAuditor.ViewModels.Groups;
 
-/// <summary>
-///     The Report group: the project folder, the two stage choices and the report location, either built from them or typed in (SDD §5.3).
-/// </summary>
+/// <summary>The Report group: the project folder, the two stage choices and the report location, either built from them or typed in (SDD §5.3).</summary>
 public sealed partial class ReportViewModel : ObservableObject
 {
-    private string _customLocation = "";
-
     private string _customFileName = "FileAuditorReport.txt";
+
+    private string _customLocation = "";
 
     private bool _isRefreshing;
 
     /// <summary>Initialises a new instance with the default settings, for the XAML designer.</summary>
     public ReportViewModel()
         : this(AppSettings.Default)
-    {
-    }
+    { }
 
     /// <summary>Initialises a new instance populated from the given settings.</summary>
     /// <param name="settings">The settings to load.</param>
@@ -25,13 +22,22 @@ public sealed partial class ReportViewModel : ObservableObject
         Load(settings);
     }
 
-    /// <summary>Gets or sets the project folder used to build the report location.</summary>
-    [ ObservableProperty ]
-    public partial string ProjectFolder { get; set; } = "";
+    /// <summary>Gets the report path the current inputs resolve to.</summary>
+    public ReportPath Current { get; private set; }
 
-    /// <summary>Gets or sets a value indicating whether the Sample project stage is selected.</summary>
+    /// <summary>Gets or sets the text of the File name box: a read-only preview when built, the typed name when custom.</summary>
     [ ObservableProperty ]
-    public partial bool IsSampleProject { get; set; }
+    public partial string FileName { get; set; } = "";
+
+    /// <summary>Gets a value indicating whether the Audit Stage group is editable: built, and not forced to Interim by the Sample stage.</summary>
+    public bool IsAuditStageEnabled => IsBuilt && !IsSampleProject;
+
+    /// <summary>Gets a value indicating whether the report location is built, so the project folder and stage groups apply.</summary>
+    public bool IsBuilt => !UseCustomLocation;
+
+    /// <summary>Gets or sets a value indicating whether the Final audit stage is selected.</summary>
+    [ ObservableProperty ]
+    public partial bool IsFinalAudit { get; set; }
 
     /// <summary>Gets or sets a value indicating whether the Final project stage is selected.</summary>
     [ ObservableProperty ]
@@ -41,30 +47,21 @@ public sealed partial class ReportViewModel : ObservableObject
     [ ObservableProperty ]
     public partial bool IsInterimAudit { get; set; } = true;
 
-    /// <summary>Gets or sets a value indicating whether the Final audit stage is selected.</summary>
+    /// <summary>Gets or sets a value indicating whether the Sample project stage is selected.</summary>
     [ ObservableProperty ]
-    public partial bool IsFinalAudit { get; set; }
-
-    /// <summary>Gets or sets a value indicating whether the report goes to a custom location and file name.</summary>
-    [ ObservableProperty ]
-    public partial bool UseCustomLocation { get; set; }
+    public partial bool IsSampleProject { get; set; }
 
     /// <summary>Gets or sets the text of the Location box: a read-only preview when built, the typed folder when custom.</summary>
     [ ObservableProperty ]
     public partial string Location { get; set; } = "";
 
-    /// <summary>Gets or sets the text of the File name box: a read-only preview when built, the typed name when custom.</summary>
+    /// <summary>Gets or sets the project folder used to build the report location.</summary>
     [ ObservableProperty ]
-    public partial string FileName { get; set; } = "";
+    public partial string ProjectFolder { get; set; } = "";
 
-    /// <summary>Gets the report path the current inputs resolve to.</summary>
-    public ReportPath Current { get; private set; }
-
-    /// <summary>Gets a value indicating whether the report location is built, so the project folder and stage groups apply.</summary>
-    public bool IsBuilt => !UseCustomLocation;
-
-    /// <summary>Gets a value indicating whether the Audit Stage group is editable: built, and not forced to Interim by the Sample stage.</summary>
-    public bool IsAuditStageEnabled => IsBuilt && !IsSampleProject;
+    /// <summary>Gets or sets a value indicating whether the report goes to a custom location and file name.</summary>
+    [ ObservableProperty ]
+    public partial bool UseCustomLocation { get; set; }
 
     /// <summary>Copies this group's inputs into the given settings.</summary>
     /// <param name="settings">The settings to start from.</param>
@@ -77,7 +74,7 @@ public sealed partial class ReportViewModel : ObservableObject
             AuditStage = IsFinalAudit ? AuditStage.Final : AuditStage.Interim,
             UseCustomReportLocation = UseCustomLocation,
             CustomLocation = _customLocation,
-            CustomFileName = _customFileName,
+            CustomFileName = _customFileName
         };
 
     /// <summary>Sets this group's inputs from the given settings.</summary>
@@ -87,11 +84,11 @@ public sealed partial class ReportViewModel : ObservableObject
         _customLocation = settings.CustomLocation;
         _customFileName = settings.CustomFileName;
 
-        ProjectFolder = settings.ProjectFolder;
-        IsSampleProject = settings.ProjectStage == ProjectStage.Sample;
-        IsFinalProject = !IsSampleProject;
-        IsInterimAudit = IsSampleProject || settings.AuditStage == AuditStage.Interim;
-        IsFinalAudit = !IsInterimAudit;
+        ProjectFolder     = settings.ProjectFolder;
+        IsSampleProject   = settings.ProjectStage == ProjectStage.Sample;
+        IsFinalProject    = !IsSampleProject;
+        IsInterimAudit    = IsSampleProject || settings.AuditStage == AuditStage.Interim;
+        IsFinalAudit      = !IsInterimAudit;
         UseCustomLocation = settings.UseCustomReportLocation;
 
         Refresh();
@@ -104,7 +101,7 @@ public sealed partial class ReportViewModel : ObservableObject
         if (value)
         {
             IsInterimAudit = true;
-            IsFinalAudit = false;
+            IsFinalAudit   = false;
         }
 
         OnPropertyChanged(nameof(IsAuditStageEnabled));
@@ -152,8 +149,8 @@ public sealed partial class ReportViewModel : ObservableObject
         ReportPath path = ReportPathResolver.Resolve(ApplyTo(AppSettings.Default));
 
         _isRefreshing = true;
-        Location = UseCustomLocation ? _customLocation : path.DisplayDirectory;
-        FileName = UseCustomLocation ? _customFileName : path.FileName;
+        Location      = UseCustomLocation ? _customLocation : path.DisplayDirectory;
+        FileName      = UseCustomLocation ? _customFileName : path.FileName;
         _isRefreshing = false;
 
         UpdateCurrent();

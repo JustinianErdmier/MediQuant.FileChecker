@@ -47,6 +47,7 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 ### Task 1: Retarget the project to File Auditor on Avalonia 11.3 + Classic.Avalonia
 
 **Files:**
+
 - Move: `Source/FileChecker/` → `Source/FileAuditor/`; `FileChecker.csproj` → `FileAuditor.csproj`
 - Move: `App.axaml`, `App.axaml.cs`, `Program.cs` → `Source/FileAuditor/Startup/`
 - Create: `Source/FileAuditor/Common/GlobalUsings.cs`
@@ -54,6 +55,7 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 - Modify: `app.manifest` (`assemblyIdentity name="FileAuditor"`), `MediQuant.FileAuditor.slnx` (project path)
 
 **Interfaces:**
+
 - Produces: namespaces `FileAuditor.Startup` (`App`, `Program`), `FileAuditor.Views.Main` (`MainWindow`).
 
 - [x] **Step 1:** Rename the folder and project with `git mv` (the template is tracked), as its own pure-rename step so rename detection holds.
@@ -70,12 +72,14 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 ### Task 2: Settings model and per-user settings store
 
 **Files:**
+
 - Create: `Models/Settings/ProjectStage.cs`, `Models/Settings/AuditStage.cs`, `Models/Settings/AppSettings.cs`
 - Create: `Common/Serialisation/SettingsJsonContext.cs`
 - Create: `Common/Errors/SettingsErrors.cs`
 - Create: `Services/Settings/SettingsStore.cs`
 
 **Interfaces:**
+
 - Produces: `enum ProjectStage { Sample, Final }`; `enum AuditStage { Interim, Final }`.
 - Produces: `sealed record AppSettings` with init properties `Server`, `Database`, `Table`, `PathColumn`, `IdColumn` (`string`, default `""`), `ReportEmptyFiles`
   (`bool`, default `true`), `ProjectFolder` (`""`), `ProjectStage` (`Final`), `AuditStage` (`Interim`), `UseCustomReportLocation` (`false`), `CustomLocation` (`""`),
@@ -93,11 +97,13 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 ### Task 3: Query builder and index table reader
 
 **Files:**
+
 - Create: `Models/Auditing/IndexRow.cs`, `Models/Auditing/AuditQuery.cs`
 - Create: `Common/Errors/QueryErrors.cs`, `Common/Errors/SqlErrors.cs`
 - Create: `Services/Sql/SqlIdentifier.cs`, `Services/Sql/QueryBuilder.cs`, `Services/Sql/IndexTableReader.cs`
 
 **Interfaces:**
+
 - Produces: `readonly record struct IndexRow(string? Id, string Path)` — `Path` is `""` for `NULL`.
 - Produces: `sealed record AuditQuery(string CountSql, string SelectSql, bool HasIdColumn)`.
 - Produces: `static class SqlIdentifier` — `string Quote(string part)` (wraps in `[` `]`, doubles `]`); `ErrorOr<IReadOnlyList<string>> ParseMultipart(string text,
@@ -122,6 +128,7 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 ### Task 4: Main window, group-box views and report-path behaviour
 
 **Files:**
+
 - Create: `ViewModels/Main/MainWindowViewModel.cs`, `Views/Main/MainWindow.axaml(.cs)` (replace placeholder)
 - Create: `ViewModels/Groups/{DatabaseViewModel, FileIndexTableViewModel, ReportViewModel, ProgressViewModel}.cs`
 - Create: `Views/Groups/{DatabaseView, FileIndexTableView, ReportView, ProgressView}.axaml(.cs)`
@@ -130,6 +137,7 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 - Modify: `Startup/App.axaml.cs` (load settings, build view models, save on close)
 
 **Interfaces:**
+
 - Consumes: `AppSettings`, `SettingsStore` (Task 2).
 - Produces: `sealed record ReportPath(string Directory, string FileName, bool IsComplete, bool IsCustom)` with `string FullPath` (= `Path.Combine`) and
   `string DisplayDirectory` (built + empty folder → `U:\Projects\<Project Folder>\DE\<Stage>\`).
@@ -159,10 +167,12 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 ### Task 5: File checker
 
 **Files:**
+
 - Create: `Models/Auditing/CheckOutcome.cs`, `Models/Auditing/CheckResult.cs`
 - Create: `Services/Checking/FileChecker.cs`, `Services/Checking/Win32ErrorMapper.cs`
 
 **Interfaces:**
+
 - Consumes: `IndexRow` (Task 3).
 - Produces: `enum CheckOutcome { Found, MissingEmpty, MissingDoesNotExist, UnverifiedDriveOrShareNotFound, UnverifiedPermissionDenied,
   UnverifiedNetworkUnreachable, UnverifiedPathTooLong, UnverifiedInvalidCharacters, UnverifiedPathEmpty, UnverifiedOther }` — Unverified members in SDD §6.3 order.
@@ -175,16 +185,16 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
   1222, 1231 → `UnverifiedNetworkUnreachable`; 15, 67 → `UnverifiedDriveOrShareNotFound`; 206, `PathTooLongException` → `UnverifiedPathTooLong`; 123, 161,
   `ArgumentException`, `NotSupportedException` → `UnverifiedInvalidCharacters`; anything else → `UnverifiedOther` with reason `"I/O error"` and `ex.Message`.
 - [x] **Step 2:** `Check` in this order (never `File.Exists` / `Directory.Exists`):
-  1. Blank or whitespace path → `UnverifiedPathEmpty`. Not rooted, or contains `Path.GetInvalidPathChars()` / `*` / `?` → `UnverifiedInvalidCharacters`.
-  2. Root (`Path.GetPathRoot`; for UNC `\\server\share\`) — cached in a `ConcurrentDictionary`. Probe with `File.GetAttributes(root)`: success → reachable; a mapped
-     `MissingDoesNotExist` or `UnverifiedDriveOrShareNotFound` → `UnverifiedDriveOrShareNotFound`; any other mapped failure → that outcome for every file under it.
-  3. Short-circuit cache: walk the file's ancestor directories (deepest first, stopping at the root) and return the cached outcome of the first one present.
-  4. `File.GetAttributes(path)`: directory attribute → `UnverifiedOther` (`"Path is a directory"`); success and `reportEmptyFiles` and `new FileInfo(path).Length == 0` →
-     `MissingEmpty`; success → `Found`. Failure → map it.
-  5. If the mapped outcome is `UnverifiedPermissionDenied`, `UnverifiedNetworkUnreachable` or `UnverifiedOther`: probe each directory from the root's child down to the
-     file's parent with `File.GetAttributes`. The first that fails with a short-circuit outcome is cached with that outcome (and reason/message) and returned for this file;
-     one that maps to `MissingDoesNotExist` makes this file `MissingDoesNotExist`; if all succeed, return the file's own outcome and cache nothing.
-  Directory keys are compared with `StringComparer.OrdinalIgnoreCase`, normalised with a trailing separator.
+    1. Blank or whitespace path → `UnverifiedPathEmpty`. Not rooted, or contains `Path.GetInvalidPathChars()` / `*` / `?` → `UnverifiedInvalidCharacters`.
+    2. Root (`Path.GetPathRoot`; for UNC `\\server\share\`) — cached in a `ConcurrentDictionary`. Probe with `File.GetAttributes(root)`: success → reachable; a mapped
+       `MissingDoesNotExist` or `UnverifiedDriveOrShareNotFound` → `UnverifiedDriveOrShareNotFound`; any other mapped failure → that outcome for every file under it.
+    3. Short-circuit cache: walk the file's ancestor directories (deepest first, stopping at the root) and return the cached outcome of the first one present.
+    4. `File.GetAttributes(path)`: directory attribute → `UnverifiedOther` (`"Path is a directory"`); success and `reportEmptyFiles` and `new FileInfo(path).Length == 0` →
+       `MissingEmpty`; success → `Found`. Failure → map it.
+    5. If the mapped outcome is `UnverifiedPermissionDenied`, `UnverifiedNetworkUnreachable` or `UnverifiedOther`: probe each directory from the root's child down to the
+       file's parent with `File.GetAttributes`. The first that fails with a short-circuit outcome is cached with that outcome (and reason/message) and returned for this file;
+       one that maps to `MissingDoesNotExist` makes this file `MissingDoesNotExist`; if all succeed, return the file's own outcome and cache nothing.
+       Directory keys are compared with `StringComparer.OrdinalIgnoreCase`, normalised with a trailing separator.
 - [x] **Step 3: Verify.** Build.
 - [x] **Step 4: Verify behaviour** with a throwaway harness under the scratchpad (not committed) against a fixture tree created in `%TEMP%\FileAuditorFixture\`: a present
   file, a 0-byte file (with `reportEmptyFiles` on and off), a missing file, a missing folder, `ok\a.txt` beside `denied\b.txt` and `denied\deep\c.txt` where `denied` has an
@@ -196,10 +206,12 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 ### Task 6: Report builder and writer
 
 **Files:**
+
 - Create: `Models/Reporting/AuditResultKind.cs`, `Models/Reporting/AuditReport.cs`
 - Create: `Services/Reporting/ReportBuilder.cs`, `Services/Reporting/ReportWriter.cs`, `Common/Errors/ReportErrors.cs`
 
 **Interfaces:**
+
 - Consumes: `CheckResult`, `CheckOutcome` (Task 5); `AppSettings` (Task 2).
 - Produces: `enum AuditResultKind { Completed, StoppedByUser, Failed }`.
 - Produces: `sealed record AuditReport(AppSettings Settings, DateTime StartedUtc, DateTime FinishedUtc, AuditResultKind Result, string? FailureMessage, long TotalFiles,
@@ -212,8 +224,8 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
   `Not reported`; Project lines omitted for custom; `Result: Completed` / `Stopped by user` / `Failed — <message>`; Summary with `N0` counts and `Not checked:` only
   when not Completed; Missing groups `Empty` then `Does not exist`; Unverified groups in enum order with titles `Drive or share not found`, `Permission denied`,
   `Network location unreachable`, `Path too long`, `Invalid characters in path`, `Path is empty in the index table`, `Other errors`; `[<Title> (<n>)]` headers;
-  `No missing files.` / `No unverified files.`; file lines `<IdColumn> <Id>` padded to the longest in the group + 3 spaces, then the path (paths padded likewise in
-  *Other errors*, then reason padded, then message); rows sorted by path with `StringComparer.OrdinalIgnoreCase`; underlines match title length; CRLF.
+  `No missing files.` / `No unverified files.`; file lines `<IdColumn> <Id>` padded to the longest in the group + 3 spaces, then the path (paths padded likewise in *Other errors*,
+  then reason padded, then message); rows sorted by path with `StringComparer.OrdinalIgnoreCase`; underlines match title length; CRLF.
 - [x] **Step 2:** `Write`: UTF-8 without BOM to `<name>.tmp` in the same folder, then `File.Move(overwrite: true)`; I/O failure → `ReportErrors.Unwritable`.
 - [x] **Step 3: Verify.** Build. With the throwaway harness, build reports for: all found; the SDD §7 sample data; a Stopped run; no ID column. Diff by eye against SDD §7.
 - [x] **Step 4: Commit** `feat(✨): build and write the plain-text audit report`.
@@ -221,20 +233,22 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 ### Task 7: Audit runner, pre-flight dialogues and run control
 
 **Files:**
+
 - Create: `Services/Auditing/AuditProgress.cs`, `Services/Auditing/AuditRequest.cs`, `Services/Auditing/AuditRunner.cs`
-- Create: `Services/Dialogues/DialogueService.cs` and the dialogue window(s) it needs under `Views/Dialogues/` + `ViewModels/Dialogues/` (or Classic.CommonControls'
+- Create: `Services/Dialogues/DialogueService.cs` and the dialogue window (s) it needs under `Views/Dialogues/` + `ViewModels/Dialogues/` (or Classic.CommonControls'
   message box if it provides Win9x error/warning boxes with custom button text — implementer's choice, recorded in the ledger)
 - Create: `Services/Auditing/PreflightChecker.cs`
 - Modify: `ViewModels/Main/MainWindowViewModel.cs`, `Views/Main/MainWindow.axaml.cs` (closing handler)
 
 **Interfaces:**
+
 - Consumes: everything above.
 - Produces: `sealed class AuditProgress` — `long TotalFiles`, `long Checked`, `long Missing`, `long Unverified` updated with `Interlocked`; `string Phase` (status text).
 - Produces: `sealed record AuditRequest(AppSettings Settings, ReportPath ReportPath)`.
 - Produces: `sealed class AuditRunner` — `Task<ErrorOr<AuditReport>> RunAsync(AuditRequest request, AuditProgress progress, CancellationToken ct)`; returns a report for
   Completed, StoppedByUser (on `ct`) and mid-run Failed; returns an `SqlErrors` error when nothing was checked.
-- Produces: `DialogueService` — `Task ShowErrorAsync(string message)`, `Task<bool> ConfirmAsync(string message, string confirmText)` (warning icon, *confirmText* +
-  *Cancel*), `Task<bool> AskYesNoAsync(string message)`. Owner is the main window; title `File Auditor`.
+- Produces: `DialogueService` — `Task ShowErrorAsync(string message)`, `Task<bool> ConfirmAsync(string message, string confirmText)` (warning icon, *confirmText* + *Cancel*),
+  `Task<bool> AskYesNoAsync(string message)`. Owner is the main window; title `File Auditor`.
 
 - [x] **Step 1:** `PreflightChecker` runs SDD §6.1 in order: identifiers (`QueryBuilder.Build`), custom file name (`Path.GetInvalidFileNameChars`), folder (built missing →
   error *"The report folder does not exist:\n<folder>"*; custom missing → confirm *Create Folder*, `Directory.CreateDirectory` failure → error), existing report → confirm
@@ -261,6 +275,7 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 ### Task 8: Documentation sync and final verification
 
 **Files:**
+
 - Modify: `Docs/Specs/1-file-auditor-master-design.md` (only where the build differs, e.g. final folder names in §9)
 - Create: `Docs/Ledgers/Epic-1-MVP/milestone-1-ledger.md` (written throughout; cleaned here)
 - Modify: `MediQuant.FileAuditor.slnx` (register the plan and ledger under `/Docs/…`)

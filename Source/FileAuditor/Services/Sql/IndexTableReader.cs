@@ -1,13 +1,9 @@
 namespace FileAuditor.Services.Sql;
 
-/// <summary>
-///     Counts and streams the rows of the file index table.
-/// </summary>
+/// <summary>Counts and streams the rows of the file index table.</summary>
 public sealed class IndexTableReader
 {
-    /// <summary>
-    ///     Counts the rows in the index table.
-    /// </summary>
+    /// <summary>Counts the rows in the index table.</summary>
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The audit query.</param>
     /// <param name="ct">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
@@ -20,9 +16,13 @@ public sealed class IndexTableReader
 
             await connection.OpenAsync(ct);
 
-            await using SqlCommand command = new(query.CountSql, connection) { CommandTimeout = 0 };
+            await using SqlCommand command = new(query.CountSql, connection)
+            {
+                CommandTimeout = 0
+            };
+
             await using CancellationTokenRegistration registration = ct.Register(command.Cancel);
-            object? result = await command.ExecuteScalarAsync(ct);
+            object?                                   result       = await command.ExecuteScalarAsync(ct);
 
             return Convert.ToInt64(result, CultureInfo.InvariantCulture);
         }
@@ -37,9 +37,7 @@ public sealed class IndexTableReader
         }
     }
 
-    /// <summary>
-    ///     Streams every row of the index table to a callback.
-    /// </summary>
+    /// <summary>Streams every row of the index table to a callback.</summary>
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The audit query.</param>
     /// <param name="onRow">Called once per row, in order.</param>
@@ -53,17 +51,21 @@ public sealed class IndexTableReader
 
             await connection.OpenAsync(ct);
 
-            await using SqlCommand command = new(query.SelectSql, connection) { CommandTimeout = 0 };
+            await using SqlCommand command = new(query.SelectSql, connection)
+            {
+                CommandTimeout = 0
+            };
+
             await using CancellationTokenRegistration registration = ct.Register(command.Cancel);
-            await using SqlDataReader reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, ct);
+            await using SqlDataReader                 reader       = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, ct);
 
             try
             {
                 while (await reader.ReadAsync(ct))
                 {
                     // SequentialAccess requires the columns to be read in order.
-                    string path = await ReadStringAsync(reader, 0, ct) ?? "";
-                    string? id = query.HasIdColumn ? await ReadStringAsync(reader, 1, ct) : null;
+                    string  path = await ReadStringAsync(reader, ordinal: 0, ct) ?? "";
+                    string? id   = query.HasIdColumn ? await ReadStringAsync(reader, ordinal: 1, ct) : null;
 
                     await onRow(new IndexRow(id, path));
                 }

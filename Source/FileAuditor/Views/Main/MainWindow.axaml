@@ -5,35 +5,59 @@
                xmlns:cc="clr-namespace:Classic.CommonControls;assembly=Classic.CommonControls.Avalonia"
                xmlns:vm="clr-namespace:FileAuditor.ViewModels.Main"
                xmlns:groups="clr-namespace:FileAuditor.Views.Groups"
-               mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="640"
+               mc:Ignorable="d"
+               d:DesignWidth="480"
+               d:DesignHeight="640"
                x:Class="FileAuditor.Views.Main.MainWindow"
                x:DataType="vm:MainWindowViewModel"
-               Title="File Auditor" Icon="avares://FileAuditor/Assets/FileAuditor.png"
-               Width="480" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterScreen">
+               Title="File Auditor"
+               Icon="avares://FileAuditor/Assets/FileAuditor.png"
+               Width="480"
+               SizeToContent="Height"
+               CanResize="False"
+               WindowStartupLocation="CenterScreen">
     <Design.DataContext>
         <vm:MainWindowViewModel />
     </Design.DataContext>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="St_art" Command="{Binding StartCommand}" HotKey="F5" InputGesture="F5" />
-                <MenuItem Header="St_op" Command="{Binding StopCommand}" HotKey="Escape" InputGesture="Escape" />
-                <MenuItem Header="_View Report" Command="{Binding ViewReportCommand}" HotKey="Ctrl+R" InputGesture="Ctrl+R" />
+                <MenuItem Header="St_art"
+                          Command="{Binding StartCommand}"
+                          HotKey="F5"
+                          InputGesture="F5" />
+                <MenuItem Header="St_op"
+                          Command="{Binding StopCommand}"
+                          HotKey="Escape"
+                          InputGesture="Escape" />
+                <MenuItem Header="_View Report"
+                          Command="{Binding ViewReportCommand}"
+                          HotKey="Ctrl+R"
+                          InputGesture="Ctrl+R" />
                 <Separator />
-                <MenuItem Header="E_xit" Command="{Binding ExitCommand}" InputGesture="Alt+F4" />
+                <MenuItem Header="E_xit"
+                          Command="{Binding ExitCommand}"
+                          InputGesture="Alt+F4" />
             </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem Header="_About File Auditor" Command="{Binding AboutCommand}" />
+                <MenuItem Header="_About File Auditor"
+                          Command="{Binding AboutCommand}" />
             </MenuItem>
         </Menu>
         <cc:StatusBar DockPanel.Dock="Bottom">
             <cc:StatusBarItem Content="{Binding Audit.StatusMessage}" />
-            <cc:StatusBarItem Content="{Binding Audit.StatusPercent}" HorizontalAlignment="Right" Width="60" />
+            <cc:StatusBarItem Content="{Binding Audit.StatusPercent}"
+                              HorizontalAlignment="Right"
+                              Width="60" />
         </cc:StatusBar>
-        <StackPanel Margin="4" Spacing="2">
-            <groups:DatabaseView DataContext="{Binding Database}" IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
-            <groups:FileIndexTableView DataContext="{Binding FileIndexTable}" IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
-            <groups:ReportView DataContext="{Binding Report}" IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
+        <StackPanel Margin="4"
+                    Spacing="2">
+            <groups:DatabaseView DataContext="{Binding Database}"
+                                 IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
+            <groups:FileIndexTableView DataContext="{Binding FileIndexTable}"
+                                       IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
+            <groups:ReportView DataContext="{Binding Report}"
+                               IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
             <groups:AuditView DataContext="{Binding Audit}" />
         </StackPanel>
     </DockPanel>

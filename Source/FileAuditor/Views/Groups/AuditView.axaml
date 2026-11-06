@@ -5,41 +5,81 @@
              xmlns:ct="clr-namespace:Classic.Avalonia.Theme.Controls;assembly=Classic.Avalonia.Theme"
              xmlns:vm="clr-namespace:FileAuditor.ViewModels.Groups"
              xmlns:mainVm="clr-namespace:FileAuditor.ViewModels.Main"
-             mc:Ignorable="d" d:DesignWidth="480"
+             mc:Ignorable="d"
+             d:DesignWidth="480"
              d:DesignHeight="170"
              x:Class="FileAuditor.Views.Groups.AuditView"
              x:DataType="vm:AuditViewModel">
     <Design.DataContext>
         <vm:AuditViewModel />
     </Design.DataContext>
-    <ct:GroupBox Header="Audit" Margin="4,2">
-        <StackPanel Margin="4" Spacing="6">
-            <Grid ColumnDefinitions="90,*,96,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="3">
+    <ct:GroupBox Header="Audit"
+                 Margin="4,2">
+        <StackPanel Margin="4"
+                    Spacing="6">
+            <Grid ColumnDefinitions="90,*,96,*"
+                  RowDefinitions="Auto,Auto,Auto,Auto"
+                  RowSpacing="3">
                 <TextBlock Text="Total files:" />
-                <TextBlock Grid.Column="1" Text="{Binding TotalFiles}" />
-                <TextBlock Grid.Column="2" Text="Elapsed:" />
-                <TextBlock Grid.Column="3" Text="{Binding Elapsed}" />
-                <TextBlock Grid.Row="1" Text="Checked:" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Checked}" />
-                <TextBlock Grid.Row="1" Grid.Column="2" Text="Remaining:" />
-                <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding Remaining}" />
-                <TextBlock Grid.Row="2" Text="Missing:" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Missing}" />
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="Files/second:" />
-                <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding FilesPerSecond}" />
-                <TextBlock Grid.Row="3" Text="Unverified:" />
-                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Unverified}" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding TotalFiles}" />
+                <TextBlock Grid.Column="2"
+                           Text="Elapsed:" />
+                <TextBlock Grid.Column="3"
+                           Text="{Binding Elapsed}" />
+                <TextBlock Grid.Row="1"
+                           Text="Checked:" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="1"
+                           Text="{Binding Checked}" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="2"
+                           Text="Remaining:" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="3"
+                           Text="{Binding Remaining}" />
+                <TextBlock Grid.Row="2"
+                           Text="Missing:" />
+                <TextBlock Grid.Row="2"
+                           Grid.Column="1"
+                           Text="{Binding Missing}" />
+                <TextBlock Grid.Row="2"
+                           Grid.Column="2"
+                           Text="Files/second:" />
+                <TextBlock Grid.Row="2"
+                           Grid.Column="3"
+                           Text="{Binding FilesPerSecond}" />
+                <TextBlock Grid.Row="3"
+                           Text="Unverified:" />
+                <TextBlock Grid.Row="3"
+                           Grid.Column="1"
+                           Text="{Binding Unverified}" />
             </Grid>
-            <ProgressBar Minimum="0" Maximum="100" Value="{Binding Percent}" ShowProgressText="False" />
+            <ProgressBar Minimum="0"
+                         Maximum="100"
+                         Value="{Binding Percent}"
+                         ShowProgressText="False" />
             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                <Button Content="_View Report" MinWidth="75" MinHeight="23" HorizontalContentAlignment="Center"
+                <Button Content="_View Report"
+                        MinWidth="75"
+                        MinHeight="23"
+                        HorizontalContentAlignment="Center"
                         Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).ViewReportCommand}" />
-                <Button Grid.Column="2" Content="St_art" MinWidth="75" MinHeight="23" HorizontalContentAlignment="Center" IsDefault="True"
+                <Button Grid.Column="2"
+                        Content="St_art"
+                        MinWidth="75"
+                        MinHeight="23"
+                        HorizontalContentAlignment="Center"
+                        IsDefault="True"
                         Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).StartCommand}" />
-                <Button Grid.Column="3" Content="St_op" MinWidth="75" MinHeight="23" HorizontalContentAlignment="Center" Margin="6,0,0,0"
+                <Button Grid.Column="3"
+                        Content="St_op"
+                        MinWidth="75"
+                        MinHeight="23"
+                        HorizontalContentAlignment="Center"
+                        Margin="6,0,0,0"
                         Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).StopCommand}" />
             </Grid>
         </StackPanel>
     </ct:GroupBox>
 </UserControl>
-

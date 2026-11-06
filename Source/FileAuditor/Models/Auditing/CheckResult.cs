@@ -1,8 +1,6 @@
 namespace FileAuditor.Models.Auditing;
 
-/// <summary>
-///     The result of checking one index row.
-/// </summary>
+/// <summary>The result of checking one index row.</summary>
 /// <param name="Row">The row that was checked.</param>
 /// <param name="Outcome">The outcome the row's path landed in.</param>
 /// <param name="Reason">A short reason; set only for <see cref="CheckOutcome.UnverifiedOther" />.</param>

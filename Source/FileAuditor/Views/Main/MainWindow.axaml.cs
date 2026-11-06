@@ -23,7 +23,9 @@ public partial class MainWindow : ClassicWindow
     {
         base.OnClosing(e);
 
-        if (_closeApproved || e.Cancel || DataContext is not MainWindowViewModel { IsRunning: true } viewModel)
+        if (_closeApproved
+            || e.Cancel
+            || DataContext is not MainWindowViewModel { IsRunning: true } viewModel)
         {
             return;
         }
@@ -34,6 +36,18 @@ public partial class MainWindow : ClassicWindow
         if (!_isAsking)
         {
             _ = CloseWhenConfirmedAsync(viewModel);
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.AboutRequested += async (_, _) => await new AboutWindow().ShowDialog(this);
+            viewModel.ExitRequested  += (_,       _) => Close();
         }
     }
 
@@ -53,18 +67,6 @@ public partial class MainWindow : ClassicWindow
         finally
         {
             _isAsking = false;
-        }
-    }
-
-    /// <inheritdoc />
-    protected override void OnDataContextChanged(EventArgs e)
-    {
-        base.OnDataContextChanged(e);
-
-        if (DataContext is MainWindowViewModel viewModel)
-        {
-            viewModel.AboutRequested += async (_, _) => await new AboutWindow().ShowDialog(this);
-            viewModel.ExitRequested += (_, _) => Close();
         }
     }
 }
