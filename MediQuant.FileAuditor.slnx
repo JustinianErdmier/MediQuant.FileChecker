@@ -7,9 +7,13 @@
     <Folder Name="/Docs/Plans/" />
     <Folder Name="/Docs/Plans/Epic-1-MVP/">
         <File Path="Docs/Plans/Epic-1-MVP/milestone-1-rewrite.md" />
+        <File Path="Docs/Plans/Epic-1-MVP/milestone-2-project-settings.md" />
     </Folder>
     <Folder Name="/Docs/Specs/">
         <File Path="Docs/Specs/1-file-auditor-master-design.md" />
+    </Folder>
+    <Folder Name="/Docs/Specs/Epic-1-MVP/">
+        <File Path="Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md" />
     </Folder>
     <Folder Name="/Docs/UserInterfaceDesign/" />
     <Folder Name="/Docs/UserInterfaceDesign/Mockups/">
