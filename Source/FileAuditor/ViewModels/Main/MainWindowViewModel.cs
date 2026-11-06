@@ -243,7 +243,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 return ("Stopped", null);
             }
 
-            return ("Failed", first.Code is SqlErrors.QueryFailedCode or AuditErrors.ReadFailedCode ? $"The audit could not read the file index table:\n\n{first.Description}" : first.Description);
+            bool readFailed = first.Code is SqlErrors.QueryFailedCode or AuditErrors.ReadFailedCode;
+
+            return ("Failed", readFailed ? $"The audit could not read the file index table:\n\n{first.Description}" : first.Description);
         }
 
         AuditReport report = outcome.Value;

@@ -24,7 +24,8 @@ public sealed class PreflightChecker(DialogueService dialogues)
 
         if (!settings.UseCustomReportLocation && !IsSingleFolderName(settings.ProjectFolder.Trim()))
         {
-            await dialogues.ShowErrorAsync($"The project folder must be a single folder name, not a path, and must not contain characters that are not allowed:\n{settings.ProjectFolder.Trim()}");
+            await dialogues.ShowErrorAsync(
+                $"The project folder must be a single folder name, not a path, and must not contain characters that are not allowed:\n{settings.ProjectFolder.Trim()}");
 
             return null;
         }
@@ -85,6 +86,14 @@ public sealed class PreflightChecker(DialogueService dialogues)
 
         if (await Task.Run(() => File.Exists(report.FullPath)))
         {
+            // An existing read-only report would pass the folder probe but fail at the final move, after the whole table had been checked.
+            if (await Task.Run(() => IsReadOnly(report.FullPath)))
+            {
+                await dialogues.ShowErrorAsync(ReportErrors.ReportReadOnly(report.FullPath).Description);
+
+                return null;
+            }
+
             if (!await dialogues.ConfirmAsync($"The report already exists:\n{report.FullPath}\n\nDo you want to overwrite it?", "_Overwrite"))
             {
                 return null;
@@ -116,6 +125,18 @@ public sealed class PreflightChecker(DialogueService dialogues)
         }
     }
 
+    private static bool IsReadOnly(string path)
+    {
+        try
+        {
+            return File.GetAttributes(path).HasFlag(FileAttributes.ReadOnly);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            // Unreadable attributes are not proof of a read-only file; the write itself will report any real failure.
+            return false;
+        }
+    }
     private static string? TryCreateFolder(string folder)
     {
         try

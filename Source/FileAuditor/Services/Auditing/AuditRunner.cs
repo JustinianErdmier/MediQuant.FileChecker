@@ -19,7 +19,8 @@ public sealed class AuditRunner
     /// <param name="ct">Stops the run; whatever was checked is reported.</param>
     /// <returns>
     ///     The report that was written for a completed, stopped or mid-run failed audit; a <c>Sql.QueryFailed</c> error when SQL Server failed before any row was
-    ///     checked; <c>Audit.ReadFailed</c> when the row stream failed for another reason before any row was checked; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while counting; or <c>Report.Unwritable</c> when the report could not be written.
+    ///     checked; <c>Audit.ReadFailed</c> when the row stream failed for another reason before any row was checked;
+    ///     <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while counting; or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
     public async Task<ErrorOr<AuditReport>> RunAsync(AuditRequest request, AuditProgress progress, CancellationToken ct)
     {
