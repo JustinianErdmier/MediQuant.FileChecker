@@ -178,7 +178,8 @@ default for Audit Stage, and both predate the final Report-file rows, the access
 
 ### 5.5 Status bar
 
-Two panes: a message (`Ready`, `Counting files...`, `Checking files...`, `Writing report...`, `Completed`, `Stopped`, `Failed`) and the percentage.
+Two sunken panes: a message pane that fills the width (`Ready`, `Counting files...`, `Checking files...`, `Writing report...`, `Completed`, `Stopped`,
+`Failed`) and a fixed-width percentage pane at the right edge.
 
 ### 5.6 Menu bar
 

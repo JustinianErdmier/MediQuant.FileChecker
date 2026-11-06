@@ -45,10 +45,15 @@
             </MenuItem>
         </Menu>
         <cc:StatusBar DockPanel.Dock="Bottom">
-            <cc:StatusBarItem Content="{Binding Audit.StatusMessage}" />
-            <cc:StatusBarItem Content="{Binding Audit.StatusPercent}"
-                              HorizontalAlignment="Right"
+            <cc:StatusBar.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <DockPanel LastChildFill="True" />
+                </ItemsPanelTemplate>
+            </cc:StatusBar.ItemsPanel>
+            <cc:StatusBarItem DockPanel.Dock="Right"
+                              Content="{Binding Audit.StatusPercent}"
                               Width="60" />
+            <cc:StatusBarItem Content="{Binding Audit.StatusMessage}" />
         </cc:StatusBar>
         <StackPanel Margin="4"
                     Spacing="2">
