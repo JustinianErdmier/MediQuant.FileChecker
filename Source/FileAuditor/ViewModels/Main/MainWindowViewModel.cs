@@ -17,6 +17,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private CancellationTokenSource? _auditCts;
 
+    // The status of the last run (Completed, Stopped or Failed), shown in place of Ready until the next run starts.
+    private string? _lastRunStatus;
+
     private Task _auditTask = Task.CompletedTask;
 
     private CancellationTokenSource? _probeCts;
@@ -47,6 +50,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         FileIndexTable.PropertyChanged += OnInputChanged;
         Report.PropertyChanged         += OnReportChanged;
 
+        UpdateIdleStatus();
         RefreshReportState();
     }
 
@@ -165,6 +169,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
         StartCommand.NotifyCanExecuteChanged();
         StopCommand.NotifyCanExecuteChanged();
         ViewReportCommand.NotifyCanExecuteChanged();
+        UpdateIdleStatus();
+    }
+
+    // While no run is active the status bar reads Ready only when Start is enabled; a run's own phases and final status are set by RunAuditAsync.
+    private void UpdateIdleStatus()
+    {
+        if (IsRunning)
+        {
+            return;
+        }
+
+        Audit.StatusMessage = _lastRunStatus ?? (CanStart() ? "Ready" : "Enter the required details");
     }
 
     private bool CanStart()
@@ -246,6 +262,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         // The final status is shown before any error dialogue, so the window behind it already reads correctly.
         (string status, string? error) = Describe(outcome);
 
+        _lastRunStatus      = status;
         Audit.StatusMessage = status;
         IsRunning           = false;
 

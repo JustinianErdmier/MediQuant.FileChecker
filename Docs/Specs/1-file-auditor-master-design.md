@@ -179,7 +179,8 @@ default for Audit Stage, and both predate the final Report-file rows, the access
 ### 5.5 Status bar
 
 Two sunken panes: a message pane that fills the width (`Ready`, `Counting files...`, `Checking files...`, `Writing report...`, `Completed`, `Stopped`,
-`Failed`) and a fixed-width percentage pane at the right edge.
+`Failed`) and a fixed-width percentage pane at the right edge. With no run active, the message reads `Ready` only while **Start** is enabled, and
+`Enter the required details` while it is not. Once a run has ended, its result (`Completed`, `Stopped` or `Failed`) stays until the next run starts.
 
 ### 5.6 Menu bar
 

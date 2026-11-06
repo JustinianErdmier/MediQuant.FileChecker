@@ -29,7 +29,7 @@ public sealed partial class AuditViewModel : ObservableObject
 
     /// <summary>Gets or sets the status-bar message.</summary>
     [ ObservableProperty ]
-    public partial string StatusMessage { get; set; } = "Ready";
+    public partial string StatusMessage { get; set; } = "";
 
     /// <summary>Gets or sets the status-bar percentage text, blank when no run is under way.</summary>
     [ ObservableProperty ]
