@@ -17,6 +17,6 @@
     <File Path="CLAUDE.md" />
   </Folder>
   <Folder Name="/Source/">
-    <Project Path="Source/FileChecker/FileChecker.csproj" />
+    <Project Path="Source/FileAuditor/FileAuditor.csproj" />
   </Folder>
 </Solution>
