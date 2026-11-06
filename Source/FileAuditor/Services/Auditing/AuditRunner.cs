@@ -1,6 +1,3 @@
-using System.Threading.Channels;
-using FileAuditor.Services.Sql;
-
 namespace FileAuditor.Services.Auditing;
 
 /// <summary>
@@ -128,6 +125,11 @@ public sealed class AuditRunner
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             stopped = true;
+        }
+        catch (Exception ex)
+        {
+            // Anything but a user stop or a SQL error: report it like a mid-run SQL failure, keeping what was checked.
+            readResult = AuditErrors.ReadFailed(ex.Message);
         }
 
         long checkedCount = progress.Checked;

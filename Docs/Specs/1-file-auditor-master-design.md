@@ -246,11 +246,14 @@ path is reachable, the failure belongs to the file itself and nothing is cached.
 
 - The UI refreshes stats a few times per second. Remaining time is estimated from the rate so far.
 - **Stop**: stops reading rows and checking files, then writes the report with `Result: Stopped by user`. Counts reflect only what was checked.
+  If Stop is pressed while the rows are still being counted (before the count query returns), no report is written and the status bar reads `Stopped`: nothing
+  has been checked, so there is nothing to report.
 - **SQL failure** (connection, bad table/column, timeout): error dialog with the message. If no rows were checked, no report is written. If it fails mid-run, the report is
   written with `Result: Failed — <message>` and the counts so far.
 - **Report write failure**: error dialog.
 - **Closing the window mid-run**: a prompt, *"An audit is in progress. Stop it and exit?"*, with **Yes** and **No**. Yes stops the run, writes the report as
-  `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same.
+  `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same. If Yes is chosen before the count query returns, no report is written (as for
+  Stop) and the application simply exits.
 
 ## 7. The report
 

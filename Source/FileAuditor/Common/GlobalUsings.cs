@@ -36,3 +36,8 @@ global using System.Collections.Concurrent;
 global using FileAuditor.Services.Checking;
 global using FileAuditor.Services.Dialogues;
 global using FileAuditor.Services.Auditing;
+global using System.Threading.Channels;
+global using Avalonia.Threading;
+global using FileAuditor.Services.Sql;
+global using FileAuditor.ViewModels.Dialogues;
+global using FileAuditor.Views.Dialogues;

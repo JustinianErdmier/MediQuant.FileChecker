@@ -4,12 +4,12 @@
                xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                xmlns:vm="clr-namespace:FileAuditor.ViewModels.Dialogues"
                mc:Ignorable="d" d:DesignWidth="380" d:DesignHeight="140"
-               x:Class="FileAuditor.Views.Dialogues.MessageDialogWindow"
-               x:DataType="vm:MessageDialogViewModel"
+               x:Class="FileAuditor.Views.Dialogues.MessageDialogueWindow"
+               x:DataType="vm:MessageDialogueViewModel"
                Title="File Auditor" Icon="avares://FileAuditor/Assets/FileAuditor.png"
                Width="380" SizeToContent="Height" CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
     <Design.DataContext>
-        <vm:MessageDialogViewModel Message="The report folder does not exist." Icon="Warning" PrimaryText="_Create Folder" SecondaryText="Cancel" />
+        <vm:MessageDialogueViewModel Message="The report folder does not exist." Icon="Warning" PrimaryText="_Create Folder" SecondaryText="Cancel" />
     </Design.DataContext>
     <DockPanel Margin="12">
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,12,0,0">

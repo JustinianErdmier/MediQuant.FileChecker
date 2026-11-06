@@ -12,4 +12,11 @@ public static class AuditErrors
     ///     Creates the error for a run the user stopped while the rows were still being counted, so there is nothing to report.
     /// </summary>
     public static Error StoppedBeforeChecking { get; } = Error.Conflict(StoppedBeforeCheckingCode, "The audit was stopped before any file was checked.");
+
+    /// <summary>
+    ///     Creates the error for a row stream that failed part-way for a reason other than SQL Server or the user.
+    /// </summary>
+    /// <param name="message">What went wrong.</param>
+    /// <returns>A failure error with code <c>Audit.ReadFailed</c>.</returns>
+    public static Error ReadFailed(string message) => Error.Failure("Audit.ReadFailed", message);
 }

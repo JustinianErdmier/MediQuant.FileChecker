@@ -7,7 +7,7 @@ namespace FileAuditor.ViewModels.Dialogues;
 /// <param name="Icon">The icon to show.</param>
 /// <param name="PrimaryText">The action button's text; an underscore marks its access key.</param>
 /// <param name="SecondaryText">The escape button's text, or <see langword="null" /> for a dialogue with a single button.</param>
-public sealed record MessageDialogViewModel(string Message, DialogueIcon Icon, string PrimaryText, string? SecondaryText)
+public sealed record MessageDialogueViewModel(string Message, DialogueIcon Icon, string PrimaryText, string? SecondaryText)
 {
     /// <summary>Gets a value indicating whether to show the error icon.</summary>
     public bool IsError => Icon == DialogueIcon.Error;

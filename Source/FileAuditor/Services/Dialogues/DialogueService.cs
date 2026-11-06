@@ -1,11 +1,12 @@
-using FileAuditor.ViewModels.Dialogues;
-using FileAuditor.Views.Dialogues;
-
 namespace FileAuditor.Services.Dialogues;
 
 /// <summary>
 ///     Shows the application's modal message dialogues, owned by the main window and titled <c>File Auditor</c>.
 /// </summary>
+/// <remarks>
+///     When there is no owner window the dialogues silently do nothing and report <see langword="false" />. That happens only in the XAML designer, where the
+///     parameterless view model is built with no main window.
+/// </remarks>
 /// <param name="ownerProvider">Supplies the owner window; evaluated each time a dialogue opens.</param>
 public sealed class DialogueService(Func<Window?> ownerProvider)
 {
@@ -13,22 +14,22 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
     /// <param name="message">The message.</param>
     /// <returns>A task that completes when the dialogue closes.</returns>
     public async Task ShowErrorAsync(string message)
-        => await ShowAsync(new MessageDialogViewModel(message, DialogueIcon.Error, "OK", null));
+        => await ShowAsync(new MessageDialogueViewModel(message, DialogueIcon.Error, "OK", null));
 
     /// <summary>Shows a warning with an action button and Cancel.</summary>
     /// <param name="message">The message.</param>
     /// <param name="confirmText">The action button's text; an underscore marks its access key.</param>
     /// <returns><see langword="true" /> when the user chose the action; <see langword="false" /> for Cancel or closing the dialogue.</returns>
     public Task<bool> ConfirmAsync(string message, string confirmText)
-        => ShowAsync(new MessageDialogViewModel(message, DialogueIcon.Warning, confirmText, "Cancel"));
+        => ShowAsync(new MessageDialogueViewModel(message, DialogueIcon.Warning, confirmText, "Cancel"));
 
     /// <summary>Asks a Yes/No question.</summary>
     /// <param name="message">The question.</param>
     /// <returns><see langword="true" /> for Yes; <see langword="false" /> for No or closing the dialogue.</returns>
     public Task<bool> AskYesNoAsync(string message)
-        => ShowAsync(new MessageDialogViewModel(message, DialogueIcon.Question, "_Yes", "_No"));
+        => ShowAsync(new MessageDialogueViewModel(message, DialogueIcon.Question, "_Yes", "_No"));
 
-    private async Task<bool> ShowAsync(MessageDialogViewModel viewModel)
+    private async Task<bool> ShowAsync(MessageDialogueViewModel viewModel)
     {
         Window? owner = ownerProvider();
 
@@ -37,6 +38,6 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
             return false;
         }
 
-        return await new MessageDialogWindow(viewModel).ShowDialog<bool>(owner);
+        return await new MessageDialogueWindow(viewModel).ShowDialog<bool>(owner);
     }
 }

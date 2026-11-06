@@ -1,5 +1,3 @@
-using Avalonia.Threading;
-
 namespace FileAuditor.ViewModels.Main;
 
 /// <summary>
@@ -244,7 +242,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 return ("Stopped", null);
             }
 
-            return ("Failed", first.Code == "Sql.QueryFailed" ? $"The audit could not read the file index table:\n\n{first.Description}" : first.Description);
+            return ("Failed", first.Code == SqlErrors.QueryFailedCode ? $"The audit could not read the file index table:\n\n{first.Description}" : first.Description);
         }
 
         AuditReport report = outcome.Value;
@@ -309,6 +307,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             await _dialogues.ShowErrorAsync($"The report could not be opened:\n{path}\n\n{ex.Message}");
         }
     }
+
     [RelayCommand]
     private void About() => AboutRequested?.Invoke(this, EventArgs.Empty);
 

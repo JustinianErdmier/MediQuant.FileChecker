@@ -1,5 +1,3 @@
-using FileAuditor.Services.Sql;
-
 namespace FileAuditor.Services.Auditing;
 
 /// <summary>
