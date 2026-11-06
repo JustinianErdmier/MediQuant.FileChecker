@@ -235,27 +235,27 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 - Produces: `DialogueService` — `Task ShowErrorAsync(string message)`, `Task<bool> ConfirmAsync(string message, string confirmText)` (warning icon, *confirmText* +
   *Cancel*), `Task<bool> AskYesNoAsync(string message)`. Owner is the main window; title `File Auditor`.
 
-- [ ] **Step 1:** `PreflightChecker` runs SDD §6.1 in order: identifiers (`QueryBuilder.Build`), custom file name (`Path.GetInvalidFileNameChars`), folder (built missing →
+- [x] **Step 1:** `PreflightChecker` runs SDD §6.1 in order: identifiers (`QueryBuilder.Build`), custom file name (`Path.GetInvalidFileNameChars`), folder (built missing →
   error *"The report folder does not exist:\n<folder>"*; custom missing → confirm *Create Folder*, `Directory.CreateDirectory` failure → error), existing report → confirm
   *Overwrite*. Folder existence here may use `Directory.Exists` (it is not the audit).
-- [ ] **Step 2:** `AuditRunner`: count, then read rows into a bounded `Channel<IndexRow>` (capacity 10,000) consumed by `Parallel.ForEachAsync` with
+- [x] **Step 2:** `AuditRunner`: count, then read rows into a bounded `Channel<IndexRow>` (capacity 10,000) consumed by `Parallel.ForEachAsync` with
   `MaxDegreeOfParallelism = 32`, each row through one `FileChecker`; count Found rows with `Interlocked` and collect the rest in a
   `ConcurrentBag<CheckResult>`. On cancellation stop reading and checking, keep what was checked.
   Then `ReportBuilder.Build` + `ReportWriter.Write`.
-- [ ] **Step 3:** `MainWindowViewModel.Start`: pre-flight → save settings → `IsRunning = true` (all inputs disabled) → run → a `DispatcherTimer` (250 ms) refreshes
+- [x] **Step 3:** `MainWindowViewModel.Start`: pre-flight → save settings → `IsRunning = true` (all inputs disabled) → run → a `DispatcherTimer` (250 ms) refreshes
   `ProgressViewModel` (Elapsed, Remaining from the rate so far, Files/second `0.00`, percent) → final status `Completed` / `Stopped` / `Failed`. SQL error with nothing
   checked → error dialogue, no report. Write failure → error dialogue. `Stop` cancels the token.
-- [ ] **Step 4:** Window closing while running: cancel the close, `AskYesNoAsync("An audit is in progress. Stop it and exit?")`; Yes → stop, await the run (report
+- [x] **Step 4:** Window closing while running: cancel the close, `AskYesNoAsync("An audit is in progress. Stop it and exit?")`; Yes → stop, await the run (report
   written), then close; No → carry on. File → Exit and Alt+F4 go through the same path.
-- [ ] **Step 5: Verify against LocalDB.** Create scratch database `FileAuditorScratch` on `(localdb)\MSSQLLocalDB` with `sqlcmd`, table `dbo.[File Index]` (`doc_id int`,
+- [x] **Step 5: Verify against LocalDB.** Create scratch database `FileAuditorScratch` on `(localdb)\MSSQLLocalDB` with `sqlcmd`, table `dbo.[File Index]` (`doc_id int`,
   `MQ_FullPath nvarchar(400)`) seeded with the Task 5 fixture paths plus ~50,000 generated rows pointing at real fixture files. Run the app with Server
   `(localdb)\MSSQLLocalDB`, Database `FileAuditorScratch`, Table `dbo.File Index`, custom report location in `%TEMP%\FileAuditorReports\`. Check: Create Folder prompt;
   progress updates; report matches SDD §7 structure; second run → Overwrite prompt; View Report opens it; built location with Project folder `D99999` → folder-missing
   error; bad column name → error dialogue, no report; run with no ID column.
-- [ ] **Step 6: Verify stop paths.** Stop mid-run → `Result: Stopped by user` and a `Not checked:` line whose arithmetic adds up; close the window mid-run → prompt, Yes →
+- [x] **Step 6: Verify stop paths.** Stop mid-run → `Result: Stopped by user` and a `Not checked:` line whose arithmetic adds up; close the window mid-run → prompt, Yes →
   report written and app exits; No → run continues.
-- [ ] **Step 7:** Drop `FileAuditorScratch`, delete the fixture and report folders, close the app.
-- [ ] **Step 8: Commit** `feat(✨): run audits with pre-flight checks, progress and stop`.
+- [x] **Step 7:** Drop `FileAuditorScratch`, delete the fixture and report folders, close the app.
+- [x] **Step 8: Commit** `feat(✨): run audits with pre-flight checks, progress and stop`.
 
 ### Task 8: Documentation sync and final verification
 

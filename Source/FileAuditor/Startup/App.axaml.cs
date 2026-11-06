@@ -22,7 +22,7 @@ public partial class App : Application
             // An unreadable settings file is treated as "use the defaults".
             ErrorOr<AppSettings> loaded = store.Load();
             AppSettings settings = loaded.IsError ? AppSettings.Default : loaded.Value;
-            MainWindowViewModel viewModel = new(settings);
+            MainWindowViewModel viewModel = new(settings, new DialogueService(() => desktop.MainWindow), store);
 
             desktop.MainWindow = new MainWindow { DataContext = viewModel };
 

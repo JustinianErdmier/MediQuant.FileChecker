@@ -34,3 +34,5 @@ global using FileAuditor.Common.Extensions;
 global using Avalonia.VisualTree;
 global using System.Collections.Concurrent;
 global using FileAuditor.Services.Checking;
+global using FileAuditor.Services.Dialogues;
+global using FileAuditor.Services.Auditing;

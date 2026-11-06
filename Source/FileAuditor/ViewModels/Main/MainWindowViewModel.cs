@@ -1,3 +1,5 @@
+using Avalonia.Threading;
+
 namespace FileAuditor.ViewModels.Main;
 
 /// <summary>
@@ -7,20 +9,40 @@ public sealed partial class MainWindowViewModel : ObservableObject
 {
     private const int ProbeDebounceMilliseconds = 300;
 
+    private const int RefreshMilliseconds = 250;
+
+    private readonly DialogueService _dialogues;
+
+    private readonly SettingsStore _settingsStore;
+
+    private readonly PreflightChecker _preflight;
+
+    private readonly AuditRunner _runner = new();
+
     private CancellationTokenSource? _probeCts;
+
+    private CancellationTokenSource? _auditCts;
+
+    private Task _auditTask = Task.CompletedTask;
 
     private bool _reportExists;
 
     /// <summary>Initialises a new instance with the default settings, for the XAML designer.</summary>
     public MainWindowViewModel()
-        : this(AppSettings.Default)
+        : this(AppSettings.Default, new DialogueService(() => null), new SettingsStore())
     {
     }
 
     /// <summary>Initialises a new instance populated from the given settings.</summary>
     /// <param name="settings">The settings to load.</param>
-    public MainWindowViewModel(AppSettings settings)
+    /// <param name="dialogues">Shows the errors, confirmations and questions.</param>
+    /// <param name="settingsStore">Saves the settings when an audit starts.</param>
+    public MainWindowViewModel(AppSettings settings, DialogueService dialogues, SettingsStore settingsStore)
     {
+        _dialogues = dialogues;
+        _settingsStore = settingsStore;
+        _preflight = new PreflightChecker(dialogues);
+
         Database = new DatabaseViewModel(settings);
         FileIndexTable = new FileIndexTableViewModel(settings);
         Report = new ReportViewModel(settings);
@@ -143,31 +165,150 @@ public sealed partial class MainWindowViewModel : ObservableObject
     // Reads the cached probe result; the file system is never touched from here.
     private bool CanViewReport() => !IsRunning && Report.Current.IsComplete && _reportExists;
 
-    // The body is supplied by the run-control task; only the CanExecute rule is final.
+    // Stays "executing" for the whole run, which also stops a second Start while the pre-flight dialogues are open.
     [RelayCommand(CanExecute = nameof(CanStart))]
-    private void Start()
+    private async Task StartAsync()
     {
+        AppSettings settings = Snapshot();
+        ReportPath? reportPath = await _preflight.RunAsync(settings);
+
+        if (reportPath is null)
+        {
+            return;
+        }
+
+        // A failed save is deliberately ignored: the user loses nothing but the convenience of remembered inputs.
+        _settingsStore.Save(settings);
+
+        _auditTask = RunAuditAsync(new AuditRequest(settings, reportPath));
+
+        await _auditTask;
     }
 
-    // The body is supplied by the run-control task; only the CanExecute rule is final.
-    [RelayCommand(CanExecute = nameof(CanStop))]
-    private void Stop()
+    private async Task RunAuditAsync(AuditRequest request)
     {
+        AuditProgress progress = new() { Phase = "Counting files..." };
+        Stopwatch clock = Stopwatch.StartNew();
+        CancellationTokenSource cts = new();
+
+        _auditCts = cts;
+
+        Progress.Reset();
+        Progress.StatusMessage = progress.Phase;
+        IsRunning = true;
+
+        DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(RefreshMilliseconds) };
+
+        timer.Tick += (_, _) => Refresh(progress, clock, isFinished: false);
+        timer.Start();
+
+        ErrorOr<AuditReport> outcome;
+
+        try
+        {
+            // Off the UI thread, so the row stream's continuations never queue behind the dispatcher.
+            outcome = await Task.Run(() => _runner.RunAsync(request, progress, cts.Token));
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            outcome = Error.Unexpected("Audit.Unexpected", ex.Message);
+        }
+
+        timer.Stop();
+        clock.Stop();
+        Refresh(progress, clock, isFinished: true);
+
+        _auditCts = null;
+        cts.Dispose();
+
+        // The final status is shown before any error dialogue, so the window behind it already reads correctly.
+        (string status, string? error) = Describe(outcome);
+
+        Progress.StatusMessage = status;
+        IsRunning = false;
+
+        if (error is not null)
+        {
+            await _dialogues.ShowErrorAsync(error);
+        }
+    }
+
+    private static (string Status, string? Error) Describe(ErrorOr<AuditReport> outcome)
+    {
+        if (outcome.IsError)
+        {
+            Error first = outcome.FirstError;
+
+            if (first.Code == AuditErrors.StoppedBeforeCheckingCode)
+            {
+                return ("Stopped", null);
+            }
+
+            return ("Failed", first.Code == "Sql.QueryFailed" ? $"The audit could not read the file index table:\n\n{first.Description}" : first.Description);
+        }
+
+        AuditReport report = outcome.Value;
+
+        return report.Result switch
+        {
+            AuditResultKind.Completed => ("Completed", null),
+            AuditResultKind.StoppedByUser => ("Stopped", null),
+            _ => ("Failed", $"The audit failed part-way through:\n\n{report.FailureMessage}\n\nThe report so far has been written.")
+        };
+    }
+
+    private void Refresh(AuditProgress progress, Stopwatch clock, bool isFinished)
+    {
+        Progress.Update(progress, clock.Elapsed, isFinished);
+
+        if (!isFinished)
+        {
+            Progress.StatusMessage = progress.Phase;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanStop))]
+    private void Stop() => _auditCts?.Cancel();
+
+    /// <summary>
+    ///     Called when the window is asked to close. With no audit running the close may proceed; otherwise the user is asked, and on Yes the run is stopped and its
+    ///     report written before the close may proceed.
+    /// </summary>
+    /// <returns><see langword="true" /> when the window may close.</returns>
+    public async Task<bool> ConfirmCloseAsync()
+    {
+        if (!IsRunning)
+        {
+            return true;
+        }
+
+        if (!await _dialogues.AskYesNoAsync("An audit is in progress. Stop it and exit?"))
+        {
+            return false;
+        }
+
+        // The run may have ended while the question was open; cancelling a finished run is harmless.
+        _auditCts?.Cancel();
+
+        await _auditTask;
+
+        return true;
     }
 
     [RelayCommand(CanExecute = nameof(CanViewReport))]
-    private void ViewReport()
+    private async Task ViewReportAsync()
     {
+        string path = Report.Current.FullPath;
+
         try
         {
-            Process.Start(new ProcessStartInfo(Report.Current.FullPath) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or FileNotFoundException)
         {
-            // No program is associated with .txt or the file vanished; nothing sensible to do without a dialogue helper.
+            await _dialogues.ShowErrorAsync($"The report could not be opened:\n{path}\n\n{ex.Message}");
         }
     }
-
     [RelayCommand]
     private void About() => AboutRequested?.Invoke(this, EventArgs.Empty);
 
