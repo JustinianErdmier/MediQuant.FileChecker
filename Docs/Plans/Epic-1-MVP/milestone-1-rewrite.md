@@ -264,8 +264,8 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 - Create: `Docs/Ledgers/Epic-1-MVP/milestone-1-ledger.md` (written throughout; cleaned here)
 - Modify: `MediQuant.FileAuditor.slnx` (register the plan and ledger under `/Docs/…`)
 
-- [ ] **Step 1:** Amend the SDD wherever the implementation settled something it left open (§9 folder list, §11). No behaviour changes without the user.
-- [ ] **Step 2:** Clean the ledger: rulings, plan defects, outstanding items, incidents.
-- [ ] **Step 3: Verify.** `dotnet clean MediQuant.FileAuditor.slnx; dotnet build MediQuant.FileAuditor.slnx` → 0 errors, 0 warnings introduced. Markdown line lengths ≤ 180
+- [x] **Step 1:** Amend the SDD wherever the implementation settled something it left open (§9 folder list, §11). No behaviour changes without the user.
+- [x] **Step 2:** Clean the ledger: rulings, plan defects, outstanding items, incidents.
+- [x] **Step 3: Verify.** `dotnet clean MediQuant.FileAuditor.slnx; dotnet build MediQuant.FileAuditor.slnx` → 0 errors, 0 warnings introduced. Markdown line lengths ≤ 180
   (PowerShell `[string].Length`). Every file under `Docs/` appears in the `.slnx`.
-- [ ] **Step 4: Commit** `docs(📝): sync the SDD and close the milestone 1 ledger`.
+- [x] **Step 4: Commit** `docs(📝): sync the SDD and close the milestone 1 ledger`.

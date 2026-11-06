@@ -328,13 +328,20 @@ saved when a run starts and when the app closes, using a temp file + `File.Move(
 
 ## 9. Code shape
 
-One project, `Source/FileAuditor/`, organised by folder (namespaces mirror folders), roughly:
+One project, `Source/FileAuditor/`, organised by folder (namespaces mirror folders). Only the `.csproj` and `app.manifest` sit at the project root; `Assets/` holds the
+icon artwork. The code folders are:
 
-- `Views/` — `MainWindow`, `AboutWindow`, and small `UserControl`s per group box where it helps readability.
-- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm).
-- `Services/` — settings store, query builder, file checker, audit runner, report writer, dialog/launcher helpers. Return `ErrorOr<T>` for expected failures.
-- `Models/` — settings record, row, outcome enums, audit result.
-- `Common/Errors/` — the custom `Error` definitions.
+- `Startup/` — `App` and `Program`.
+- `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`) and `Groups/` (a `UserControl` per group box: Database, File Index
+  Table, Report, Progress).
+- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon`) and `Groups/`.
+- `Services/` — `Settings/` (settings store), `Sql/` (connection strings, SQL identifiers, query builder, index table reader), `Checking/` (file checker and Win32 error
+  mapper), `Auditing/` (audit runner, pre-flight checker, request and progress types), `Reporting/` (report builder, writer and path resolver) and `Dialogues/` (dialogue
+  service). Return `ErrorOr<T>` for expected failures.
+- `Models/` — `Settings/` (settings record and the project and audit stage enums), `Auditing/` (audit query, index row, check outcome and result) and `Reporting/` (audit
+  report and result kind).
+- `Common/` — `GlobalUsings.cs`; `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/` (`ClassicWindow` helpers); `Serialisation/`
+  (the source-generated settings JSON context).
 
 There is no dependency-injection container requirement; the builder may wire services by hand in `App` or use `Microsoft.Extensions.DependencyInjection`.
 
@@ -357,3 +364,15 @@ that failed, found by walking the path (§6.3); the close-mid-run prompt.
 ## 11. Left to the builder
 
 Concurrency mechanism and degree; UI refresh interval; exact window dimensions; access-key letters; how dialogs are implemented on Classic.Avalonia; icon artwork.
+
+Settled by the build (milestone 1), with no change in behaviour:
+
+- **Access keys:** *Browse...* is `B`, *Start* is `A` (St**a**rt) and *Stop* is `O` (St**o**p); `R` and `M` were already taken by neighbouring labels. The *OK* and *Cancel*
+  buttons in message dialogues carry no access keys, as with Win9x message boxes (Enter and Esc).
+- **Default button:** *Start* is the window's default button, so Enter starts an audit.
+- **Dialogues:** every dialogue uses the custom `MessageDialogueWindow` (a `ClassicWindow` with icon, message and right-aligned buttons), because Classic.Avalonia's own
+  message box cannot take custom button text.
+- **Number and time formatting in the report:** counts are formatted `N0` with the invariant culture, so reports diff identically on any machine; elapsed time is shown in
+  total hours (at least two digits), not rolled over into days.
+- **Full-path validation:** a path is accepted as absolute only if `Path.IsPathFullyQualified` says so, so `C:x` and `\x` (which would resolve against the application's
+  current drive or folder) count as *Invalid characters in path*.
