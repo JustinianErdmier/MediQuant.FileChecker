@@ -56,15 +56,15 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 **Interfaces:**
 - Produces: namespaces `FileAuditor.Startup` (`App`, `Program`), `FileAuditor.Views.Main` (`MainWindow`).
 
-- [ ] **Step 1:** Rename the folder and project with `git mv` (the template is tracked), as its own pure-rename step so rename detection holds. Update the `.slnx` `<Project Path>` to `Source/FileAuditor/FileAuditor.csproj`.
-- [ ] **Step 2:** Replace the package references with Avalonia 11.3.22, Avalonia.Desktop 11.3.22, Classic.Avalonia.Theme 11.3.0.3, Classic.CommonControls.Avalonia
+- [x] **Step 1:** Rename the folder and project with `git mv` (the template is tracked), as its own pure-rename step so rename detection holds. Update the `.slnx` `<Project Path>` to `Source/FileAuditor/FileAuditor.csproj`.
+- [x] **Step 2:** Replace the package references with Avalonia 11.3.22, Avalonia.Desktop 11.3.22, Classic.Avalonia.Theme 11.3.0.3, Classic.CommonControls.Avalonia
   11.3.0.3, CommunityToolkit.Mvvm 8.4.2, ErrorOr 2.1.1, Microsoft.Data.SqlClient 7.1.1. Add the assembly metadata from *Global Constraints*.
-- [ ] **Step 3:** In `App.axaml` replace `<FluentTheme />` with the Classic theme (`<ClassicTheme />` from `xmlns:classic="https://github.com/BAndysc/Classic.Avalonia"`),
+- [x] **Step 3:** In `App.axaml` replace `<FluentTheme />` with the Classic theme (`<ClassicTheme />` from `xmlns:classic="https://github.com/BAndysc/Classic.Avalonia"`),
   `RequestedThemeVariant="Light"`. In `Program` drop `.WithInterFont()` and `.WithDeveloperTools()`. Namespaces and `x:Class` follow the new folders.
-- [ ] **Step 4:** `MainWindow`: title `File Auditor`, `CanResize="False"`, a placeholder body. Leave sizing to Task 4.
-- [ ] **Step 5: Verify.** `dotnet clean MediQuant.FileAuditor.slnx; dotnet build MediQuant.FileAuditor.slnx` → 0 errors. Run the app; screenshot shows Win9x chrome
+- [x] **Step 4:** `MainWindow`: title `File Auditor`, `CanResize="False"`, a placeholder body. Leave sizing to Task 4.
+- [x] **Step 5: Verify.** `dotnet clean MediQuant.FileAuditor.slnx; dotnet build MediQuant.FileAuditor.slnx` → 0 errors. Run the app; screenshot shows Win9x chrome
   titled *File Auditor*. Close it.
-- [ ] **Step 6: Commit** `build(📦): retarget to File Auditor on Avalonia 11.3 and Classic.Avalonia`.
+- [x] **Step 6: Commit** `build(📦): retarget to File Auditor on Avalonia 11.3 and Classic.Avalonia`.
 
 ### Task 2: Settings model and per-user settings store
 
@@ -82,12 +82,12 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 - Produces: `sealed class SettingsStore` — `ErrorOr<AppSettings> Load()`, `ErrorOr<Success> Save(AppSettings settings)`, `string FilePath { get; }`.
 - Produces: `static class SettingsErrors` — `Error Unreadable(string detail)`, `Error Unwritable(string detail)`.
 
-- [ ] **Step 1:** Write the models. Enums serialise as strings (`JsonStringEnumConverter` via the source-generated context's options); indented output.
-- [ ] **Step 2:** `SettingsStore.Load`: missing file → `AppSettings.Default` (not an error); unreadable or invalid JSON → `SettingsErrors.Unreadable`. Missing properties
+- [x] **Step 1:** Write the models. Enums serialise as strings (`JsonStringEnumConverter` via the source-generated context's options); indented output.
+- [x] **Step 2:** `SettingsStore.Load`: missing file → `AppSettings.Default` (not an error); unreadable or invalid JSON → `SettingsErrors.Unreadable`. Missing properties
   take their defaults. `Save`: create the directory, write to `settings.json.tmp`, then `File.Move(tmp, path, overwrite: true)`; I/O failure → `SettingsErrors.Unwritable`.
-- [ ] **Step 3: Verify.** Build. Callers (Task 4) treat `Unreadable` as "use defaults" — note it in the XML doc. Manually: write `{ "Server": 5, ` to the file later in
+- [x] **Step 3: Verify.** Build. Callers (Task 4) treat `Unreadable` as "use defaults" — note it in the XML doc. Manually: write `{ "Server": 5, ` to the file later in
   Task 4's run and confirm the app opens with defaults.
-- [ ] **Step 4: Commit** `feat(✨): add per-user JSON settings store`.
+- [x] **Step 4: Commit** `feat(✨): add per-user JSON settings store`.
 
 ### Task 3: Query builder and index table reader
 
@@ -106,17 +106,17 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
   `Task<ErrorOr<Success>> ReadAsync(string connectionString, AuditQuery query, Func<IndexRow, ValueTask> onRow, CancellationToken ct)`.
 - Produces: `static string ConnectionStrings.Build(string server, string database)` in `Services/Sql/ConnectionStrings.cs`.
 
-- [ ] **Step 1:** `ParseMultipart`: trim; split on `.` outside brackets; a part may be written bracketed (`[My Table]`, with `]]` as an escaped `]`) or bare; reject empty
+- [x] **Step 1:** `ParseMultipart`: trim; split on `.` outside brackets; a part may be written bracketed (`[My Table]`, with `]]` as an escaped `]`) or bare; reject empty
   parts or more than `maxParts` with `QueryErrors.InvalidIdentifier(text)`. Table allows 2 parts (`schema.table`), columns 1.
-- [ ] **Step 2:** `Build` emits exactly `SELECT COUNT_BIG(*) FROM <table>;` and `SELECT <path> AS [Path][, <id> AS [Id]] FROM <table>;` with every part through `Quote`.
+- [x] **Step 2:** `Build` emits exactly `SELECT COUNT_BIG(*) FROM <table>;` and `SELECT <path> AS [Path][, <id> AS [Id]] FROM <table>;` with every part through `Quote`.
   Empty `idColumn` → no ID part.
-- [ ] **Step 3: Verify the quoting** with a throwaway console check or a debugger evaluation (not committed): `dbo.My Table` → `[dbo].[My Table]`; `[Odd]]Name]` →
+- [x] **Step 3: Verify the quoting** with a throwaway console check or a debugger evaluation (not committed): `dbo.My Table` → `[dbo].[My Table]`; `[Odd]]Name]` →
   `[Odd]]Name]`; `x; DROP TABLE y` → `[x; DROP TABLE y]`; `a.b.c` → `InvalidIdentifier`; `""` → `InvalidIdentifier`.
-- [ ] **Step 4:** `IndexTableReader`: `CommandTimeout = 0` for both commands; `CountAsync` reads the scalar as `long`; `ReadAsync` uses `CommandBehavior.SequentialAccess`,
+- [x] **Step 4:** `IndexTableReader`: `CommandTimeout = 0` for both commands; `CountAsync` reads the scalar as `long`; `ReadAsync` uses `CommandBehavior.SequentialAccess`,
   reads columns with `IsDBNull` → `""` / `null`, converts non-string values with `Convert.ToString(value, CultureInfo.InvariantCulture)`. `SqlException` →
   `SqlErrors.QueryFailed(message)`; cancellation propagates as `OperationCanceledException` (the runner owns it).
-- [ ] **Step 5: Verify.** Build.
-- [ ] **Step 6: Commit** `feat(✨): build the audit query from table and column names`.
+- [x] **Step 5: Verify.** Build.
+- [x] **Step 6: Commit** `feat(✨): build the audit query from table and column names`.
 
 ### Task 4: Main window, group-box views and report-path behaviour
 
