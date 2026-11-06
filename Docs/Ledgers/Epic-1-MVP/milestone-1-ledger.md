@@ -32,6 +32,9 @@ Decisions taken without the user, each with what it costs if wrong.
 | R15 | 7 | *OK* and *Cancel* in message dialogues carry no access keys. | Win9x message boxes used Enter and Esc for them. | Cosmetic. |
 | R16 | 7 | Message dialogue windows follow the `*Window` naming exception, like `MainWindow` and `AboutWindow`, for the view composition pair rule. | The dialogue is a window, not a `UserControl`. | A CLAUDE.md wording tweak later. |
 | R17 | 7 | The custom `MessageDialogueWindow` is used for all dialogues. | Classic.Avalonia's `MessageBox` cannot take custom button text. | None. |
+| R18 | Fix wave 1 | The root re-probe is throttled to one per 5 s per root. | Cheap under 32-way parallelism. | Files checked within about 5 s of a mapped drive dropping can still be reported Missing. A single failed probe marks the root failed for the rest of the run, with no recovery. |
+| R19 | Fix wave 1 | Stop after the count returns but before any row is checked still writes a Stopped report. | The literal reading of SDD §6.4; the user's decision covered only Stop before the count returns. | A near-empty report. |
+| R20 | Fix wave 2 | CLAUDE.md drift is left to the user, since CLAUDE.md is the user's instruction file (see *For the user*). | The file is not mine to edit. | The drift persists until the user amends it. |
 
 ## User decisions
 
@@ -46,7 +49,7 @@ Taken by the user, not rulings.
   plan makes every service a concrete class with no interfaces. Resolved by ruling R1.
 - **Commit `39642e1` does not build on its own.** The rename of the template project landed before the `.slnx` path was updated; the fix arrived in `e62e272`. Anyone
   bisecting across that pair will hit a broken build.
-- **Plan line 208 still lists `ReportErrors.FolderMissing`.** That error was removed during Task 7; the plan text was left as it was written.
+- **Plan line 208 still lists `ReportErrors.FolderMissing`.** That error was removed during Task 7; the plan line is now annotated to say so (`f8265a7`).
 
 ## Outstanding items
 
@@ -58,7 +61,7 @@ Taken by the user, not rulings.
 - **FIXED in `e6e30f7` — component longer than 255 characters** → *Unverified: path too long* (ruling R10), by a pre-check ahead of the OS call.
 - **FIXED in `e6e30f7` — unwritable report folder.** Pre-flight now probes the folder by creating and removing the report's temporary file and stops the run with an error
   dialogue before any row is read (`ReportErrors.FolderNotWritable`).
-- **Attribute bracket spacing.** `[ObservableProperty]` and `[RelayCommand]` are unspaced, against the `[ STAThread ]` convention.
+- **FIXED in `65c41ee` — attribute bracket spacing.** `[ObservableProperty]` and `[RelayCommand]` were unspaced, against the `[ STAThread ]` convention.
 - **FIXED in `e6e30f7` — `"Server": null` in `settings.json`** deserialised into a non-nullable `string` because `RespectNullableAnnotations` is off, and crashed start-up.
   `SettingsStore.Load` now replaces null strings and undefined enum values with their defaults.
 
@@ -68,30 +71,35 @@ Taken by the user, not rulings.
   them; that needs a package-policy decision.
 - **`\\?\` paths stay *Invalid characters in path*** (ruling R11).
 - **No-ID empty-path row** renders as a blank line (ruling R14); a placeholder would need the user's say.
+- **CLAUDE.md drift** (ruling R20), to amend at the user's discretion:
+  - the pair-rule exception does not name the dialogue windows;
+  - the Dialogues icons are listed as error/warning/information, but the code has Question rather than Information;
+  - the Architecture `Views/` bullet omits `Dialogues/`;
+  - the `Services/` bullet mentions "launcher helpers", which do not exist.
 
 ### Later / nice to have
 
 Minor findings deferred by the task reviews, none of which affects correctness today.
 
-- **Task 1:** Avalonia usings are not consolidated into `Common/GlobalUsings.cs`; several files lack trailing newlines; the `MainWindow` `x:DataType` was a placeholder until
-  Task 4.
+- **Task 1:** Avalonia usings are not consolidated into `Common/GlobalUsings.cs`; the `MainWindow` `x:DataType` was a placeholder until Task 4. (Missing trailing
+  newlines: FIXED in `65c41ee`.)
 - **Task 2:** `settings.json.tmp` is left behind if `File.Move` fails; `SettingsStore` has an unrequested extra path constructor; numeric enum values are accepted by the
   string enum converter.
 - **Task 3:** double-quoted identifiers are treated literally (`"dbo"."T"` becomes `["dbo"].["T"]`) and fail at runtime rather than at validation; `ParseMultipart`'s
-  `maxParts` is not guarded below 1; `Convert.ToInt64(null)` on the `COUNT_BIG` result would silently give 0; files lack trailing newlines; the outer
+  `maxParts` is not guarded below 1; `Convert.ToInt64(null)` on the `COUNT_BIG` result would silently give 0; the outer
   `catch (SqlException)` in `ReadAsync` could mask an `onRow` exception if reader disposal throws after a cancel (speculative).
 - **Task 4:** `MainWindow` event handlers are never unsubscribed and the About handler is `async void` without try/catch; `OnBrowseClick` is likewise `async void`;
-  `ProgressView` binds its command row through `$parent[Window]`; `ReportViewModel` resolves the path twice in its constructor; leftover blank lines, unsorted
-  `GlobalUsings`, a hard-coded `#404040` colour; a custom Location counts as complete when non-empty even if relative (the Task 7 pre-flight rejects it);
-  `HideMaximiseButton` is silent if `PART_RestoreButton` is missing and acts on the first template application only; `ProbeReportAsync` discards its task and catches only
-  `OperationCanceledException`, the CTS is never disposed, and *View Report* flickers for about 300 ms on path change or activation.
+  `ProgressView` binds its command row through `$parent[Window]`; `ReportViewModel` resolves the path twice in its constructor; leftover blank lines, a hard-coded
+  `#404040` colour; a custom Location counts as complete when non-empty even if relative (the Task 7 pre-flight rejects it); (unsorted `GlobalUsings`: FIXED in `65c41ee`);
+  `HideMaximiseButton` is silent if `PART_RestoreButton` is missing and acts on the first template application only; `ProbeReportAsync` discards its task and catches
+  only `OperationCanceledException`, the CTS is never disposed, and *View Report* flickers for about 300 ms on path change or activation.
 - **Task 5:** the first concurrent wave under a newly blocked directory is not probe-once (performance only); `C:/` and `C:\` roots are cached separately and so probed
   twice.
 - **Task 6:** `TrimEnd` strips trailing whitespace that belongs to a path (it should trim padding only); `Flatten` handles only CR/LF, so tabs, NEL and U+2028 skew the
   alignment; the unverified count is derived as `Problems.Count - missing`; the temp file has a fixed `<name>.tmp` name.
-- **Task 7:** two dialogues can stack if a run fails while the close prompt is open; the `AuditRunner.RunAsync` `<returns>` doc omits `Audit.ReadFailed`; the ReadFailed
-  dialogue lacks the "could not read the file index table:" prefix and uses an inline `"Audit.ReadFailed"` literal; local `using` directives remain in
-  `MainWindow.axaml.cs`, `App.axaml.cs`, `AboutWindow.axaml.cs` and `SettingsStore.cs`.
+- **Task 7:** two dialogues can stack if a run fails while the close prompt is open; the `AuditRunner.RunAsync` `<returns>` doc omitting `Audit.ReadFailed`, the ReadFailed
+  dialogue lacking the "could not read the file index table:" prefix and the inline `"Audit.ReadFailed"` literal were FIXED in `e6e30f7`; the local `using` directives in
+  `MainWindow.axaml.cs`, `App.axaml.cs`, `AboutWindow.axaml.cs` and `SettingsStore.cs` were FIXED in `65c41ee`.
 
 ## Incidents
 
@@ -100,14 +108,27 @@ Minor findings deferred by the task reviews, none of which affects correctness t
 - **Test runs opened Notepad++ windows** in the user's session while exercising *View Report*.
 - **An empty, locked `Source/FileChecker/` folder** is left on disk, untracked, from the project rename.
 - **Alt+F4 could not be driven** by the automation tool, so only the window's X button and File → Exit were exercised. Alt+F4 shares the `Closing` handler with both.
+- **The `.idea` files were committed by accident** during the fix wave. The commit was soft-reset straight away and the history was verified clean.
+- **Computer use could not be granted to the locally built app**, so verification used Windows UI Automation through PowerShell.
 - **No SQL Server with Windows authentication exists on this machine.** Verification used LocalDB, `(localdb)\MSSQLLocalDB`, only; remote-server and domain-account behaviour
   was not exercised.
 
+## Not exercised at runtime
+
+- The vanished-root reclassification, the 255-character segment rule and the `DriveNotFoundException` mapping: each builds and was code-reviewed only.
+- Alt+F4.
+- Any real SQL Server with Windows authentication (LocalDB only).
+- The real `U:` drive.
+
 ## Commits
 
-`git log --oneline 69e233e..HEAD`, newest first (the Task 8 commit follows these):
+`git log --oneline 69e233e..HEAD` as at the end of fix wave 1, newest first (the fix wave 2 documentation commit follows these):
 
-```
+```n8d06c19 fix(🐛): pre-flight a read-only report and wrap long lines
+f8265a7 docs(📝): align mock-ups and plan with the build
+65c41ee style(🎨): apply house conventions across the branch
+e6e30f7 fix(🐛): close final-review correctness gaps
+3887338 docs(📝): sync the SDD and close the milestone 1 ledger
 b447ca9 fix(🐛): address Task 7 review findings
 d899e54 feat(✨): run audits with pre-flight checks, progress and stop
 f2e1c82 docs(📝): tick completed plan tasks 4-6
@@ -128,4 +149,5 @@ f8c5637 docs(📝): add the milestone 1 rewrite plan
 
 ## Final review
 
-Pending.
+The Opus whole-branch review of `69e233e..3887338` found 0 Critical, 4 Important and 13 Minor issues. Fix wave 1 (`e6e30f7`, `65c41ee`, `f8265a7`) addressed them.
+The Opus re-review then found the SDD out of sync and the ledger incomplete. Fix wave 2 (this commit, plus the commit before it, `8d06c19`) closed those.

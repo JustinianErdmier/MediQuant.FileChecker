@@ -56,7 +56,8 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 **Interfaces:**
 - Produces: namespaces `FileAuditor.Startup` (`App`, `Program`), `FileAuditor.Views.Main` (`MainWindow`).
 
-- [x] **Step 1:** Rename the folder and project with `git mv` (the template is tracked), as its own pure-rename step so rename detection holds. Update the `.slnx` `<Project Path>` to `Source/FileAuditor/FileAuditor.csproj`.
+- [x] **Step 1:** Rename the folder and project with `git mv` (the template is tracked), as its own pure-rename step so rename detection holds.
+  Update the `.slnx` `<Project Path>` to `Source/FileAuditor/FileAuditor.csproj`.
 - [x] **Step 2:** Replace the package references with Avalonia 11.3.22, Avalonia.Desktop 11.3.22, Classic.Avalonia.Theme 11.3.0.3, Classic.CommonControls.Avalonia
   11.3.0.3, CommunityToolkit.Mvvm 8.4.2, ErrorOr 2.1.1, Microsoft.Data.SqlClient 7.1.1. Add the assembly metadata from *Global Constraints*.
 - [x] **Step 3:** In `App.axaml` replace `<FluentTheme />` with the Classic theme (`<ClassicTheme />` from `xmlns:classic="https://github.com/BAndysc/Classic.Avalonia"`),

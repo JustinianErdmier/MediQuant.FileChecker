@@ -191,12 +191,17 @@ while a run is in progress.
 
 ### 6.1 Pre-flight checks (on Start, before touching the database)
 
-1. Validate inputs (identifiers well formed; custom File name has no invalid file-name characters). Failure → error dialog, run does not start.
+1. Validate inputs (identifiers well formed; custom File name has no invalid file-name characters). With the built location, the Project folder must be a single
+   folder name: not rooted, no `\` or `/`, not `.` or `..`, and no invalid file-name characters. Failure → error dialog, run does not start.
 2. Report folder:
    - *Built location* and the folder does not exist → **error dialog**; the run does not start.
    - *Custom location* and the folder does not exist → **warning dialog** with **Create Folder** and **Cancel**. Create Folder tries to create it (failure → error dialog,
      run does not start).
-3. Report file already exists (either mode) → **warning dialog** with **Overwrite** and **Cancel**.
+   - Once the folder exists (or has been created), a writability probe creates and removes the report's temporary file. If the folder cannot be written to → error dialog,
+     run does not start.
+3. Report file already exists (either mode):
+   - if it is read-only → **error dialog**, run does not start;
+   - otherwise → **warning dialog** with **Overwrite** and **Cancel**.
 4. Save settings.
 
 ### 6.2 Query
@@ -234,7 +239,11 @@ The check must not use `File.Exists` alone, because it returns `false` for every
 
 **Roots are checked once.** The root of each path (a drive letter such as `U:\`, or `\\server\share`) is checked the first time it is seen and the result is cached for
 the run. If the root does not exist, every file under it is *Unverified — Drive or share not found* without being tried. *Missing — Does not exist* is reserved for files
-whose root exists, so an unmapped drive or a missing share can never flood the Missing section.
+whose root exists, so an unmapped drive or a missing share can never flood the Missing section. A root confirmed reachable is re-probed when a file under it comes back
+not-found and the root's last confirmation is more than 5 seconds old; if the root is gone, that file and every later file under it are *Unverified — Drive or share not found*.
+
+Two mappings guard the same rule: a .NET DriveNotFoundException maps to *Unverified — Drive or share not found* (never *Missing*), and a path segment longer than 255
+characters maps to *Unverified — Path too long* before the OS is asked.
 
 **Unreachable locations short-circuit, at the level that actually failed.** When a file whose root exists comes back unreachable for any reason (*Permission denied*,
 *Network location unreachable* or *Other errors*), the checker walks the path one directory at a time from the root down (`x\`, then `x\y\`, then `x\y\z\`) to find the
@@ -325,7 +334,8 @@ Rules:
 
 `%APPDATA%\MediQuant\FileAuditor\settings.json`, per Windows user. Holds every input: server, database, table, path column, ID column, empty-files option, project folder,
 project stage, audit stage (default Interim), custom-location flag, custom location, custom file name. No credentials. Loaded on launch (missing or unreadable file → defaults);
-saved when a run starts and when the app closes, using a temp file + `File.Move(overwrite: true)`. Window size and position are not saved — the window is fixed-size.
+saved when a run starts and when the app closes, using a temp file + `File.Move(overwrite: true)`. A null string value or an undefined enum value in the file falls
+back, field by field, to its default; other values are kept. Window size and position are not saved — the window is fixed-size.
 
 ## 9. Code shape
 
