@@ -139,21 +139,21 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 - Produces: `MainWindowViewModel` — `bool IsRunning`, `AppSettings Snapshot()`, commands `StartCommand`, `StopCommand`, `ViewReportCommand`, `AboutCommand`, `ExitCommand`
   (Start/Stop bodies are stubs until Task 7; their `CanExecute` rules are final here, per SDD §5.8).
 
-- [ ] **Step 1:** Group views per SDD §5.1–5.4 and the mock-ups: labels with colons and unique access keys, `(Optional)` note, the checkbox (default ticked), Project folder
+- [x] **Step 1:** Group views per SDD §5.1–5.4 and the mock-ups: labels with colons and unique access keys, `(Optional)` note, the checkbox (default ticked), Project folder
   watermark `D12345`, two radio group boxes, the custom checkbox, Location + `B_rowse...`, File name, the stats grid, progress bar, and the command row (`_View Report`
   left; `S_tart`, `St_op` right). Buttons ≥ 75 × 23.
-- [ ] **Step 2:** `ReportViewModel` rules: Sample forces Interim and disables Audit Stage; back to Final re-enables and keeps Interim; Custom ticked disables Project folder and
+- [x] **Step 2:** `ReportViewModel` rules: Sample forces Interim and disables Audit Stage; back to Final re-enables and keeps Interim; Custom ticked disables Project folder and
   both stage groups, makes Location and File name editable (Location empty, File name `FileAuditorReport.txt` the first time it is ticked); unticked shows read-only built
   previews. Browse opens `StorageProvider.OpenFolderPickerAsync` (single folder).
-- [ ] **Step 3:** `MainWindow`: fixed size (`CanResize="False"`, `SizeToContent="WidthAndHeight"` or fixed dimensions — builder's choice), menu bar (`_File`: Start F5, Stop
+- [x] **Step 3:** `MainWindow`: fixed size (`CanResize="False"`, `SizeToContent="WidthAndHeight"` or fixed dimensions — builder's choice), menu bar (`_File`: Start F5, Stop
   Esc, View Report Ctrl+R, separator, Exit Alt+F4; `_Help`: About File Auditor), two-pane status bar. Keep the `.axaml` ≤ 100 lines. View Report opens the file with
   `Process.Start(new ProcessStartInfo(path) { UseShellExecute = true })`.
-- [ ] **Step 4:** About window: modal, fixed-size, app icon, `File Auditor`, `Version 1.0.0` (from the assembly), `Copyright © 2026 MediQuant`, `OK` (default + cancel button).
-- [ ] **Step 5:** App start: `SettingsStore.Load` (error → defaults); app close: `Save(Snapshot())` (error → ignore silently; record the ruling in the ledger).
-- [ ] **Step 6: Verify.** Build; run; screenshot each of the four Report states and compare with `report-section-states.html`; confirm Start is disabled with empty inputs
+- [x] **Step 4:** About window: modal, fixed-size, app icon, `File Auditor`, `Version 1.0.0` (from the assembly), `Copyright © 2026 MediQuant`, `OK` (default + cancel button).
+- [x] **Step 5:** App start: `SettingsStore.Load` (error → defaults); app close: `Save(Snapshot())` (error → ignore silently; record the ruling in the ledger).
+- [x] **Step 6: Verify.** Build; run; screenshot each of the four Report states and compare with `report-section-states.html`; confirm Start is disabled with empty inputs
   and enabled once filled; type values, close, reopen → values restored from `%APPDATA%\MediQuant\FileAuditor\settings.json`; corrupt the file → app opens with defaults.
   Open Help → About. Close the app.
-- [ ] **Step 7: Commit** `feat(✨): add the File Auditor main window and About box`.
+- [x] **Step 7: Commit** `feat(✨): add the File Auditor main window and About box`.
 
 ### Task 5: File checker
 
@@ -169,11 +169,11 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
   `UnverifiedOther` (e.g. `"I/O error"`, the exception message).
 - Produces: `sealed class FileChecker(bool reportEmptyFiles)` — `CheckResult Check(IndexRow row)`, thread-safe, one instance per run.
 
-- [ ] **Step 1:** `Win32ErrorMapper.Map(Exception) → (CheckOutcome, string? reason, string? message)` using `ex.HResult & 0xFFFF` and the exception type:
+- [x] **Step 1:** `Win32ErrorMapper.Map(Exception) → (CheckOutcome, string? reason, string? message)` using `ex.HResult & 0xFFFF` and the exception type:
   2, 3, `FileNotFoundException`, `DirectoryNotFoundException` → `MissingDoesNotExist`; 5, `UnauthorizedAccessException` → `UnverifiedPermissionDenied`; 51, 53, 64,
   1222, 1231 → `UnverifiedNetworkUnreachable`; 15, 67 → `UnverifiedDriveOrShareNotFound`; 206, `PathTooLongException` → `UnverifiedPathTooLong`; 123, 161,
   `ArgumentException`, `NotSupportedException` → `UnverifiedInvalidCharacters`; anything else → `UnverifiedOther` with reason `"I/O error"` and `ex.Message`.
-- [ ] **Step 2:** `Check` in this order (never `File.Exists` / `Directory.Exists`):
+- [x] **Step 2:** `Check` in this order (never `File.Exists` / `Directory.Exists`):
   1. Blank or whitespace path → `UnverifiedPathEmpty`. Not rooted, or contains `Path.GetInvalidPathChars()` / `*` / `?` → `UnverifiedInvalidCharacters`.
   2. Root (`Path.GetPathRoot`; for UNC `\\server\share\`) — cached in a `ConcurrentDictionary`. Probe with `File.GetAttributes(root)`: success → reachable; a mapped
      `MissingDoesNotExist` or `UnverifiedDriveOrShareNotFound` → `UnverifiedDriveOrShareNotFound`; any other mapped failure → that outcome for every file under it.
@@ -184,13 +184,13 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
      file's parent with `File.GetAttributes`. The first that fails with a short-circuit outcome is cached with that outcome (and reason/message) and returned for this file;
      one that maps to `MissingDoesNotExist` makes this file `MissingDoesNotExist`; if all succeed, return the file's own outcome and cache nothing.
   Directory keys are compared with `StringComparer.OrdinalIgnoreCase`, normalised with a trailing separator.
-- [ ] **Step 3: Verify.** Build.
-- [ ] **Step 4: Verify behaviour** with a throwaway harness under the scratchpad (not committed) against a fixture tree created in `%TEMP%\FileAuditorFixture\`: a present
+- [x] **Step 3: Verify.** Build.
+- [x] **Step 4: Verify behaviour** with a throwaway harness under the scratchpad (not committed) against a fixture tree created in `%TEMP%\FileAuditorFixture\`: a present
   file, a 0-byte file (with `reportEmptyFiles` on and off), a missing file, a missing folder, `ok\a.txt` beside `denied\b.txt` and `denied\deep\c.txt` where `denied` has an
   `icacls /deny "%USERNAME%":(RX)` ACE (remove the ACE and the tree afterwards), an unmapped drive letter (e.g. `Q:\x.txt` — check it is unmapped first),
   `\\FileAuditorNoSuchHost\share\x.txt` × 200 (must finish in seconds after the first), `\\localhost\FileAuditorNoSuchShare\x.txt`, `""`, `C:\bad|name.txt`, and a
   300-character path. Every row lands in the outcome the SDD table names, and `ok\a.txt` stays `Found`.
-- [ ] **Step 5: Commit** `feat(✨): check files and classify missing and unverified outcomes`.
+- [x] **Step 5: Commit** `feat(✨): check files and classify missing and unverified outcomes`.
 
 ### Task 6: Report builder and writer
 
@@ -207,15 +207,15 @@ ErrorOr 2.1.1 · Microsoft.Data.SqlClient 7.1.1 · System.Text.Json (in-box, sou
 - Produces: `static string ReportBuilder.Build(AuditReport report)`; `static ErrorOr<Success> ReportWriter.Write(string fullPath, string content)`.
 - Produces: `static class ReportErrors` — `Error FolderMissing(string folder)`, `Error Unwritable(string detail)`.
 
-- [ ] **Step 1:** `Build` produces SDD §7 exactly: header block with label column padded to 17 characters; `ID column: (none)`; `Empty files: Reported as missing` /
+- [x] **Step 1:** `Build` produces SDD §7 exactly: header block with label column padded to 17 characters; `ID column: (none)`; `Empty files: Reported as missing` /
   `Not reported`; Project lines omitted for custom; `Result: Completed` / `Stopped by user` / `Failed — <message>`; Summary with `N0` counts and `Not checked:` only
   when not Completed; Missing groups `Empty` then `Does not exist`; Unverified groups in enum order with titles `Drive or share not found`, `Permission denied`,
   `Network location unreachable`, `Path too long`, `Invalid characters in path`, `Path is empty in the index table`, `Other errors`; `[<Title> (<n>)]` headers;
   `No missing files.` / `No unverified files.`; file lines `<IdColumn> <Id>` padded to the longest in the group + 3 spaces, then the path (paths padded likewise in
   *Other errors*, then reason padded, then message); rows sorted by path with `StringComparer.OrdinalIgnoreCase`; underlines match title length; CRLF.
-- [ ] **Step 2:** `Write`: UTF-8 without BOM to `<name>.tmp` in the same folder, then `File.Move(overwrite: true)`; I/O failure → `ReportErrors.Unwritable`.
-- [ ] **Step 3: Verify.** Build. With the throwaway harness, build reports for: all found; the SDD §7 sample data; a Stopped run; no ID column. Diff by eye against SDD §7.
-- [ ] **Step 4: Commit** `feat(✨): build and write the plain-text audit report`.
+- [x] **Step 2:** `Write`: UTF-8 without BOM to `<name>.tmp` in the same folder, then `File.Move(overwrite: true)`; I/O failure → `ReportErrors.Unwritable`.
+- [x] **Step 3: Verify.** Build. With the throwaway harness, build reports for: all found; the SDD §7 sample data; a Stopped run; no ID column. Diff by eye against SDD §7.
+- [x] **Step 4: Commit** `feat(✨): build and write the plain-text audit report`.
 
 ### Task 7: Audit runner, pre-flight dialogues and run control
 
