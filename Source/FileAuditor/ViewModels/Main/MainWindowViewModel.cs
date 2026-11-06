@@ -44,7 +44,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Database = new DatabaseViewModel(settings);
         FileIndexTable = new FileIndexTableViewModel(settings);
         Report = new ReportViewModel(settings);
-        Progress = new ProgressViewModel();
+        Audit = new AuditViewModel();
 
         Database.PropertyChanged += OnInputChanged;
         FileIndexTable.PropertyChanged += OnInputChanged;
@@ -68,8 +68,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>Gets the Report group.</summary>
     public ReportViewModel Report { get; }
 
-    /// <summary>Gets the Progress group and status bar.</summary>
-    public ProgressViewModel Progress { get; }
+    /// <summary>Gets the Audit group and status bar.</summary>
+    public AuditViewModel Audit { get; }
 
     /// <summary>Gets or sets a value indicating whether an audit is running; every input is disabled while it is.</summary>
     [ ObservableProperty ]
@@ -192,8 +192,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         _auditCts = cts;
 
-        Progress.Reset();
-        Progress.StatusMessage = progress.Phase;
+        Audit.Reset();
+        Audit.StatusMessage = progress.Phase;
         IsRunning = true;
 
         DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(RefreshMilliseconds) };
@@ -223,7 +223,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         // The final status is shown before any error dialogue, so the window behind it already reads correctly.
         (string status, string? error) = Describe(outcome);
 
-        Progress.StatusMessage = status;
+        Audit.StatusMessage = status;
         IsRunning = false;
 
         if (error is not null)
@@ -260,11 +260,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void Refresh(AuditProgress progress, Stopwatch clock, bool isFinished)
     {
-        Progress.Update(progress, clock.Elapsed, isFinished);
+        Audit.Update(progress, clock.Elapsed, isFinished);
 
         if (!isFinished)
         {
-            Progress.StatusMessage = progress.Phase;
+            Audit.StatusMessage = progress.Phase;
         }
     }
 

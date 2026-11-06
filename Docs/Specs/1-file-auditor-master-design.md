@@ -107,7 +107,7 @@ bottom, left to right.
 
 Layout, top to bottom. The approved mock-ups are [`main-window-layout.html`](../UserInterfaceDesign/Mockups/main-window-layout.html) and
 [`report-section-states.html`](../UserInterfaceDesign/Mockups/report-section-states.html). They are a design reference only: the latter's state 1 predates the Interim
-default for Audit Stage, and both predate the final Report-file rows and the access keys. The XAML and this section are the contract.
+default for Audit Stage, and both predate the final Report-file rows, the access keys and the *Audit* group (named *Progress* there). The XAML and this section are the contract.
 
 ```text
 ┌ File Auditor ─────────────────────────────────────── _ × ┐
@@ -131,7 +131,7 @@ default for Audit Stage, and both predate the final Report-file rows and the acc
 │ │ Location:     [U:\Projects\D12345\DE\Final\ ] Browse...│ │
 │ │ File name:    [FileAuditorReport_Interim.txt       ] │ │
 │ └──────────────────────────────────────────────────────┘ │
-│ ┌ Progress ────────────────────────────────────────────┐ │
+│ ┌ Audit ───────────────────────────────────────────────┐ │
 │ │ Total files:  124,500     Elapsed:       00:02:14    │ │
 │ │ Checked:      61,200      Remaining:     00:02:18    │ │
 │ │ Missing:      12          Files/second:  456.72      │ │
@@ -170,7 +170,7 @@ default for Audit Stage, and both predate the final Report-file rows and the acc
   - *Ticked (custom):* Project folder and both stage groups are disabled. Location becomes an editable directory path, empty by default, with **Browse...** opening a
     *folder* picker (directories only). File name becomes editable, defaulting to `FileAuditorReport.txt`.
 
-### 5.4 Progress group
+### 5.4 Audit group
 
 - Read-only statistics in two columns: **Total files**, **Checked**, **Missing**, **Unverified**; **Elapsed**, **Remaining**, **Files/second**. Counts use thousands
   separators (`N0`); times are `hh:mm:ss`; rate has two decimals. Blank before the first run.
@@ -364,7 +364,7 @@ XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj
 
 - `Startup/` — `App` and `Program`.
 - `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`) and `Groups/` (a `UserControl` per group box: Database, File Index
-  Table, Report, Progress).
+  Table, Report, Audit).
 - `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon`) and `Groups/`.
 - `Services/` — `Settings/` (settings store), `Sql/` (connection strings, SQL identifiers, query builder, index table reader), `Checking/` (file checker and Win32 error
   mapper), `Auditing/` (audit runner, pre-flight checker, request and progress types), `Reporting/` (report builder, writer and path resolver) and `Dialogues/` (dialogue

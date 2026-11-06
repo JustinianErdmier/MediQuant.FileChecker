@@ -27,14 +27,14 @@
             </MenuItem>
         </Menu>
         <cc:StatusBar DockPanel.Dock="Bottom">
-            <cc:StatusBarItem Content="{Binding Progress.StatusMessage}" />
-            <cc:StatusBarItem Content="{Binding Progress.StatusPercent}" HorizontalAlignment="Right" Width="60" />
+            <cc:StatusBarItem Content="{Binding Audit.StatusMessage}" />
+            <cc:StatusBarItem Content="{Binding Audit.StatusPercent}" HorizontalAlignment="Right" Width="60" />
         </cc:StatusBar>
         <StackPanel Margin="4" Spacing="2">
             <groups:DatabaseView DataContext="{Binding Database}" IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
             <groups:FileIndexTableView DataContext="{Binding FileIndexTable}" IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
             <groups:ReportView DataContext="{Binding Report}" IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
-            <groups:ProgressView DataContext="{Binding Progress}" />
+            <groups:AuditView DataContext="{Binding Audit}" />
         </StackPanel>
     </DockPanel>
 </ClassicWindow>

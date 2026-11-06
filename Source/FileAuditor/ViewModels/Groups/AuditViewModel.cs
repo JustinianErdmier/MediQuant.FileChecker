@@ -1,9 +1,9 @@
 namespace FileAuditor.ViewModels.Groups;
 
 /// <summary>
-///     The Progress group and status bar: read-only run statistics as display strings, blank before the first run.
+///     The Audit group and status bar: read-only run statistics as display strings, blank before the first run.
 /// </summary>
-public sealed partial class ProgressViewModel : ObservableObject
+public sealed partial class AuditViewModel : ObservableObject
 {
     /// <summary>Gets or sets the total number of files, formatted with thousands separators.</summary>
     [ ObservableProperty ]
