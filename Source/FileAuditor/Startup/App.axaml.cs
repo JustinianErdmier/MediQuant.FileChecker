@@ -1,12 +1,9 @@
-using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Markup.Xaml;
-
+using FileAuditor.ViewModels.Main;
 using FileAuditor.Views.Main;
 
 namespace FileAuditor.Startup;
 
-/// <summary>The File Auditor application: loads the Classic theme and shows the main window.</summary>
+/// <summary>The File Auditor application: loads the Classic theme and the saved settings, and shows the main window.</summary>
 public partial class App : Application
 {
     /// <inheritdoc />
@@ -20,7 +17,17 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow();
+            SettingsStore store = new();
+
+            // An unreadable settings file is treated as "use the defaults".
+            ErrorOr<AppSettings> loaded = store.Load();
+            AppSettings settings = loaded.IsError ? AppSettings.Default : loaded.Value;
+            MainWindowViewModel viewModel = new(settings);
+
+            desktop.MainWindow = new MainWindow { DataContext = viewModel };
+
+            // A failed save is deliberately ignored: the user loses nothing but the convenience of remembered inputs.
+            desktop.Exit += (_, _) => store.Save(viewModel.Snapshot());
         }
 
         base.OnFrameworkInitializationCompleted();

@@ -1,4 +1,3 @@
-using FileAuditor.Models.Settings;
 
 namespace FileAuditor.Common.Serialisation;
 

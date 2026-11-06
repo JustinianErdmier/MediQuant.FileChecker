@@ -1,4 +1,5 @@
-using Classic.Avalonia.Theme;
+using FileAuditor.ViewModels.Main;
+using FileAuditor.Views.About;
 
 namespace FileAuditor.Views.Main;
 
@@ -9,5 +10,20 @@ public partial class MainWindow : ClassicWindow
     public MainWindow()
     {
         InitializeComponent();
+
+        // The report may have been created or deleted while another program had focus.
+        Activated += (_, _) => (DataContext as MainWindowViewModel)?.RefreshReportState();
+    }
+
+    /// <inheritdoc />
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.AboutRequested += async (_, _) => await new AboutWindow().ShowDialog(this);
+            viewModel.ExitRequested += (_, _) => Close();
+        }
     }
 }

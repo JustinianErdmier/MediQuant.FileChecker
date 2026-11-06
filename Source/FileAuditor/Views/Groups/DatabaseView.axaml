@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ct="clr-namespace:Classic.Avalonia.Theme.Controls;assembly=Classic.Avalonia.Theme"
+             xmlns:vm="clr-namespace:FileAuditor.ViewModels.Groups"
+             mc:Ignorable="d" d:DesignWidth="480"
+             d:DesignHeight="90"
+             x:Class="FileAuditor.Views.Groups.DatabaseView"
+             x:DataType="vm:DatabaseViewModel">
+    <Design.DataContext>
+        <vm:DatabaseViewModel />
+    </Design.DataContext>
+    <ct:GroupBox Header="Database" Margin="4,2">
+        <Grid ColumnDefinitions="92,*" RowDefinitions="Auto,Auto" RowSpacing="6" Margin="4">
+            <Label Content="_Server:" Target="{Binding #ServerBox}" VerticalAlignment="Center" />
+            <TextBox x:Name="ServerBox" Grid.Column="1" Text="{Binding Server}" />
+            <Label Grid.Row="1" Content="_Database:" Target="{Binding #DatabaseBox}" VerticalAlignment="Center" />
+            <TextBox x:Name="DatabaseBox" Grid.Row="1" Grid.Column="1" Text="{Binding Database}" />
+        </Grid>
+    </ct:GroupBox>
+</UserControl>

@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ct="clr-namespace:Classic.Avalonia.Theme.Controls;assembly=Classic.Avalonia.Theme"
+             xmlns:vm="clr-namespace:FileAuditor.ViewModels.Groups"
+             mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="230"
+             x:Class="FileAuditor.Views.Groups.ReportView"
+             x:DataType="vm:ReportViewModel">
+    <Design.DataContext>
+        <vm:ReportViewModel />
+    </Design.DataContext>
+    <ct:GroupBox Header="Report" Margin="4,2">
+        <Grid ColumnDefinitions="92,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6" Margin="4">
+            <Label Content="Pro_ject folder:" Target="{Binding #ProjectFolderBox}" IsEnabled="{Binding IsBuilt}" VerticalAlignment="Center" />
+            <Grid Grid.Column="1" Grid.ColumnSpan="2" ColumnDefinitions="140,*">
+                <TextBox x:Name="ProjectFolderBox" Watermark="D12345" Text="{Binding ProjectFolder}" IsEnabled="{Binding IsBuilt}" />
+            </Grid>
+            <Grid Grid.Row="1" Grid.ColumnSpan="3" ColumnDefinitions="*,*" ColumnSpacing="6">
+                <ct:GroupBox Header="Project Stage" IsEnabled="{Binding IsBuilt}">
+                    <StackPanel Orientation="Horizontal" Spacing="14" Margin="4">
+                        <RadioButton GroupName="ProjectStage" Content="Sa_mple" IsChecked="{Binding IsSampleProject}" />
+                        <RadioButton GroupName="ProjectStage" Content="Fi_nal" IsChecked="{Binding IsFinalProject}" />
+                    </StackPanel>
+                </ct:GroupBox>
+                <ct:GroupBox Grid.Column="1" Header="Audit Stage" IsEnabled="{Binding IsAuditStageEnabled}">
+                    <StackPanel Orientation="Horizontal" Spacing="14" Margin="4">
+                        <RadioButton GroupName="AuditStage" Content="Inte_rim" IsChecked="{Binding IsInterimAudit}" />
+                        <RadioButton GroupName="AuditStage" Content="Fina_l" IsChecked="{Binding IsFinalAudit}" />
+                    </StackPanel>
+                </ct:GroupBox>
+            </Grid>
+            <CheckBox Grid.Row="2" Grid.ColumnSpan="3" Content="_Use a custom report location and file name" IsChecked="{Binding UseCustomLocation}" />
+            <Label Grid.Row="3" Content="Lo_cation:" Target="{Binding #LocationBox}" VerticalAlignment="Center" />
+            <TextBox x:Name="LocationBox" Grid.Row="3" Grid.Column="1" Text="{Binding Location}" IsReadOnly="{Binding IsBuilt}" />
+            <Button x:Name="BrowseButton" Grid.Row="3" Grid.Column="2" Content="_Browse..." MinWidth="75" MinHeight="23" Margin="6,0,0,0"
+                    HorizontalContentAlignment="Center" IsEnabled="{Binding UseCustomLocation}" Click="OnBrowseClick" />
+            <Label Grid.Row="4" Content="File nam_e:" Target="{Binding #FileNameBox}" VerticalAlignment="Center" />
+            <TextBox x:Name="FileNameBox" Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding FileName}" IsReadOnly="{Binding IsBuilt}" />
+        </Grid>
+    </ct:GroupBox>
+</UserControl>
