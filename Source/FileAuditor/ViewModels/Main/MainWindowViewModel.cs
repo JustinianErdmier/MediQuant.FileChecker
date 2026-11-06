@@ -307,7 +307,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or FileNotFoundException)
         {
-            await _dialogues.ShowErrorAsync($"The report could not be opened:\n{path}\n\n{ex.Message}");
+            await _dialogues.ShowErrorAsync($"The report could not be opened:\n{PathText.Breakable(path)}\n\n{ex.Message}");
         }
     }
 

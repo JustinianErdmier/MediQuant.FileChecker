@@ -43,7 +43,8 @@ public sealed class PreflightChecker(DialogueService dialogues)
 
             if (!Path.IsPathFullyQualified(report.Directory))
             {
-                await dialogues.ShowErrorAsync($"The report location must be a full path, such as C:\\Reports or \\\\server\\share\\Reports:\n{report.Directory}");
+                await dialogues.ShowErrorAsync(
+                    $"The report location must be a full path, such as C:\\Reports or \\\\server\\share\\Reports:\n{PathText.Breakable(report.Directory)}");
 
                 return null;
             }
@@ -54,12 +55,12 @@ public sealed class PreflightChecker(DialogueService dialogues)
         {
             if (!report.IsCustom)
             {
-                await dialogues.ShowErrorAsync($"The report folder does not exist:\n{report.Directory}");
+                await dialogues.ShowErrorAsync($"The report folder does not exist:\n{PathText.Breakable(report.Directory)}");
 
                 return null;
             }
 
-            if (!await dialogues.ConfirmAsync($"The report folder does not exist:\n{report.Directory}\n\nDo you want to create it?", "_Create Folder"))
+            if (!await dialogues.ConfirmAsync($"The report folder does not exist:\n{PathText.Breakable(report.Directory)}\n\nDo you want to create it?", "_Create Folder"))
             {
                 return null;
             }
@@ -68,7 +69,7 @@ public sealed class PreflightChecker(DialogueService dialogues)
 
             if (failure is not null)
             {
-                await dialogues.ShowErrorAsync($"The report folder could not be created:\n{report.Directory}\n\n{failure}");
+                await dialogues.ShowErrorAsync($"The report folder could not be created:\n{PathText.Breakable(report.Directory)}\n\n{failure}");
 
                 return null;
             }
@@ -94,7 +95,7 @@ public sealed class PreflightChecker(DialogueService dialogues)
                 return null;
             }
 
-            if (!await dialogues.ConfirmAsync($"The report already exists:\n{report.FullPath}\n\nDo you want to overwrite it?", "_Overwrite"))
+            if (!await dialogues.ConfirmAsync($"The report already exists:\n{PathText.Breakable(report.FullPath)}\n\nDo you want to overwrite it?", "_Overwrite"))
             {
                 return null;
             }

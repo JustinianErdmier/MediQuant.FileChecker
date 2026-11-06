@@ -101,7 +101,8 @@ bottom, left to right.
 - **Ellipsis (`...`)** only on a command that needs more input before it completes (e.g. *Browse...*). A command that acts immediately — including opening a file in
   another program, like *View Report* — has none.
 - **Menus:** *File* ends with *Exit*; *Help* ends with *About File Auditor*. Menu items mirror the buttons and enable and disable with them.
-- **Dialogues** are modal, fixed-size, with an icon (error, warning or question) and buttons along the bottom right.
+- **Dialogues** are modal, fixed-size, with an icon (error, warning or question) and buttons along the bottom right. A path in dialogue text sits on its own line and
+  wraps only after a `\` or `/` separator, never at a space or hyphen inside a folder name (`PathText.Breakable`).
 - **No modern affordances** that Win9x lacked: no rounded corners, no flyouts, no toast notifications, no accent colours, no hamburger menus.
 
 Layout, top to bottom. The approved mock-ups are [`main-window-layout.html`](../UserInterfaceDesign/Mockups/main-window-layout.html) and
