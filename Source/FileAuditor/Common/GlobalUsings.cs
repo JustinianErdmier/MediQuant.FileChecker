@@ -31,3 +31,5 @@ global using Avalonia.Interactivity;
 global using Avalonia.Platform.Storage;
 global using FileAuditor.Common.Extensions;
 global using Avalonia.VisualTree;
+global using System.Collections.Concurrent;
+global using FileAuditor.Services.Checking;
