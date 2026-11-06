@@ -65,8 +65,11 @@ changes almost everything around it:
 - **ErrorOr** for expected failures: services return `ErrorOr<T>` with custom errors instead of throwing.
 - **Microsoft.Data.SqlClient** for SQL Server.
 - **System.Text.Json** (source-generated context) for settings.
+- **System.Security.Cryptography.Pkcs** pinned as a direct reference to a patched version, because Microsoft.Data.SqlClient 7.1.1 pulls in a vulnerable one
+  (GHSA-846f-f764-76mx, GHSA-2fmv-rv2c-59x7). Remove the pin once SqlClient references a fixed version.
 
-Explicitly not used: Mediator/CQRS, FluentValidation, EF Core/Dapper, Serilog, `System.IO.Abstractions`, test projects.
+Explicitly not used: Mediator/CQRS, FluentValidation, EF Core/Dapper, Serilog, `System.IO.Abstractions`, test projects. No other package is added without the user's
+say.
 
 ## 4. Naming
 
@@ -86,8 +89,20 @@ The existing `Source/FileChecker/` template project and `MediQuant.FileChecker.s
 
 ## 5. The main window
 
-A single, **fixed-size** window (not resizable, no maximise button; minimise and close only). Classic.Avalonia supplies the Win9x chrome. All labels end with a colon; every
-input and button has an access key (underlined letter, Alt+letter); access keys are unique within the window. Tab order runs top to bottom, left to right.
+A single, **fixed-size** window (not resizable, no maximise button; minimise and close only). Classic.Avalonia supplies the Win9x chrome. Tab order runs top to
+bottom, left to right.
+
+**Win9x conventions.** Every window looks and behaves like a native Windows 95/98 utility:
+
+- **Group boxes** organise related inputs; labels sit to the left of their inputs and end with a colon.
+- **Access keys** on every label, input, button and menu item (`_` prefix in XAML), unique within a window. The exception is *OK* and *Cancel* in message dialogues (§11).
+- **Command buttons** are 75 × 23 minimum, laid out horizontally; the action comes first, the escape after it (*Start* then *Stop*, *OK* then *Cancel*, *Overwrite*
+  then *Cancel*).
+- **Ellipsis (`...`)** only on a command that needs more input before it completes (e.g. *Browse...*). A command that acts immediately — including opening a file in
+  another program, like *View Report* — has none.
+- **Menus:** *File* ends with *Exit*; *Help* ends with *About File Auditor*. Menu items mirror the buttons and enable and disable with them.
+- **Dialogues** are modal, fixed-size, with an icon (error, warning or question) and buttons along the bottom right.
+- **No modern affordances** that Win9x lacked: no rounded corners, no flyouts, no toast notifications, no accent colours, no hamburger menus.
 
 Layout, top to bottom. The approved mock-ups are [`main-window-layout.html`](../UserInterfaceDesign/Mockups/main-window-layout.html) and
 [`report-section-states.html`](../UserInterfaceDesign/Mockups/report-section-states.html). They are a design reference only: the latter's state 1 predates the Interim
@@ -325,6 +340,8 @@ Rules:
 
 - Group titles and their counts are wrapped in square brackets, each on its own line, with a blank line between groups.
 - A group with no files is omitted. A section with no groups reads `No missing files.` / `No unverified files.`
+- With no ID column set, a file line is just the path, so a row in *[Path is empty in the index table]* prints as a **blank line** — one per such row, so the
+  group's count still matches its lines. This is intended; the user guide should call it out.
 - `ID column:` reads `(none)` when not set. `Empty files:` reads `Reported as missing` or `Not reported`. The Project folder / stage lines are omitted when a custom location
   is used.
 - Missing groups appear in the order *Empty*, *Does not exist*; Unverified groups in the order of the table in §6.3, *Other errors* last.
@@ -355,7 +372,14 @@ icon artwork. The code folders are:
 - `Common/` — `GlobalUsings.cs`; `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/` (`ClassicWindow` helpers); `Serialisation/`
   (the source-generated settings JSON context).
 
-There is no dependency-injection container requirement; the builder may wire services by hand in `App` or use `Microsoft.Extensions.DependencyInjection`.
+Services are wired by hand in `App`; there is no dependency-injection container. `MainWindow.axaml` composes the group-box views and holds the menu bar, command row
+and status bar; it stays at 100 lines or fewer by pushing content into the group-box `UserControl`s.
+
+**Errors.** Services return `ErrorOr<T>`: expected failures (bad input, SQL errors, an unwritable report, unreadable settings) are values with custom errors from
+`Common/Errors/`, not exceptions. Exceptions are caught at the boundary where they occur (SQL, file system) and translated into errors or check outcomes. SQL access is
+plain `Microsoft.Data.SqlClient`, with no ORM.
+
+**Storage.** The app writes only the per-user settings file (§8) and the report (§7) — never anything beside its executable, which runs from a shared file server.
 
 ## 10. Builder's calls (decided by Claude, not the user)
 
@@ -388,3 +412,29 @@ Settled by the build (milestone 1), with no change in behaviour:
   total hours (at least two digits), not rolled over into days.
 - **Full-path validation:** a path is accepted as absolute only if `Path.IsPathFullyQualified` says so, so `C:x` and `\x` (which would resolve against the application's
   current drive or folder) count as *Invalid characters in path*.
+
+## 12. Code conventions
+
+- **One type per file, no exceptions.** Class, record, struct, interface, enum and delegate each in its own file, named after the type, in a folder mirroring the
+  namespace.
+- **No code files at the project root** (§9). `App` and `Program` live under `Startup/`, not `Application/`, whose namespace would shadow Avalonia's `Application`.
+- **Usings** are consolidated in `Common/GlobalUsings.cs`; a local `using` only for a namespace conflict or an alias. **File-scoped namespaces** everywhere.
+- **British English** in comments, XML doc text, UI copy, commit messages, Markdown, and identifier wording where there is a choice (`Initialise`, `Behaviour`,
+  `Colour`, `Dialogue`). A US spelling fixed by an external API (`System.IO`, `Color`, `Dialog`) stays.
+- **XML doc comments on every public type and member** (`<summary>`, `<param>`, `<returns>`, `<remarks>`, `<exception>` as appropriate); `//` comments only for inline
+  implementation notes. `<c>…</c>` and `<code>…</code>` carry no inside whitespace.
+- **Spaced attribute brackets:** `[ STAThread ]`, `[ ObservableProperty ]`, `[ RelayCommand ]`.
+- **Vertical spacing:** consecutive statements of different kinds (e.g. a declaration followed by an invocation) are separated by a blank line; like statements are
+  grouped. Every `if` has braces.
+- **UTC internally, local at the boundary.** Timestamps are captured and carried in UTC (`Utc` suffix on names) and converted to local time only for display and the
+  report.
+- **Source-generated MVVM:** `[ ObservableProperty ]` on `partial` properties, `[ RelayCommand ]` on private methods; no hand-rolled INPC. **Compiled bindings:** every
+  XAML file declares `x:DataType`.
+- **Designer constructors:** view models expose a parameterless constructor for the XAML designer only, built from `AppSettings.Default` and parameterless concrete
+  services. No interfaces are introduced just for the designer.
+- **View composition pair rule:** every public `*ViewModel` has a sibling `*View.axaml` under the parallel `Views/…` folder, and vice versa. Windows are the exception
+  to the `*View` suffix: `MainWindow`, `AboutWindow` and `MessageDialogueWindow` pair with `MainWindowViewModel`, `AboutWindowViewModel` and
+  `MessageDialogueViewModel`.
+- **User-data writes** (settings, the report) use a temp file + `File.Move(overwrite: true)`, never an in-place write.
+- **Never `File.Exists` / `Directory.Exists` inside the audit check** (§6.3): they turn "couldn't check" into "missing". Pre-flight checks of the report folder may
+  use them.

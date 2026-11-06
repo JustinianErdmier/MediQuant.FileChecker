@@ -67,15 +67,13 @@ Taken by the user, not rulings.
 
 ### For the user
 
-- **NU1902/NU1903 warnings** from the transitive `System.Security.Cryptography.Pkcs` 9.0.18 (ruling R3). Pinning a patched version as a direct package reference would clear
-  them; that needs a package-policy decision.
+- **NU1902/NU1903 warnings** from the transitive `System.Security.Cryptography.Pkcs` 9.0.18 (ruling R3). **Resolved by the user's decision:** pinned to 10.0.14 as a
+  direct reference; the build now has no warnings (SDD §3).
 - **`\\?\` paths stay *Invalid characters in path*** (ruling R11).
-- **No-ID empty-path row** renders as a blank line (ruling R14); a placeholder would need the user's say.
-- **CLAUDE.md drift** (ruling R20), to amend at the user's discretion:
-  - the pair-rule exception does not name the dialogue windows;
-  - the Dialogues icons are listed as error/warning/information, but the code has Question rather than Information;
-  - the Architecture `Views/` bullet omits `Dialogues/`;
-  - the `Services/` bullet mentions "launcher helpers", which do not exist.
+- **No-ID empty-path row** renders as a blank line (ruling R14). **Accepted by the user** as intended; SDD §7 now says so, for the user guide to call out.
+- **CLAUDE.md drift** (ruling R20). **Resolved by the user's decision:** CLAUDE.md now holds only repository context and rules for Claude, and points to the SDD; the
+  design and code decisions it used to repeat (Win9x conventions, architecture, code conventions, including the pair-rule exception for `MessageDialogueWindow` and the
+  error / warning / question icons) moved into SDD §5, §9 and §12.
 
 ### Later / nice to have
 
