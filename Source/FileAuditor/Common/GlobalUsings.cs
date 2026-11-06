@@ -23,6 +23,7 @@ global using Classic.Avalonia.Theme;
 global using CommunityToolkit.Mvvm.ComponentModel;
 global using CommunityToolkit.Mvvm.Input;
 global using FileAuditor.Models.Settings;
+global using FileAuditor.Models.Reporting;
 global using FileAuditor.Services.Reporting;
 global using FileAuditor.Services.Settings;
 global using FileAuditor.ViewModels.Groups;
