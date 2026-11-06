@@ -206,7 +206,9 @@ public sealed class FileChecker(bool reportEmptyFiles)
                 }
 
                 if (mapped.Outcome == CheckOutcome.MissingDoesNotExist)
+                {
                     return ToResult(row, mapped);
+                }
             }
         }
 
@@ -227,7 +229,9 @@ public sealed class FileChecker(bool reportEmptyFiles)
             string key = AsDirectoryKey(directory);
 
             if (key.Length <= root.Length)
+            {
                 break;
+            }
 
             ancestors.Add(key);
             directory = Path.GetDirectoryName(directory);

@@ -1,6 +1,3 @@
-using FileAuditor.ViewModels.Main;
-using FileAuditor.Views.Main;
-
 namespace FileAuditor.Startup;
 
 /// <summary>The File Auditor application: loads the Classic theme and the saved settings, and shows the main window.</summary>

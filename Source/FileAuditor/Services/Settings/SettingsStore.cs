@@ -1,5 +1,3 @@
-using FileAuditor.Common.Serialisation;
-
 namespace FileAuditor.Services.Settings;
 
 /// <summary>

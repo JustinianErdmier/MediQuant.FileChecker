@@ -12,7 +12,7 @@ public static class AuditErrors
     public const string StoppedBeforeCheckingCode = "Audit.StoppedBeforeChecking";
 
     /// <summary>
-    ///     Creates the error for a run the user stopped while the rows were still being counted, so there is nothing to report.
+    ///     Gets the error for a run the user stopped while the rows were still being counted, so there is nothing to report.
     /// </summary>
     public static Error StoppedBeforeChecking { get; } = Error.Conflict(StoppedBeforeCheckingCode, "The audit was stopped before any file was checked.");
 

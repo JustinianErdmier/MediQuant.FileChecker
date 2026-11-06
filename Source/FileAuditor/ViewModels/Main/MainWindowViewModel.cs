@@ -72,7 +72,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ProgressViewModel Progress { get; }
 
     /// <summary>Gets or sets a value indicating whether an audit is running; every input is disabled while it is.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial bool IsRunning { get; set; }
 
     /// <summary>Gets a value indicating whether the inputs are editable, that is, no audit is running.</summary>
@@ -117,6 +117,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _probeCts?.Cancel();
 
         CancellationTokenSource cts = new();
+
         _probeCts = cts;
 
         ReportPath path = Report.Current;
@@ -164,7 +165,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool CanViewReport() => !IsRunning && Report.Current.IsComplete && _reportExists;
 
     // Stays "executing" for the whole run, which also stops a second Start while the pre-flight dialogues are open.
-    [RelayCommand(CanExecute = nameof(CanStart))]
+    [ RelayCommand(CanExecute = nameof(CanStart)) ]
     private async Task StartAsync()
     {
         AppSettings settings = Snapshot();
@@ -265,7 +266,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    [RelayCommand(CanExecute = nameof(CanStop))]
+    [ RelayCommand(CanExecute = nameof(CanStop)) ]
     private void Stop() => _auditCts?.Cancel();
 
     /// <summary>
@@ -293,7 +294,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return true;
     }
 
-    [RelayCommand(CanExecute = nameof(CanViewReport))]
+    [ RelayCommand(CanExecute = nameof(CanViewReport)) ]
     private async Task ViewReportAsync()
     {
         string path = Report.Current.FullPath;
@@ -308,9 +309,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [ RelayCommand ]
     private void About() => AboutRequested?.Invoke(this, EventArgs.Empty);
 
-    [RelayCommand]
+    [ RelayCommand ]
     private void Exit() => ExitRequested?.Invoke(this, EventArgs.Empty);
 }

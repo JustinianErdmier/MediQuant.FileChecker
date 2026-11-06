@@ -1,6 +1,3 @@
-using FileAuditor.ViewModels.Main;
-using FileAuditor.Views.About;
-
 namespace FileAuditor.Views.Main;
 
 /// <summary>The File Auditor main window.</summary>

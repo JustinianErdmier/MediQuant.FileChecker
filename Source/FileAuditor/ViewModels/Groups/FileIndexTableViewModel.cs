@@ -19,19 +19,19 @@ public sealed partial class FileIndexTableViewModel : ObservableObject
     }
 
     /// <summary>Gets or sets the table name, optionally schema-qualified.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial string Table { get; set; } = "";
 
     /// <summary>Gets or sets the name of the column holding file paths.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial string PathColumn { get; set; } = "";
 
     /// <summary>Gets or sets the name of the optional ID column.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial string IdColumn { get; set; } = "";
 
     /// <summary>Gets or sets a value indicating whether zero-byte files are reported as missing.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial bool ReportEmptyFiles { get; set; } = true;
 
     /// <summary>Copies this group's inputs into the given settings.</summary>

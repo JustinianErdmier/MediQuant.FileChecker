@@ -17,6 +17,7 @@ public sealed class IndexTableReader
         try
         {
             await using SqlConnection connection = new(connectionString);
+
             await connection.OpenAsync(ct);
 
             await using SqlCommand command = new(query.CountSql, connection) { CommandTimeout = 0 };
@@ -49,6 +50,7 @@ public sealed class IndexTableReader
         try
         {
             await using SqlConnection connection = new(connectionString);
+
             await connection.OpenAsync(ct);
 
             await using SqlCommand command = new(query.SelectSql, connection) { CommandTimeout = 0 };

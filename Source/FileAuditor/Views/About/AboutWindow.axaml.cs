@@ -1,5 +1,3 @@
-using FileAuditor.ViewModels.About;
-
 namespace FileAuditor.Views.About;
 
 /// <summary>The modal About box.</summary>

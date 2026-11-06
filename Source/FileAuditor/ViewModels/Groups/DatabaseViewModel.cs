@@ -19,11 +19,11 @@ public sealed partial class DatabaseViewModel : ObservableObject
     }
 
     /// <summary>Gets or sets the SQL Server instance name.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial string Server { get; set; } = "";
 
     /// <summary>Gets or sets the database name.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial string Database { get; set; } = "";
 
     /// <summary>Copies this group's inputs into the given settings.</summary>

@@ -26,35 +26,35 @@ public sealed partial class ReportViewModel : ObservableObject
     }
 
     /// <summary>Gets or sets the project folder used to build the report location.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial string ProjectFolder { get; set; } = "";
 
     /// <summary>Gets or sets a value indicating whether the Sample project stage is selected.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial bool IsSampleProject { get; set; }
 
     /// <summary>Gets or sets a value indicating whether the Final project stage is selected.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial bool IsFinalProject { get; set; } = true;
 
     /// <summary>Gets or sets a value indicating whether the Interim audit stage is selected.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial bool IsInterimAudit { get; set; } = true;
 
     /// <summary>Gets or sets a value indicating whether the Final audit stage is selected.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial bool IsFinalAudit { get; set; }
 
     /// <summary>Gets or sets a value indicating whether the report goes to a custom location and file name.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial bool UseCustomLocation { get; set; }
 
     /// <summary>Gets or sets the text of the Location box: a read-only preview when built, the typed folder when custom.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial string Location { get; set; } = "";
 
     /// <summary>Gets or sets the text of the File name box: a read-only preview when built, the typed name when custom.</summary>
-    [ObservableProperty]
+    [ ObservableProperty ]
     public partial string FileName { get; set; } = "";
 
     /// <summary>Gets the report path the current inputs resolve to.</summary>

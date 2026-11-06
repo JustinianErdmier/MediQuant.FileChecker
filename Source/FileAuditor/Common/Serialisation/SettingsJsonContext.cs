@@ -1,4 +1,3 @@
-
 namespace FileAuditor.Common.Serialisation;
 
 /// <summary>
