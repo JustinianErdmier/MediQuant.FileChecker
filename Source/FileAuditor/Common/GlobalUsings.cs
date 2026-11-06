@@ -29,3 +29,5 @@ global using FileAuditor.ViewModels.Groups;
 global using System.Reflection;
 global using Avalonia.Interactivity;
 global using Avalonia.Platform.Storage;
+global using FileAuditor.Common.Extensions;
+global using Avalonia.VisualTree;

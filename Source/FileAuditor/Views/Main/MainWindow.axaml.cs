@@ -11,6 +11,8 @@ public partial class MainWindow : ClassicWindow
     {
         InitializeComponent();
 
+        Opened += (_, _) => this.HideMaximiseButton();
+
         // The report may have been created or deleted while another program had focus.
         Activated += (_, _) => (DataContext as MainWindowViewModel)?.RefreshReportState();
     }

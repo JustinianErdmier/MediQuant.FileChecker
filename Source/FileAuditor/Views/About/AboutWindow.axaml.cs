@@ -10,6 +10,8 @@ public partial class AboutWindow : ClassicWindow
     {
         InitializeComponent();
 
+        Opened += (_, _) => this.HideMaximiseButton();
+
         DataContext = new AboutWindowViewModel();
     }
 
