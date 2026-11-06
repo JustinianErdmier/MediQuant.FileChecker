@@ -240,7 +240,8 @@ The check must not use `File.Exists` alone, because it returns `false` for every
 **Roots are checked once.** The root of each path (a drive letter such as `U:\`, or `\\server\share`) is checked the first time it is seen and the result is cached for
 the run. If the root does not exist, every file under it is *Unverified — Drive or share not found* without being tried. *Missing — Does not exist* is reserved for files
 whose root exists, so an unmapped drive or a missing share can never flood the Missing section. A root confirmed reachable is re-probed when a file under it comes back
-not-found and the root's last confirmation is more than 5 seconds old; if the root is gone, that file and every later file under it are *Unverified — Drive or share not found*.
+not-found and the root's last confirmation is 5 seconds old or more. If the root no longer exists, that file and every later file under it are *Unverified — Drive or
+share not found*; if the root now fails for another reason (permission, network), they take that outcome instead.
 
 Two mappings guard the same rule: a .NET DriveNotFoundException maps to *Unverified — Drive or share not found* (never *Missing*), and a path segment longer than 255
 characters maps to *Unverified — Path too long* before the OS is asked.

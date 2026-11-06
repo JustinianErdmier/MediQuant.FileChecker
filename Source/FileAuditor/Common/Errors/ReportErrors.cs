@@ -19,8 +19,9 @@ public static class ReportErrors
     /// </summary>
     /// <param name="path">The full path of the report.</param>
     /// <returns>A failure error with code <c>Report.ReadOnly</c>.</returns>
-    public static Error ReportReadOnly(string path) =>
+    public static Error ReadOnly(string path) =>
         Error.Failure("Report.ReadOnly", $"The existing report is read-only and cannot be overwritten:\n{path}\n\nClear its read-only attribute, or choose another location.");
+
     /// <summary>
     ///     Creates the error for a report that cannot be written to disk.
     /// </summary>

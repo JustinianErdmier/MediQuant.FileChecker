@@ -89,7 +89,7 @@ public sealed class PreflightChecker(DialogueService dialogues)
             // An existing read-only report would pass the folder probe but fail at the final move, after the whole table had been checked.
             if (await Task.Run(() => IsReadOnly(report.FullPath)))
             {
-                await dialogues.ShowErrorAsync(ReportErrors.ReportReadOnly(report.FullPath).Description);
+                await dialogues.ShowErrorAsync(ReportErrors.ReadOnly(report.FullPath).Description);
 
                 return null;
             }
@@ -137,6 +137,7 @@ public sealed class PreflightChecker(DialogueService dialogues)
             return false;
         }
     }
+
     private static string? TryCreateFolder(string folder)
     {
         try

@@ -122,9 +122,11 @@ Minor findings deferred by the task reviews, none of which affects correctness t
 
 ## Commits
 
-`git log --oneline 69e233e..HEAD` as at the end of fix wave 1, newest first (the fix wave 2 documentation commit follows these):
+`git log --oneline 69e233e..HEAD`, newest first (the closing tidy-up commit that records this list follows these):
 
-```n8d06c19 fix(🐛): pre-flight a read-only report and wrap long lines
+```
+f2c0cdd docs(📝): sync the SDD with the final-review fixes and close the ledger
+8d06c19 fix(🐛): pre-flight a read-only report and wrap long lines
 f8265a7 docs(📝): align mock-ups and plan with the build
 65c41ee style(🎨): apply house conventions across the branch
 e6e30f7 fix(🐛): close final-review correctness gaps
@@ -150,4 +152,6 @@ f8c5637 docs(📝): add the milestone 1 rewrite plan
 ## Final review
 
 The Opus whole-branch review of `69e233e..3887338` found 0 Critical, 4 Important and 13 Minor issues. Fix wave 1 (`e6e30f7`, `65c41ee`, `f8265a7`) addressed them.
-The Opus re-review then found the SDD out of sync and the ledger incomplete. Fix wave 2 (this commit, plus the commit before it, `8d06c19`) closed those.
+The Opus re-review then found the SDD out of sync and the ledger incomplete. Fix wave 2 (`8d06c19`, `f2c0cdd`) closed those.
+The Opus re-review of fix wave 2 found no Critical or Important issues; its four Minor tidy-ups (a broken code fence here, two missing blank lines, the `ReadOnly`
+error name, and two imprecisions in SDD §6.3's root re-probe text) went into one closing commit.
