@@ -60,12 +60,33 @@ public sealed class SettingsStore
                 return SettingsErrors.Unreadable("the file is empty or contains null.");
             }
 
-            return settings;
+            return Normalise(settings);
         }
         catch (JsonException ex)
         {
             return SettingsErrors.Unreadable(ex.Message);
         }
+    }
+
+    // A hand-edited or damaged file can hold null strings or numeric enum values that name nothing; each such value falls back to its default so one bad property
+    // never takes down the others (or the start-up).
+    private static AppSettings Normalise(AppSettings settings)
+    {
+        AppSettings defaults = AppSettings.Default;
+
+        return settings with
+        {
+            Server = settings.Server ?? defaults.Server,
+            Database = settings.Database ?? defaults.Database,
+            Table = settings.Table ?? defaults.Table,
+            PathColumn = settings.PathColumn ?? defaults.PathColumn,
+            IdColumn = settings.IdColumn ?? defaults.IdColumn,
+            ProjectFolder = settings.ProjectFolder ?? defaults.ProjectFolder,
+            ProjectStage = Enum.IsDefined(settings.ProjectStage) ? settings.ProjectStage : defaults.ProjectStage,
+            AuditStage = Enum.IsDefined(settings.AuditStage) ? settings.AuditStage : defaults.AuditStage,
+            CustomLocation = settings.CustomLocation ?? defaults.CustomLocation,
+            CustomFileName = settings.CustomFileName ?? defaults.CustomFileName
+        };
     }
 
     /// <summary>

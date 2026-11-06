@@ -9,6 +9,12 @@ namespace FileAuditor.ViewModels.Dialogues;
 /// <param name="SecondaryText">The escape button's text, or <see langword="null" /> for a dialogue with a single button.</param>
 public sealed record MessageDialogueViewModel(string Message, DialogueIcon Icon, string PrimaryText, string? SecondaryText)
 {
+    /// <summary>Initialises a new instance with placeholder content, for the XAML designer.</summary>
+    public MessageDialogueViewModel()
+        : this("The report folder does not exist.", DialogueIcon.Warning, "_Create Folder", "Cancel")
+    {
+    }
+
     /// <summary>Gets a value indicating whether to show the error icon.</summary>
     public bool IsError => Icon == DialogueIcon.Error;
 

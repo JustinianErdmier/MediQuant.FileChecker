@@ -6,6 +6,15 @@ namespace FileAuditor.Common.Errors;
 public static class ReportErrors
 {
     /// <summary>
+    ///     Creates the error for a report folder that cannot be written to, found by the pre-flight probe before the run starts.
+    /// </summary>
+    /// <param name="folder">The report folder.</param>
+    /// <param name="detail">What went wrong.</param>
+    /// <returns>A failure error with code <c>Report.FolderNotWritable</c>.</returns>
+    public static Error FolderNotWritable(string folder, string detail) =>
+        Error.Failure("Report.FolderNotWritable", $"The report cannot be written to {folder}:\n\n{detail}");
+
+    /// <summary>
     ///     Creates the error for a report that cannot be written to disk.
     /// </summary>
     /// <param name="detail">What went wrong.</param>

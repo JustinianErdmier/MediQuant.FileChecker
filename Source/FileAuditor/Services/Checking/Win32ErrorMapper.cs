@@ -14,6 +14,12 @@ internal static class Win32ErrorMapper
     /// <returns>The outcome; anything unrecognised is <see cref="CheckOutcome.UnverifiedOther" />.</returns>
     public static MappedOutcome Map(Exception ex)
     {
+        // A missing drive carries the same HRESULT as a missing directory (ERROR_PATH_NOT_FOUND), so the type has to be checked first.
+        if (ex is DriveNotFoundException)
+        {
+            return new MappedOutcome(CheckOutcome.UnverifiedDriveOrShareNotFound);
+        }
+
         // Only HRESULTs in the Win32 facility carry a Win32 code in their low word; any other HRESULT must not be misread as one
         // (that could turn an unrelated failure into "does not exist").
         int code = ((ex.HResult >> 16) & 0xFFFF) == Win32Facility ? ex.HResult & 0xFFFF : 0;

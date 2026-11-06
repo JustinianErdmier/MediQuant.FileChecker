@@ -22,6 +22,13 @@ public sealed class PreflightChecker(DialogueService dialogues)
             return null;
         }
 
+        if (!settings.UseCustomReportLocation && !IsSingleFolderName(settings.ProjectFolder.Trim()))
+        {
+            await dialogues.ShowErrorAsync($"The project folder must be a single folder name, not a path, and must not contain characters that are not allowed:\n{settings.ProjectFolder.Trim()}");
+
+            return null;
+        }
+
         ReportPath report = ReportPathResolver.Resolve(settings);
 
         if (report.IsCustom)
@@ -66,6 +73,16 @@ public sealed class PreflightChecker(DialogueService dialogues)
             }
         }
 
+        // Better to learn now that the folder is read-only than after the whole table has been checked.
+        ErrorOr<Success> writable = await Task.Run(() => ProbeWritable(report));
+
+        if (writable.IsError)
+        {
+            await dialogues.ShowErrorAsync(writable.FirstError.Description);
+
+            return null;
+        }
+
         if (await Task.Run(() => File.Exists(report.FullPath)))
         {
             if (!await dialogues.ConfirmAsync($"The report already exists:\n{report.FullPath}\n\nDo you want to overwrite it?", "_Overwrite"))
@@ -75,6 +92,28 @@ public sealed class PreflightChecker(DialogueService dialogues)
         }
 
         return report;
+    }
+
+    private static bool IsSingleFolderName(string folder)
+        => folder.Length > 0
+           && folder is not ("." or "..")
+           && !Path.IsPathRooted(folder)
+           && folder.IndexOfAny(['\\', '/']) < 0
+           && folder.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
+
+    // Creates and immediately removes the temporary file that ReportWriter uses, so the probe leaves nothing behind.
+    private static ErrorOr<Success> ProbeWritable(ReportPath report)
+    {
+        try
+        {
+            using FileStream probe = new(report.FullPath + ".tmp", FileMode.Create, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose);
+
+            return Result.Success;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return ReportErrors.FolderNotWritable(report.Directory, ex.Message);
+        }
     }
 
     private static string? TryCreateFolder(string folder)
