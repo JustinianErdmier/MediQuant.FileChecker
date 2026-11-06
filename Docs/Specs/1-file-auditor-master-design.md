@@ -122,11 +122,11 @@ default for Audit Stage, and both predate the final Report-file rows, the access
 │ │ [ ] Report empty (zero-byte) files as missing        │ │
 │ └──────────────────────────────────────────────────────┘ │
 │ ┌ Report ──────────────────────────────────────────────┐ │
+│ │ [ ] Use a custom report location and file name       │ │
 │ │ Project folder: [D12345  ]                           │ │
 │ │ ┌ Project Stage ─────────┐ ┌ Audit Stage ──────────┐ │ │
 │ │ │ ( ) Sample  (•) Final  │ │ (•) Interim ( ) Final │ │ │
 │ │ └────────────────────────┘ └───────────────────────┘ │ │
-│ │ [ ] Use a custom report location and file name       │ │
 │ │ Location:     [U:\Projects\D12345\DE\Final\ ] Browse...│ │
 │ │ File name:    [FileAuditorReport_Interim.txt       ] │ │
 │ └──────────────────────────────────────────────────────┘ │
@@ -157,12 +157,12 @@ default for Audit Stage, and both predate the final Report-file rows, the access
 
 ### 5.3 Report group
 
+- **Use a custom report location and file name**: checkbox, unchecked by default. It is the group's first control, because it decides whether the rest apply.
 - **Project folder**: text input with watermark `D12345`.
 - **Project Stage** radio group: *Sample*, *Final*. Default **Final**.
 - **Audit Stage** radio group: *Interim*, *Final*. Default **Interim**.
 - While *Project Stage = Sample*, *Audit Stage* is forced to **Interim** and the group is disabled (read-only). Switching back to *Final* re-enables it and keeps Interim
   selected.
-- **Use a custom report location and file name**: checkbox, unchecked by default.
 - **Location** and **File name**:
     - *Unticked (built):* both are read-only previews. Location is `U:\Projects\<Project Folder>\DE\<Project Stage>\`; File name is
       `FileAuditorReport_<Audit Stage>.txt`. An empty Project folder shows as the literal placeholder `<Project Folder>`. **Browse...** is disabled.

@@ -18,11 +18,16 @@
               RowDefinitions="Auto,Auto,Auto,Auto,Auto"
               RowSpacing="6"
               Margin="4">
-            <Label Content="Pro_ject folder:"
+            <CheckBox Grid.ColumnSpan="3"
+                      Content="_Use a custom report location and file name"
+                      IsChecked="{Binding UseCustomLocation}" />
+            <Label Grid.Row="1"
+                   Content="Pro_ject folder:"
                    Target="{Binding #ProjectFolderBox}"
                    IsEnabled="{Binding IsBuilt}"
                    VerticalAlignment="Center" />
-            <Grid Grid.Column="1"
+            <Grid Grid.Row="1"
+                  Grid.Column="1"
                   Grid.ColumnSpan="2"
                   ColumnDefinitions="140,*">
                 <TextBox x:Name="ProjectFolderBox"
@@ -30,7 +35,7 @@
                          Text="{Binding ProjectFolder}"
                          IsEnabled="{Binding IsBuilt}" />
             </Grid>
-            <Grid Grid.Row="1"
+            <Grid Grid.Row="2"
                   Grid.ColumnSpan="3"
                   ColumnDefinitions="*,*"
                   ColumnSpacing="6">
@@ -62,10 +67,6 @@
                     </StackPanel>
                 </ct:GroupBox>
             </Grid>
-            <CheckBox Grid.Row="2"
-                      Grid.ColumnSpan="3"
-                      Content="_Use a custom report location and file name"
-                      IsChecked="{Binding UseCustomLocation}" />
             <Label Grid.Row="3"
                    Content="Lo_cation:"
                    Target="{Binding #LocationBox}"
