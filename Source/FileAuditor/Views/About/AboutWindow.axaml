@@ -1,0 +1,45 @@
+<ClassicWindow xmlns="https://github.com/avaloniaui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+               xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+               xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+               xmlns:vm="clr-namespace:FileAuditor.ViewModels.About"
+               mc:Ignorable="d"
+               d:DesignWidth="320"
+               d:DesignHeight="150"
+               x:Class="FileAuditor.Views.About.AboutWindow"
+               x:DataType="vm:AboutWindowViewModel"
+               Title="About File Auditor"
+               Icon="avares://FileAuditor/Assets/FileAuditor.png"
+               Width="320"
+               Height="150"
+               CanResize="False"
+               ShowInTaskbar="False"
+               WindowStartupLocation="CenterOwner">
+    <Design.DataContext>
+        <vm:AboutWindowViewModel />
+    </Design.DataContext>
+    <DockPanel Margin="12">
+        <Button DockPanel.Dock="Bottom"
+                Content="OK"
+                MinWidth="75"
+                MinHeight="23"
+                HorizontalAlignment="Right"
+                HorizontalContentAlignment="Center"
+                IsDefault="True"
+                IsCancel="True"
+                Click="OnOkClick" />
+        <StackPanel Orientation="Horizontal"
+                    Spacing="16"
+                    VerticalAlignment="Center">
+            <Image Source="avares://FileAuditor/Assets/FileAuditor.png"
+                   Width="32"
+                   Height="32"
+                   VerticalAlignment="Top" />
+            <StackPanel Spacing="6">
+                <TextBlock Text="{Binding ProductName}"
+                           FontWeight="Bold" />
+                <TextBlock Text="{Binding Version}" /> <TextBlock Text="{Binding Copyright}" />
+            </StackPanel>
+        </StackPanel>
+    </DockPanel>
+</ClassicWindow>

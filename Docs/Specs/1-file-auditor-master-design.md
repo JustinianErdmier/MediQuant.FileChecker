@@ -1,7 +1,6 @@
 # File Auditor — Master Design
 
-**Date:** 2026-11-06
-**Status:** Approved 2026-11-06
+**Date:** 2026-11-06 **Status:** Approved 2026-11-06
 
 ## 1. Intent
 
@@ -12,16 +11,16 @@ project's version-control repository as a record of the audit.
 File Auditor is a rewrite of the old WinForms .NET Framework tool *File Checker* (kept read-only under `OriginalSource/` for reference). The rewrite keeps the core job and
 changes almost everything around it:
 
-| Area           | File Checker (old)                                        | File Auditor (new)                                                                 |
-|----------------|-----------------------------------------------------------|------------------------------------------------------------------------------------|
-| Query          | User types a whole SQL `SELECT`                           | User names the table and columns; the app builds the query                         |
-| ID column      | Required (first column of the query)                      | Optional                                                                           |
-| Authentication | SQL user/password or integrated security                  | Integrated security only, server certificate always trusted                        |
-| Settings       | `FileChecker.ini` beside the executable, shared by all    | `settings.json` under each user's `%APPDATA%`                                      |
-| Output         | Tab-delimited "log" (`MissingID<TAB>MissingFile`)         | Plain-text **report** with stats, grouped Missing and Unverified sections          |
-| Output path    | Free text, default `_DMS_Output.txt` in working directory | Built from project folder + stages, or a custom location and name                  |
-| Errors         | Files that can't be checked are silently "missing"        | Files that can't be checked are listed as **Unverified**, with a reason            |
-| UI             | Ad hoc WinForms layout                                    | Standard Windows 9x layout and conventions, via Classic.Avalonia                   |
+| Area           | File Checker (old)                                        | File Auditor (new)                                                        |
+|----------------|-----------------------------------------------------------|---------------------------------------------------------------------------|
+| Query          | User types a whole SQL `SELECT`                           | User names the table and columns; the app builds the query                |
+| ID column      | Required (first column of the query)                      | Optional                                                                  |
+| Authentication | SQL user/password or integrated security                  | Integrated security only, server certificate always trusted               |
+| Settings       | `FileChecker.ini` beside the executable, shared by all    | `settings.json` under each user's `%APPDATA%`                             |
+| Output         | Tab-delimited "log" (`MissingID<TAB>MissingFile`)         | Plain-text **report** with stats, grouped Missing and Unverified sections |
+| Output path    | Free text, default `_DMS_Output.txt` in working directory | Built from project folder + stages, or a custom location and name         |
+| Errors         | Files that can't be checked are silently "missing"        | Files that can't be checked are listed as **Unverified**, with a reason   |
+| UI             | Ad hoc WinForms layout                                    | Standard Windows 9x layout and conventions, via Classic.Avalonia          |
 
 ### Why the changes
 
@@ -65,32 +64,49 @@ changes almost everything around it:
 - **ErrorOr** for expected failures: services return `ErrorOr<T>` with custom errors instead of throwing.
 - **Microsoft.Data.SqlClient** for SQL Server.
 - **System.Text.Json** (source-generated context) for settings.
+- **System.Security.Cryptography.Pkcs** pinned as a direct reference to a patched version, because Microsoft.Data.SqlClient 7.1.1 pulls in a vulnerable one (GHSA-846f-f764-76mx,
+  GHSA-2fmv-rv2c-59x7). Remove the pin once SqlClient references a fixed version.
 
-Explicitly not used: Mediator/CQRS, FluentValidation, EF Core/Dapper, Serilog, `System.IO.Abstractions`, test projects.
+Explicitly not used: Mediator/CQRS, FluentValidation, EF Core/Dapper, Serilog, `System.IO.Abstractions`, test projects. No other package is added without the user's
+say.
 
 ## 4. Naming
 
-| Thing                  | Name                                                       |
-|------------------------|------------------------------------------------------------|
-| Product (title bar)    | File Auditor                                               |
-| Solution               | `MediQuant.FileAuditor.slnx`                               |
-| Project / root namespace / assembly | `FileAuditor` under `Source/FileAuditor/`    |
-| Settings file          | `%APPDATA%\MediQuant\FileAuditor\settings.json`            |
-| Report file (built)    | `FileAuditorReport_<Audit Stage>.txt`                      |
-| Report file (custom)   | `FileAuditorReport.txt` (default, editable)                |
-| Version                | 1.0.0                                                      |
-| Company / copyright    | MediQuant / Copyright © 2026 MediQuant                     |
+| Thing                               | Name                                            |
+|-------------------------------------|-------------------------------------------------|
+| Product (title bar)                 | File Auditor                                    |
+| Solution                            | `MediQuant.FileAuditor.slnx`                    |
+| Project / root namespace / assembly | `FileAuditor` under `Source/FileAuditor/`       |
+| Settings file                       | `%APPDATA%\MediQuant\FileAuditor\settings.json` |
+| Report file (built)                 | `FileAuditorReport_<Audit Stage>.txt`           |
+| Report file (custom)                | `FileAuditorReport.txt` (default, editable)     |
+| Version                             | 1.0.0                                           |
+| Company / copyright                 | MediQuant / Copyright © 2026 MediQuant          |
 
-The existing `Source/FileChecker/` template project and `MediQuant.FileChecker.slnx` are renamed accordingly. The Git repository and its folder keep their current name
-(renaming the GitHub repository is the user's call, outside this design).
+The existing `Source/FileChecker/` template project and `MediQuant.FileChecker.slnx` are renamed accordingly. The Git repository and its folder keep their current name (renaming
+the GitHub repository is the user's call, outside this design).
 
 ## 5. The main window
 
-A single, **fixed-size** window (not resizable, no maximise button; minimise and close only). Classic.Avalonia supplies the Win9x chrome. All labels end with a colon; every
-input and button has an access key (underlined letter, Alt+letter); access keys are unique within the window. Tab order runs top to bottom, left to right.
+A single, **fixed-size** window (not resizable, no maximise button; minimise and close only). Classic.Avalonia supplies the Win9x chrome. Tab order runs top to
+bottom, left to right.
+
+**Win9x conventions.** Every window looks and behaves like a native Windows 95/98 utility:
+
+- **Group boxes** organise related inputs; labels sit to the left of their inputs and end with a colon.
+- **Access keys** on every label, input, button and menu item (`_` prefix in XAML), unique within a window. The exception is *OK* and *Cancel* in message dialogues (§11).
+- **Command buttons** are 75 × 23 minimum, laid out horizontally; the action comes first, the escape after it (*Start* then *Stop*, *OK* then *Cancel*, *Overwrite*
+  then *Cancel*).
+- **Ellipsis (`...`)** only on a command that needs more input before it completes (e.g. *Browse...*). A command that acts immediately — including opening a file in
+  another program, like *View Report* — has none.
+- **Menus:** *File* ends with *Exit*; *Help* ends with *About File Auditor*. Menu items mirror the buttons and enable and disable with them.
+- **Dialogues** are modal, fixed-size, with an icon (error, warning or question) and buttons along the bottom right. A path in dialogue text sits on its own line and
+  wraps only after a `\` or `/` separator, never at a space or hyphen inside a folder name (`PathText.Breakable`).
+- **No modern affordances** that Win9x lacked: no rounded corners, no flyouts, no toast notifications, no accent colours, no hamburger menus.
 
 Layout, top to bottom. The approved mock-ups are [`main-window-layout.html`](../UserInterfaceDesign/Mockups/main-window-layout.html) and
-[`report-section-states.html`](../UserInterfaceDesign/Mockups/report-section-states.html); the latter's state 1 predates the Interim default for Audit Stage.
+[`report-section-states.html`](../UserInterfaceDesign/Mockups/report-section-states.html). They are a design reference only: the latter's state 1 predates the Interim
+default for Audit Stage, and both predate the final Report-file rows, the access keys and the *Audit* group (named *Progress* there). The XAML and this section are the contract.
 
 ```text
 ┌ File Auditor ─────────────────────────────────────── _ × ┐
@@ -114,7 +130,7 @@ Layout, top to bottom. The approved mock-ups are [`main-window-layout.html`](../
 │ │ Location:     [U:\Projects\D12345\DE\Final\ ] Browse...│ │
 │ │ File name:    [FileAuditorReport_Interim.txt       ] │ │
 │ └──────────────────────────────────────────────────────┘ │
-│ ┌ Progress ────────────────────────────────────────────┐ │
+│ ┌ Audit ───────────────────────────────────────────────┐ │
 │ │ Total files:  124,500     Elapsed:       00:02:14    │ │
 │ │ Checked:      61,200      Remaining:     00:02:18    │ │
 │ │ Missing:      12          Files/second:  456.72      │ │
@@ -148,12 +164,12 @@ Layout, top to bottom. The approved mock-ups are [`main-window-layout.html`](../
   selected.
 - **Use a custom report location and file name**: checkbox, unchecked by default.
 - **Location** and **File name**:
-  - *Unticked (built):* both are read-only previews. Location is `U:\Projects\<Project Folder>\DE\<Project Stage>\`; File name is
-    `FileAuditorReport_<Audit Stage>.txt`. An empty Project folder shows as the literal placeholder `<Project Folder>`. **Browse...** is disabled.
-  - *Ticked (custom):* Project folder and both stage groups are disabled. Location becomes an editable directory path, empty by default, with **Browse...** opening a
-    *folder* picker (directories only). File name becomes editable, defaulting to `FileAuditorReport.txt`.
+    - *Unticked (built):* both are read-only previews. Location is `U:\Projects\<Project Folder>\DE\<Project Stage>\`; File name is
+      `FileAuditorReport_<Audit Stage>.txt`. An empty Project folder shows as the literal placeholder `<Project Folder>`. **Browse...** is disabled.
+    - *Ticked (custom):* Project folder and both stage groups are disabled. Location becomes an editable directory path, empty by default, with **Browse...** opening a *folder*
+      picker (directories only). File name becomes editable, defaulting to `FileAuditorReport.txt`.
 
-### 5.4 Progress group
+### 5.4 Audit group
 
 - Read-only statistics in two columns: **Total files**, **Checked**, **Missing**, **Unverified**; **Elapsed**, **Remaining**, **Files/second**. Counts use thousands
   separators (`N0`); times are `hh:mm:ss`; rate has two decimals. Blank before the first run.
@@ -175,11 +191,11 @@ A small modal, fixed-size Win9x About dialog: the app icon, **File Auditor**, **
 
 ### 5.8 Command states
 
-| Command     | Enabled when                                                                                                     |
-|-------------|------------------------------------------------------------------------------------------------------------------|
-| Start       | Not running, and Server, Database, Table, Path column are filled, and the report path is complete (see below)    |
-| Stop        | Running                                                                                                          |
-| View Report | Not running, and a report file exists at the current resolved path                                               |
+| Command     | Enabled when                                                                                                  |
+|-------------|---------------------------------------------------------------------------------------------------------------|
+| Start       | Not running, and Server, Database, Table, Path column are filled, and the report path is complete (see below) |
+| Stop        | Running                                                                                                       |
+| View Report | Not running, and a report file exists at the current resolved path                                            |
 
 The report path is complete when, *built*: Project folder is filled (an Audit Stage is always selected); *custom*: Location and File name are filled. All inputs are disabled
 while a run is in progress.
@@ -190,12 +206,17 @@ while a run is in progress.
 
 ### 6.1 Pre-flight checks (on Start, before touching the database)
 
-1. Validate inputs (identifiers well formed; custom File name has no invalid file-name characters). Failure → error dialog, run does not start.
+1. Validate inputs (identifiers well formed; custom File name has no invalid file-name characters). With the built location, the Project folder must be a single
+   folder name: not rooted, no `\` or `/`, not `.` or `..`, and no invalid file-name characters. Failure → error dialog, run does not start.
 2. Report folder:
-   - *Built location* and the folder does not exist → **error dialog**; the run does not start.
-   - *Custom location* and the folder does not exist → **warning dialog** with **Create Folder** and **Cancel**. Create Folder tries to create it (failure → error dialog,
-     run does not start).
-3. Report file already exists (either mode) → **warning dialog** with **Overwrite** and **Cancel**.
+    - *Built location* and the folder does not exist → **error dialog**; the run does not start.
+    - *Custom location* and the folder does not exist → **warning dialog** with **Create Folder** and **Cancel**. Create Folder tries to create it (failure → error dialog,
+      run does not start).
+    - Once the folder exists (or has been created), a writability probe creates and removes the report's temporary file. If the folder cannot be written to → error dialog,
+      run does not start.
+3. Report file already exists (either mode):
+    - if it is read-only → **error dialog**, run does not start;
+    - otherwise → **warning dialog** with **Overwrite** and **Cancel**.
 4. Save settings.
 
 ### 6.2 Query
@@ -215,42 +236,50 @@ enough for large tables.
 Each row is checked concurrently with bounded parallelism (builder chooses the mechanism and degree; the old app's unbounded `ThreadPool` + 1 million queue cap is not a
 requirement). Each file lands in exactly one outcome:
 
-| Outcome                       | When                                                                                           |
-|-------------------------------|------------------------------------------------------------------------------------------------|
-| Found                         | The file exists (and, if the empty option is on, its length > 0)                               |
-| Missing — Does not exist      | The path's root exists, but the file or a directory below the root does not                    |
-| Missing — Empty               | Empty option on, and the file exists with length 0                                             |
-| Unverified — Drive or share not found | The path's root (drive letter, or `\\server\share`) does not exist for this user       |
-| Unverified — Permission denied | Access to the file or its location is denied                                                  |
-| Unverified — Network location unreachable | The server or share in a UNC path cannot be reached                                |
-| Unverified — Path too long    | The path exceeds what the system can handle                                                    |
-| Unverified — Invalid characters in path | The path is malformed or contains illegal characters                                 |
-| Unverified — Path is empty in the index table | The path value is `NULL`, empty or whitespace                                  |
-| Unverified — Other errors     | Any other I/O failure; the reason and system message are recorded per file                     |
+| Outcome                                       | When                                                                             |
+|-----------------------------------------------|----------------------------------------------------------------------------------|
+| Found                                         | The file exists (and, if the empty option is on, its length > 0)                 |
+| Missing — Does not exist                      | The path's root exists, but the file or a directory below the root does not      |
+| Missing — Empty                               | Empty option on, and the file exists with length 0                               |
+| Unverified — Drive or share not found         | The path's root (drive letter, or `\\server\share`) does not exist for this user |
+| Unverified — Permission denied                | Access to the file or its location is denied                                     |
+| Unverified — Network location unreachable     | The server or share in a UNC path cannot be reached                              |
+| Unverified — Path too long                    | The path exceeds what the system can handle                                      |
+| Unverified — Invalid characters in path       | The path is malformed or contains illegal characters                             |
+| Unverified — Path is empty in the index table | The path value is `NULL`, empty or whitespace                                    |
+| Unverified — Other errors                     | Any other I/O failure; the reason and system message are recorded per file       |
 
-The check must not use `File.Exists` alone, because it returns `false` for every failure and would report unreachable files as missing. Use an API that surfaces the error
-(e.g. `FileInfo` / `File.GetAttributes`) and map exceptions and Win32 error codes to the outcomes above.
+The check must not use `File.Exists` alone, because it returns `false` for every failure and would report unreachable files as missing. Use an API that surfaces the error (e.g.
+`FileInfo` / `File.GetAttributes`) and map exceptions and Win32 error codes to the outcomes above.
 
 **Roots are checked once.** The root of each path (a drive letter such as `U:\`, or `\\server\share`) is checked the first time it is seen and the result is cached for
 the run. If the root does not exist, every file under it is *Unverified — Drive or share not found* without being tried. *Missing — Does not exist* is reserved for files
-whose root exists, so an unmapped drive or a missing share can never flood the Missing section.
+whose root exists, so an unmapped drive or a missing share can never flood the Missing section. A root confirmed reachable is re-probed when a file under it comes back
+not-found and the root's last confirmation is 5 seconds old or more. If the root no longer exists, that file and every later file under it are *Unverified — Drive or
+share not found*; if the root now fails for another reason (permission, network), they take that outcome instead.
 
-**Unreachable locations short-circuit, at the level that actually failed.** When a file whose root exists comes back unreachable for any reason (*Permission denied*,
-*Network location unreachable* or *Other errors*), the checker walks the path one directory at a time from the root down (`x\`, then `x\y\`, then `x\y\z\`) to find the
+Two mappings guard the same rule: a .NET DriveNotFoundException maps to *Unverified — Drive or share not found* (never *Missing*), and a path segment longer than 255
+characters maps to *Unverified — Path too long* before the OS is asked.
+
+**Unreachable locations short-circuit, at the level that actually failed.** When a file whose root exists comes back unreachable for any reason (*Permission denied*, *Network
+location unreachable* or *Other errors*), the checker walks the path one directory at a time from the root down (`x\`, then `x\y\`, then `x\y\z\`) to find the
 first directory that cannot be reached. That directory and its reason are cached for the run, and every later file *under that directory* gets the same Unverified
 outcome without being tried. Files elsewhere are still checked: if `x\y\z\` is unreachable, files in `x\` and `x\y\other\` are not affected. If every directory in the
-path is reachable, the failure belongs to the file itself and nothing is cached. Short-circuited files are still listed individually in the report. Path-shape failures
-(*Path too long*, *Invalid characters in path*, *Path is empty in the index table*) never short-circuit other files.
+path is reachable, the failure belongs to the file itself and nothing is cached. Short-circuited files are still listed individually in the report. Path-shape failures (*Path too
+long*, *Invalid characters in path*, *Path is empty in the index table*) never short-circuit other files.
 
 ### 6.4 Progress, stop and failure
 
 - The UI refreshes stats a few times per second. Remaining time is estimated from the rate so far.
 - **Stop**: stops reading rows and checking files, then writes the report with `Result: Stopped by user`. Counts reflect only what was checked.
+  If Stop is pressed while the rows are still being counted (before the count query returns), no report is written and the status bar reads `Stopped`: nothing
+  has been checked, so there is nothing to report.
 - **SQL failure** (connection, bad table/column, timeout): error dialog with the message. If no rows were checked, no report is written. If it fails mid-run, the report is
   written with `Result: Failed — <message>` and the counts so far.
 - **Report write failure**: error dialog.
 - **Closing the window mid-run**: a prompt, *"An audit is in progress. Stop it and exit?"*, with **Yes** and **No**. Yes stops the run, writes the report as
-  `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same.
+  `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same. If Yes is chosen before the count query returns, no report is written (as for
+  Stop) and the application simply exits.
 
 ## 7. The report
 
@@ -311,6 +340,8 @@ Rules:
 
 - Group titles and their counts are wrapped in square brackets, each on its own line, with a blank line between groups.
 - A group with no files is omitted. A section with no groups reads `No missing files.` / `No unverified files.`
+- With no ID column set, a file line is just the path, so a row in *[Path is empty in the index table]* prints as a **blank line** — one per such row, so the
+  group's count still matches its lines. This is intended; the user guide should call it out.
 - `ID column:` reads `(none)` when not set. `Empty files:` reads `Reported as missing` or `Not reported`. The Project folder / stage lines are omitted when a custom location
   is used.
 - Missing groups appear in the order *Empty*, *Does not exist*; Unverified groups in the order of the table in §6.3, *Other errors* last.
@@ -321,19 +352,35 @@ Rules:
 
 `%APPDATA%\MediQuant\FileAuditor\settings.json`, per Windows user. Holds every input: server, database, table, path column, ID column, empty-files option, project folder,
 project stage, audit stage (default Interim), custom-location flag, custom location, custom file name. No credentials. Loaded on launch (missing or unreadable file → defaults);
-saved when a run starts and when the app closes, using a temp file + `File.Move(overwrite: true)`. Window size and position are not saved — the window is fixed-size.
+saved when a run starts and when the app closes, using a temp file + `File.Move(overwrite: true)`. A null string value or an undefined enum value in the file falls
+back, field by field, to its default; other values are kept. Window size and position are not saved — the window is fixed-size.
 
 ## 9. Code shape
 
-One project, `Source/FileAuditor/`, organised by folder (namespaces mirror folders), roughly:
+One project, `Source/FileAuditor/`, organised by folder (namespaces mirror folders). Only the `.csproj` and `app.manifest` sit at the project root; `Assets/` holds the
+app icon, and `Assets/Win95Icons/` the Windows 95 icon set. Dialogue icons are taken from that set (`error32.gif`, `warning32.png`, `question32.png`), never drawn in
+XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj`. The code folders are:
 
-- `Views/` — `MainWindow`, `AboutWindow`, and small `UserControl`s per group box where it helps readability.
-- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm).
-- `Services/` — settings store, query builder, file checker, audit runner, report writer, dialog/launcher helpers. Return `ErrorOr<T>` for expected failures.
-- `Models/` — settings record, row, outcome enums, audit result.
-- `Common/Errors/` — the custom `Error` definitions.
+- `Startup/` — `App` and `Program`.
+- `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`) and `Groups/` (a `UserControl` per group box: Database, File Index
+  Table, Report, Audit).
+- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon`) and `Groups/`.
+- `Services/` — `Settings/` (settings store), `Sql/` (connection strings, SQL identifiers, query builder, index table reader), `Checking/` (file checker and Win32 error
+  mapper), `Auditing/` (audit runner, pre-flight checker, request and progress types), `Reporting/` (report builder, writer and path resolver) and `Dialogues/` (dialogue
+  service). Return `ErrorOr<T>` for expected failures.
+- `Models/` — `Settings/` (settings record and the project and audit stage enums), `Auditing/` (audit query, index row, check outcome and result) and `Reporting/` (audit
+  report and result kind).
+- `Common/` — `GlobalUsings.cs`; `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/` (`ClassicWindow` helpers); `Serialisation/`
+  (the source-generated settings JSON context).
 
-There is no dependency-injection container requirement; the builder may wire services by hand in `App` or use `Microsoft.Extensions.DependencyInjection`.
+Services are wired by hand in `App`; there is no dependency-injection container. `MainWindow.axaml` composes the group-box views and holds the menu bar, command row
+and status bar; it stays at 100 lines or fewer by pushing content into the group-box `UserControl`s.
+
+**Errors.** Services return `ErrorOr<T>`: expected failures (bad input, SQL errors, an unwritable report, unreadable settings) are values with custom errors from
+`Common/Errors/`, not exceptions. Exceptions are caught at the boundary where they occur (SQL, file system) and translated into errors or check outcomes. SQL access is
+plain `Microsoft.Data.SqlClient`, with no ORM.
+
+**Storage.** The app writes only the per-user settings file (§8) and the report (§7) — never anything beside its executable, which runs from a shared file server.
 
 ## 10. Builder's calls (decided by Claude, not the user)
 
@@ -354,3 +401,41 @@ that failed, found by walking the path (§6.3); the close-mid-run prompt.
 ## 11. Left to the builder
 
 Concurrency mechanism and degree; UI refresh interval; exact window dimensions; access-key letters; how dialogs are implemented on Classic.Avalonia; icon artwork.
+
+Settled by the build (milestone 1), with no change in behaviour:
+
+- **Access keys:** *Browse...* is `B`, *Start* is `A` (St **a**rt) and *Stop* is `O` (St **o**p); `R` and `M` were already taken by neighbouring labels. The *OK* and *Cancel*
+  buttons in message dialogues carry no access keys, as with Win9x message boxes (Enter and Esc).
+- **Default button:** *Start* is the window's default button, so Enter starts an audit.
+- **Dialogues:** every dialogue uses the custom `MessageDialogueWindow` (a `ClassicWindow` with icon, message and right-aligned buttons), because Classic.Avalonia's own
+  message box cannot take custom button text.
+- **Number and time formatting in the report:** counts are formatted `N0` with the invariant culture, so reports diff identically on any machine; elapsed time is shown in
+  total hours (at least two digits), not rolled over into days.
+- **Full-path validation:** a path is accepted as absolute only if `Path.IsPathFullyQualified` says so, so `C:x` and `\x` (which would resolve against the application's
+  current drive or folder) count as *Invalid characters in path*.
+
+## 12. Code conventions
+
+- **One type per file, no exceptions.** Class, record, struct, interface, enum and delegate each in its own file, named after the type, in a folder mirroring the
+  namespace.
+- **No code files at the project root** (§9). `App` and `Program` live under `Startup/`, not `Application/`, whose namespace would shadow Avalonia's `Application`.
+- **Usings** are consolidated in `Common/GlobalUsings.cs`; a local `using` only for a namespace conflict or an alias. **File-scoped namespaces** everywhere.
+- **British English** in comments, XML doc text, UI copy, commit messages, Markdown, and identifier wording where there is a choice (`Initialise`, `Behaviour`,
+  `Colour`, `Dialogue`). A US spelling fixed by an external API (`System.IO`, `Color`, `Dialog`) stays.
+- **XML doc comments on every public type and member** (`<summary>`, `<param>`, `<returns>`, `<remarks>`, `<exception>` as appropriate); `//` comments only for inline
+  implementation notes. `<c>…</c>` and `<code>…</code>` carry no inside whitespace.
+- **Spaced attribute brackets:** `[ STAThread ]`, `[ ObservableProperty ]`, `[ RelayCommand ]`.
+- **Vertical spacing:** consecutive statements of different kinds (e.g. a declaration followed by an invocation) are separated by a blank line; like statements are
+  grouped. Every `if` has braces.
+- **UTC internally, local at the boundary.** Timestamps are captured and carried in UTC (`Utc` suffix on names) and converted to local time only for display and the
+  report.
+- **Source-generated MVVM:** `[ ObservableProperty ]` on `partial` properties, `[ RelayCommand ]` on private methods; no hand-rolled INPC. **Compiled bindings:** every
+  XAML file declares `x:DataType`.
+- **Designer constructors:** view models expose a parameterless constructor for the XAML designer only, built from `AppSettings.Default` and parameterless concrete
+  services. No interfaces are introduced just for the designer.
+- **View composition pair rule:** every public `*ViewModel` has a sibling `*View.axaml` under the parallel `Views/…` folder, and vice versa. Windows are the exception
+  to the `*View` suffix: `MainWindow`, `AboutWindow` and `MessageDialogueWindow` pair with `MainWindowViewModel`, `AboutWindowViewModel` and
+  `MessageDialogueViewModel`.
+- **User-data writes** (settings, the report) use a temp file + `File.Move(overwrite: true)`, never an in-place write.
+- **Never `File.Exists` / `Directory.Exists` inside the audit check** (§6.3): they turn "couldn't check" into "missing". Pre-flight checks of the report folder may
+  use them.

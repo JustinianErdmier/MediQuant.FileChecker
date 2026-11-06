@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ct="clr-namespace:Classic.Avalonia.Theme.Controls;assembly=Classic.Avalonia.Theme"
+             xmlns:vm="clr-namespace:FileAuditor.ViewModels.Groups"
+             mc:Ignorable="d"
+             d:DesignWidth="480"
+             d:DesignHeight="150"
+             x:Class="FileAuditor.Views.Groups.FileIndexTableView"
+             x:DataType="vm:FileIndexTableViewModel">
+    <Design.DataContext>
+        <vm:FileIndexTableViewModel />
+    </Design.DataContext>
+    <ct:GroupBox Header="File Index Table"
+                 Margin="4,2">
+        <Grid ColumnDefinitions="92,*,Auto"
+              RowDefinitions="Auto,Auto,Auto,Auto"
+              RowSpacing="6"
+              Margin="4">
+            <Label Content="_Table:"
+                   Target="{Binding #TableBox}"
+                   VerticalAlignment="Center" />
+            <TextBox x:Name="TableBox"
+                     Grid.Column="1"
+                     Grid.ColumnSpan="2"
+                     Text="{Binding Table}" />
+            <Label Grid.Row="1"
+                   Content="_Path column:"
+                   Target="{Binding #PathColumnBox}"
+                   VerticalAlignment="Center" />
+            <TextBox x:Name="PathColumnBox"
+                     Grid.Row="1"
+                     Grid.Column="1"
+                     Grid.ColumnSpan="2"
+                     Text="{Binding PathColumn}" />
+            <Label Grid.Row="2"
+                   Content="_ID column:"
+                   Target="{Binding #IdColumnBox}"
+                   VerticalAlignment="Center" />
+            <TextBox x:Name="IdColumnBox"
+                     Grid.Row="2"
+                     Grid.Column="1"
+                     Text="{Binding IdColumn}" />
+            <TextBlock Grid.Row="2"
+                       Grid.Column="2"
+                       Text="(Optional)"
+                       Margin="6,0,0,0"
+                       VerticalAlignment="Center"
+                       Foreground="#404040" />
+            <CheckBox Grid.Row="3"
+                      Grid.ColumnSpan="3"
+                      Content="Report empt_y (zero-byte) files as missing"
+                      IsChecked="{Binding ReportEmptyFiles}" />
+        </Grid>
+    </ct:GroupBox>
+</UserControl>

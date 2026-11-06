@@ -1,0 +1,63 @@
+<ClassicWindow xmlns="https://github.com/avaloniaui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+               xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+               xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+               xmlns:vm="clr-namespace:FileAuditor.ViewModels.Dialogues"
+               mc:Ignorable="d"
+               d:DesignWidth="380"
+               d:DesignHeight="140"
+               x:Class="FileAuditor.Views.Dialogues.MessageDialogueWindow"
+               x:DataType="vm:MessageDialogueViewModel"
+               Title="File Auditor"
+               Icon="avares://FileAuditor/Assets/FileAuditor.png"
+               Width="380"
+               SizeToContent="Height"
+               CanResize="False"
+               ShowInTaskbar="False"
+               WindowStartupLocation="CenterOwner">
+    <Design.DataContext>
+        <vm:MessageDialogueViewModel Message="The report folder does not exist."
+                                     Icon="Warning"
+                                     PrimaryText="_Create Folder"
+                                     SecondaryText="Cancel" />
+    </Design.DataContext>
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Bottom"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="6"
+                    Margin="0,12,0,0">
+            <Button Content="{Binding PrimaryText}"
+                    MinWidth="75"
+                    MinHeight="23"
+                    HorizontalContentAlignment="Center"
+                    IsDefault="True"
+                    IsCancel="{Binding !HasSecondary}"
+                    Click="OnPrimaryClick" />
+            <Button Content="{Binding SecondaryText}"
+                    MinWidth="75"
+                    MinHeight="23"
+                    HorizontalContentAlignment="Center"
+                    IsVisible="{Binding HasSecondary}"
+                    IsCancel="True"
+                    Click="OnSecondaryClick" />
+        </StackPanel>
+        <Panel DockPanel.Dock="Left"
+               Width="32"
+               Height="32"
+               VerticalAlignment="Top"
+               Margin="0,0,16,0"
+               RenderOptions.BitmapInterpolationMode="None">
+            <Image Source="avares://FileAuditor/Assets/Win95Icons/error32.gif"
+                   IsVisible="{Binding IsError}" />
+            <Image Source="avares://FileAuditor/Assets/Win95Icons/warning32.png"
+                   IsVisible="{Binding IsWarning}" />
+            <Image Source="avares://FileAuditor/Assets/Win95Icons/question32.png"
+                   IsVisible="{Binding IsQuestion}" />
+        </Panel>
+        <TextBlock Text="{Binding Message}"
+                   TextWrapping="Wrap"
+                   VerticalAlignment="Center"
+                   MinHeight="32" />
+    </DockPanel>
+</ClassicWindow>
