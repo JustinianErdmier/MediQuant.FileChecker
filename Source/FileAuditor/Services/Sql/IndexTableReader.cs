@@ -1,11 +1,3 @@
-using System.Data;
-using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
-using FileAuditor.Common.Errors;
-using FileAuditor.Models.Auditing;
-using Microsoft.Data.SqlClient;
-
 namespace FileAuditor.Services.Sql;
 
 /// <summary>
@@ -28,13 +20,19 @@ public sealed class IndexTableReader
             await connection.OpenAsync(ct);
 
             await using SqlCommand command = new(query.CountSql, connection) { CommandTimeout = 0 };
+            await using CancellationTokenRegistration registration = ct.Register(command.Cancel);
             object? result = await command.ExecuteScalarAsync(ct);
 
             return Convert.ToInt64(result, CultureInfo.InvariantCulture);
         }
-        catch (SqlException ex)
+        catch (SqlException ex) when (!ct.IsCancellationRequested)
         {
             return SqlErrors.QueryFailed(ex.Message);
+        }
+        catch (SqlException)
+        {
+            // SqlClient may fault a cancelled command with a SqlException; report it as the cancellation it is.
+            throw new OperationCanceledException(ct);
         }
     }
 
@@ -54,22 +52,38 @@ public sealed class IndexTableReader
             await connection.OpenAsync(ct);
 
             await using SqlCommand command = new(query.SelectSql, connection) { CommandTimeout = 0 };
+            await using CancellationTokenRegistration registration = ct.Register(command.Cancel);
             await using SqlDataReader reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, ct);
 
-            while (await reader.ReadAsync(ct))
+            try
             {
-                // SequentialAccess requires the columns to be read in order.
-                string path = await ReadStringAsync(reader, 0, ct) ?? "";
-                string? id = query.HasIdColumn ? await ReadStringAsync(reader, 1, ct) : null;
+                while (await reader.ReadAsync(ct))
+                {
+                    // SequentialAccess requires the columns to be read in order.
+                    string path = await ReadStringAsync(reader, 0, ct) ?? "";
+                    string? id = query.HasIdColumn ? await ReadStringAsync(reader, 1, ct) : null;
 
-                await onRow(new IndexRow(id, path));
+                    await onRow(new IndexRow(id, path));
+                }
+            }
+            catch
+            {
+                // Closing a reader drains the remaining rows unless the command is cancelled first.
+                command.Cancel();
+
+                throw;
             }
 
             return Result.Success;
         }
-        catch (SqlException ex)
+        catch (SqlException ex) when (!ct.IsCancellationRequested)
         {
             return SqlErrors.QueryFailed(ex.Message);
+        }
+        catch (SqlException)
+        {
+            // SqlClient may fault a cancelled command with a SqlException; report it as the cancellation it is.
+            throw new OperationCanceledException(ct);
         }
     }
 
