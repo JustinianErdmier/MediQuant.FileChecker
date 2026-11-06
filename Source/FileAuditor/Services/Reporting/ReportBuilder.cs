@@ -108,6 +108,10 @@ public static class ReportBuilder
             List<CheckResult> results = report.Problems
                 .Where(result => result.Outcome == outcome)
                 .OrderBy(result => result.Row.Path, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(result => result.Row.Path, StringComparer.Ordinal)
+                .ThenBy(result => result.Row.Id ?? string.Empty, StringComparer.Ordinal)
+                .ThenBy(result => result.Reason ?? string.Empty, StringComparer.Ordinal)
+                .ThenBy(result => result.SystemMessage ?? string.Empty, StringComparer.Ordinal)
                 .ToList();
 
             if (results.Count > 0)
