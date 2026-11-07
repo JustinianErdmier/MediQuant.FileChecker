@@ -3,7 +3,7 @@ namespace FileAuditor.Common.Errors;
 /// <summary>The expected failures of the settings store.</summary>
 public static class SettingsErrors
 {
-    /// <summary>Creates the error for a settings file that exists but cannot be read or parsed. Callers treat this as "use the defaults".</summary>
+    /// <summary>Creates the error for a project settings file that is missing, cannot be read or cannot be parsed.</summary>
     /// <param name="detail">What went wrong.</param>
     /// <returns>A failure error with code <c>Settings.Unreadable</c>.</returns>
     public static Error Unreadable(string detail) => Error.Failure(code: "Settings.Unreadable", $"The settings file could not be read: {detail}");

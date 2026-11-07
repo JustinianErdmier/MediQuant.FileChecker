@@ -13,7 +13,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private readonly AuditRunner _runner = new();
 
-    private readonly SettingsStore _settingsStore;
+    private readonly ProjectSettingsService _project;
 
     private CancellationTokenSource? _auditCts;
 
@@ -28,18 +28,23 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     /// <summary>Initialises a new instance with the default settings, for the XAML designer.</summary>
     public MainWindowViewModel()
-        : this(AppSettings.Default, new DialogueService(() => null), new SettingsStore())
+        : this(new DialogueService(() => null))
     { }
 
-    /// <summary>Initialises a new instance populated from the given settings.</summary>
-    /// <param name="settings">The settings to load.</param>
+    private MainWindowViewModel(DialogueService dialogues)
+        : this(dialogues, new ProjectSettingsService(new SettingsStore(), dialogues))
+    { }
+
+    /// <summary>Initialises a new instance populated with the default settings.</summary>
     /// <param name="dialogues">Shows the errors, confirmations and questions.</param>
-    /// <param name="settingsStore">Saves the settings when an audit starts.</param>
-    public MainWindowViewModel(AppSettings settings, DialogueService dialogues, SettingsStore settingsStore)
+    /// <param name="project">Holds the open project's settings file and saves it when an audit starts.</param>
+    public MainWindowViewModel(DialogueService dialogues, ProjectSettingsService project)
     {
-        _dialogues     = dialogues;
-        _settingsStore = settingsStore;
-        _preflight     = new PreflightChecker(dialogues);
+        AppSettings settings = AppSettings.Default;
+
+        _dialogues = dialogues;
+        _project   = project;
+        _preflight = new PreflightChecker(dialogues);
 
         Database       = new DatabaseViewModel(settings);
         FileIndexTable = new FileIndexTableViewModel(settings);
@@ -208,8 +213,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        // A failed save is deliberately ignored: the user loses nothing but the convenience of remembered inputs.
-        _settingsStore.Save(settings);
+        // Task 3: pass Report.SaveProjectSettings and tick the checkbox on TickCheckbox; until then the box counts as ticked.
+        SavePointResult savePoint = await _project.RunSavePointAsync(settings, reportPath, saveTicked: true);
+
+        if (!savePoint.Proceed)
+        {
+            return;
+        }
 
         _auditTask = RunAuditAsync(new AuditRequest(settings, reportPath));
 

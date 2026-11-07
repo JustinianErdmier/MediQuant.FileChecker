@@ -112,12 +112,12 @@ code conventions bind every task. House rules: [`CLAUDE.md`](../../../CLAUDE.md)
     - `bool IsChanged(AppSettings current)` — `current != baseline` (record equality).
     - `Task<SavePointResult> RunSavePointAsync(AppSettings current, ReportPath report, bool saveTicked)` — the whole rule.
 
-- [ ] **Step 1: Rework `SettingsStore`** to the per-path API above; remove the `%APPDATA%` path and the path-holding constructor. Update the `SettingsErrors` XML docs
+- [x] **Step 1: Rework `SettingsStore`** to the per-path API above; remove the `%APPDATA%` path and the path-holding constructor. Update the `SettingsErrors` XML docs
   (no longer "use the defaults").
-- [ ] **Step 2: Start-up with defaults.** `App` no longer loads or saves settings: build `ProjectSettingsService` and pass it to `MainWindowViewModel`, which starts from
+- [x] **Step 2: Start-up with defaults.** `App` no longer loads or saves settings: build `ProjectSettingsService` and pass it to `MainWindowViewModel`, which starts from
   `AppSettings.Default`; delete the `desktop.Exit` save. New constructor: `MainWindowViewModel(DialogueService dialogues, ProjectSettingsService project)`; the designer
   constructor builds both from `new DialogueService(() => null)` and `new SettingsStore()`.
-- [ ] **Step 3: Write `RunSavePointAsync`** in this order (spec §3.4, §3.5, §3.7):
+- [x] **Step 3: Write `RunSavePointAsync`** in this order (spec §3.4, §3.5, §3.7):
 
   ```text
   if !IsChanged(current)                         → Go
@@ -143,14 +143,14 @@ code conventions bind every task. House rules: [`CLAUDE.md`](../../../CLAUDE.md)
 
   `Go(tick)` means `GoAndTick` when `tick` is set. An incomplete report location with no `FilePath` is `CannotSave("The report location is incomplete.")`, with
   `{path}` the report's display directory.
-- [ ] **Step 4: Wire Start.** In `StartAsync`, replace `_settingsStore.Save(settings)` with `RunSavePointAsync(settings, reportPath, Report.SaveProjectSettings)`:
+- [x] **Step 4: Wire Start.** In `StartAsync`, replace `_settingsStore.Save(settings)` with `RunSavePointAsync(settings, reportPath, Report.SaveProjectSettings)`:
   `Cancel` → return without starting; `TickCheckbox` → `Report.SaveProjectSettings = true`. (The checkbox property arrives in Task 3; until then pass `true`.)
   Add the comparison helper `static bool SameFolder(string a, string b)` (trim ending separator, `OrdinalIgnoreCase`).
-- [ ] **Step 5: Verify.** Clean build. Run the app with a custom location set to a scratch folder and Server/Database/Table/Path column filled (server `x`): press
+- [x] **Step 5: Verify.** Clean build. Run the app with a custom location set to a scratch folder and Server/Database/Table/Path column filled (server `x`): press
   Start → `FileAuditorSettings.json` appears in the scratch folder before the SQL error. Put a different `FileAuditorSettings.json` in a second scratch folder, point
   the location there, change a field, Start → the *Overwrite / Skip Save / Cancel* warning appears; check each button: *Cancel* starts nothing, *Skip Save* leaves the
   file untouched and runs, *Overwrite* replaces it. Press Start again unchanged → no prompt, no write (check the file's timestamp).
-- [ ] **Step 6: Commit** — `feat(✨): save settings per project beside the report`.
+- [x] **Step 6: Commit** — `feat(✨): save settings per project beside the report`.
 
 ### Task 3: The checkbox, its untick warning, and saving on close
 
