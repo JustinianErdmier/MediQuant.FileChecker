@@ -3,6 +3,7 @@
     <Folder Name="/Docs/Ledgers/" />
     <Folder Name="/Docs/Ledgers/Epic-1-MVP/">
         <File Path="Docs/Ledgers/Epic-1-MVP/milestone-1-ledger.md" />
+        <File Path="Docs/Ledgers/Epic-1-MVP/milestone-2-ledger.md" />
     </Folder>
     <Folder Name="/Docs/Plans/" />
     <Folder Name="/Docs/Plans/Epic-1-MVP/">

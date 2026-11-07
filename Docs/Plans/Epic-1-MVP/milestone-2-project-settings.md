@@ -217,8 +217,8 @@ code conventions bind every task. House rules: [`CLAUDE.md`](../../../CLAUDE.md)
 - Create: `Docs/Ledgers/Epic-1-MVP/milestone-2-ledger.md`
 - Modify: `MediQuant.FileAuditor.slnx` (the plan, the milestone spec and the ledger, in milestone order)
 
-- [ ] **Step 1: Amend the SDD** in the sections the spec's §5 lists, so that it describes project files, the File menu items, the checkbox, the save rule (or points
+- [x] **Step 1: Amend the SDD** in the sections the spec's §5 lists, so that it describes project files, the File menu items, the checkbox, the save rule (or points
   to the milestone spec for the full prompt table) and the removed `%APPDATA%` file. Keep the master SDD the authority: copy the rules, not just a link.
-- [ ] **Step 2: Write the ledger** from the run's notes: rulings, plan defects, outstanding items, incidents, what was not exercised.
-- [ ] **Step 3: Verify** — clean build; every Markdown prose line ≤ 180 characters (PowerShell `.Length`); every file under `Docs/` is in the `.slnx`.
-- [ ] **Step 4: Commit** — `docs(📝): sync the SDD with project settings and close the milestone 2 ledger`.
+- [x] **Step 2: Write the ledger** from the run's notes: rulings, plan defects, outstanding items, incidents, what was not exercised.
+- [x] **Step 3: Verify** — clean build; every Markdown prose line ≤ 180 characters (PowerShell `.Length`); every file under `Docs/` is in the `.slnx`.
+- [x] **Step 4: Commit** — `docs(📝): sync the SDD with project settings and close the milestone 2 ledger`.

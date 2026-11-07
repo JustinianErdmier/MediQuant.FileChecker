@@ -16,7 +16,7 @@ changes almost everything around it:
 | Query          | User types a whole SQL `SELECT`                           | User names the table and columns; the app builds the query                |
 | ID column      | Required (first column of the query)                      | Optional                                                                  |
 | Authentication | SQL user/password or integrated security                  | Integrated security only, server certificate always trusted               |
-| Settings       | `FileChecker.ini` beside the executable, shared by all    | `settings.json` under each user's `%APPDATA%`                             |
+| Settings       | `FileChecker.ini` beside the executable, shared by all    | `FileAuditorSettings.json` per project, saved beside the report (§8)      |
 | Output         | Tab-delimited "log" (`MissingID<TAB>MissingFile`)         | Plain-text **report** with stats, grouped Missing and Unverified sections |
 | Output path    | Free text, default `_DMS_Output.txt` in working directory | Built from project folder + stages, or a custom location and name         |
 | Errors         | Files that can't be checked are silently "missing"        | Files that can't be checked are listed as **Unverified**, with a reason   |
@@ -24,8 +24,9 @@ changes almost everything around it:
 
 ### Why the changes
 
-- **Settings per user.** The executable lives on a shared file server, not on each user's machine. An INI beside it is shared by everyone who opens the app, which defeats
-  the purpose of remembering settings.
+- **Settings per project.** The executable lives on a shared file server, not on each user's machine, so an INI beside it is shared by everyone who opens the app and
+  defeats the purpose of remembering settings. The inputs belong to a *project* (its server, database, index table and report location), not to a person, so they are
+  saved as a project file beside the project's report, where they are committed to the repository with it and any teammate can open the same project (§8).
 - **No hand-written SQL.** Users only ever need "path column (and ID column) from table"; typing the query is error-prone and unnecessary.
 - **A report, not a log.** The output is a durable record committed to the project repo. It has to read well to a person, say clearly when nothing is missing, and make it
   easy to act on many missing files at once — hence grouping by reason instead of a reason column.
@@ -37,7 +38,7 @@ changes almost everything around it:
 - Verify every row of a file index table: the file exists, and (optionally) is not empty.
 - Distinguish *missing* (definitely not there, or empty) from *unverified* (could not be checked, and why).
 - Produce a readable, deterministic plain-text report suitable for committing.
-- Remember each user's inputs between runs.
+- Remember each project's inputs between runs, in a project settings file beside the report.
 - Look and behave like a native Windows 95/98 utility.
 
 **Non-goals**
@@ -52,7 +53,10 @@ changes almost everything around it:
 
 - Reporting a file as *missing* when the truth is that it could not be checked (the old app's `File.Exists` did this silently).
 - A report that is hard to scan when hundreds of files are missing.
-- Settings that leak between users.
+- Settings that leak between projects or between users: one project's settings silently saved over another project's file, or a per-user file that follows a person
+  into a project that is not theirs.
+- Asking the same save question again after the user has answered it, until the project is closed or the app is relaunched.
+- Losing the user's edits without asking when the window or the project is closed.
 - Discovering after a long run that the report cannot be written.
 
 ## 3. Technology
@@ -77,7 +81,7 @@ say.
 | Product (title bar)                 | File Auditor                                    |
 | Solution                            | `MediQuant.FileAuditor.slnx`                    |
 | Project / root namespace / assembly | `FileAuditor` under `Source/FileAuditor/`       |
-| Settings file                       | `%APPDATA%\MediQuant\FileAuditor\settings.json` |
+| Settings file (per project)         | `FileAuditorSettings.json`, beside the report   |
 | Report file (built)                 | `FileAuditorReport_<Audit Stage>.txt`           |
 | Report file (custom)                | `FileAuditorReport.txt` (default, editable)     |
 | Version                             | 1.0.0                                           |
@@ -106,7 +110,8 @@ bottom, left to right.
 
 Layout, top to bottom. The approved mock-ups are [`main-window-layout.html`](../UserInterfaceDesign/Mockups/main-window-layout.html) and
 [`report-section-states.html`](../UserInterfaceDesign/Mockups/report-section-states.html). They are a design reference only: the latter's state 1 predates the Interim
-default for Audit Stage, and both predate the final Report-file rows, the access keys and the *Audit* group (named *Progress* there). The XAML and this section are the contract.
+default for Audit Stage, and both predate the final Report-file rows, the access keys, the *Audit* group (named *Progress* there), and the project settings (the *Save project
+settings with the report* checkbox and the *Open project...* and *Close project* menu items, milestone 2). The XAML and this section are the contract.
 
 ```text
 ┌ File Auditor ─────────────────────────────────────── _ × ┐
@@ -129,6 +134,7 @@ default for Audit Stage, and both predate the final Report-file rows, the access
 │ │ └────────────────────────┘ └───────────────────────┘ │ │
 │ │ Location:     [U:\Projects\D12345\DE\Final\ ] Browse...│ │
 │ │ File name:    [FileAuditorReport_Interim.txt       ] │ │
+│ │ [x] Save project settings with the report            │ │
 │ └──────────────────────────────────────────────────────┘ │
 │ ┌ Audit ───────────────────────────────────────────────┐ │
 │ │ Total files:  124,500     Elapsed:       00:02:14    │ │
@@ -168,6 +174,11 @@ default for Audit Stage, and both predate the final Report-file rows, the access
       `FileAuditorReport_<Audit Stage>.txt`. An empty Project folder shows as the literal placeholder `<Project Folder>`. **Browse...** is disabled.
     - *Ticked (custom):* Project folder and both stage groups are disabled. Location becomes an editable directory path, empty by default, with **Browse...** opening a *folder*
       picker (directories only). File name becomes editable, defaulting to `FileAuditorReport.txt`.
+- **Save project settings with the report**: checkbox on the group's last row, below *File name*. It is **ticked by default** — on launch, after *Open project...* and after
+  *Close project* — and its state is not stored in the settings file; it is a per-session preference. It is disabled while an audit is running. Ticking it needs no
+  confirmation. **Unticking** first shows a warning dialogue (*"If you untick this box, this project's settings will no longer be saved automatically. You will be asked
+  whether to save them instead. Do you want to untick it?"*) with **Untick** and **Cancel**; *Cancel* leaves the box ticked. Once *Untick* has been chosen the warning is not
+  shown again, and later unticking goes straight through, until *Close project* or a fresh launch. What the box does is set out in §8.
 
 ### 5.4 Audit group
 
@@ -184,7 +195,8 @@ Two sunken panes: a message pane that fills the width (`Ready`, `Counting files.
 
 ### 5.6 Menu bar
 
-- **File**: **Start** (F5), **Stop** (Esc), **View Report** (Ctrl+R), separator, **Exit** (Alt+F4). Items enable and disable with their buttons.
+- **File**: **Open project...** (`p`), **Close project** (`C`), separator, **Start** (F5), **Stop** (Esc), **View Report** (Ctrl+R), separator, **Exit** (Alt+F4). Start, Stop
+  and View Report enable and disable with their buttons. *Open project...* and *Close project* have no button; they are disabled while an audit is running.
 - **Help**: **About File Auditor**.
 
 ### 5.7 About box
@@ -193,14 +205,16 @@ A small modal, fixed-size Win9x About dialog: the app icon, **File Auditor**, **
 
 ### 5.8 Command states
 
-| Command     | Enabled when                                                                                                  |
-|-------------|---------------------------------------------------------------------------------------------------------------|
-| Start       | Not running, and Server, Database, Table, Path column are filled, and the report path is complete (see below) |
-| Stop        | Running                                                                                                       |
-| View Report | Not running, and a report file exists at the current resolved path                                            |
+| Command         | Enabled when                                                                                                  |
+|-----------------|---------------------------------------------------------------------------------------------------------------|
+| Start           | Not running, and Server, Database, Table, Path column are filled, and the report path is complete (see below) |
+| Stop            | Running                                                                                                       |
+| View Report     | Not running, and a report file exists at the current resolved path                                            |
+| Open project... | Not running                                                                                                   |
+| Close project   | Not running                                                                                                   |
 
-The report path is complete when, *built*: Project folder is filled (an Audit Stage is always selected); *custom*: Location and File name are filled. All inputs are disabled
-while a run is in progress.
+The report path is complete when, *built*: Project folder is filled (an Audit Stage is always selected); *custom*: Location and File name are filled. All inputs,
+including the *Save project settings with the report* checkbox, are disabled while a run is in progress.
 
 **View Report** opens the report in the user's default program for `.txt` (shell execute). No ellipsis: it needs no further input. **Browse...** keeps its ellipsis.
 
@@ -219,7 +233,7 @@ while a run is in progress.
 3. Report file already exists (either mode):
     - if it is read-only → **error dialog**, run does not start;
     - otherwise → **warning dialog** with **Overwrite** and **Cancel**.
-4. Save settings.
+4. Run the save rule (§8.2) for the project's settings. It may ask whether or where to save; *Cancel* on any of its prompts stops the run from starting.
 
 ### 6.2 Query
 
@@ -282,6 +296,9 @@ long*, *Invalid characters in path*, *Path is empty in the index table*) never s
 - **Closing the window mid-run**: a prompt, *"An audit is in progress. Stop it and exit?"*, with **Yes** and **No**. Yes stops the run, writes the report as
   `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same. If Yes is chosen before the count query returns, no report is written (as for
   Stop) and the application simply exits.
+- **Closing the window, in general**: every close, including one caused by the operating system logging off or shutting down, runs the save rule (§8.2) before the window
+  goes. During a run the stop-and-exit prompt above comes first, and the save rule runs only if the answer is Yes. *Cancel* on any of the save rule's prompts keeps the
+  window open.
 
 ## 7. The report
 
@@ -352,10 +369,66 @@ Rules:
 
 ## 8. Settings
 
-`%APPDATA%\MediQuant\FileAuditor\settings.json`, per Windows user. Holds every input: server, database, table, path column, ID column, empty-files option, project folder,
-project stage, audit stage (default Interim), custom-location flag, custom location, custom file name. No credentials. Loaded on launch (missing or unreadable file → defaults);
-saved when a run starts and when the app closes, using a temp file + `File.Move(overwrite: true)`. A null string value or an undefined enum value in the file falls
-back, field by field, to its default; other values are kept. Window size and position are not saved — the window is fixed-size.
+Settings belong to the **project**, not the Windows user. They are saved as `FileAuditorSettings.json` beside the project's report, so that the file lives in the project's
+repository with the report and any teammate can open the same project. The per-user `%APPDATA%\MediQuant\FileAuditor\settings.json` of earlier builds is no longer read or
+written; it is left on disk untouched and is not migrated.
+
+The file holds every input: server, database, table, path column, ID column, empty-files option, project folder, project stage, audit stage (default Interim),
+custom-location flag, custom location, custom file name. No credentials. The *Save project settings with the report* checkbox is not stored in it. The file is written
+with a temp file + `File.Move(overwrite: true)`; a save never creates a folder. A null string value or an undefined enum value in the file falls back, field by field, to its
+default; other values are kept. Window size and position are not saved — the window is fixed-size. The milestone 2 spec
+(`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`) has the full prompt texts.
+
+### 8.1 Start-up, opening and closing a project
+
+- **Start-up:** the app opens with every input at its default (`AppSettings.Default`) and no project open. Nothing is read from disk, and the checkbox is ticked.
+- **Open project...** runs the save rule (§8.2) for the current project; *Cancel* there stops. It then shows a file picker titled *Open Project*, filtered to JSON files, with
+  `FileAuditorSettings.json` suggested. The picker starts in the report's *Location* when that is a full path to a folder that exists, otherwise in the user's profile folder.
+    - *Picker cancelled:* nothing changes; the current project stays open as it was, remembered answers included.
+    - *File cannot be read* (invalid JSON, access denied, not a settings file): an error dialogue; the current project stays open unchanged.
+    - *File read:* the project is reset as for *Close project*, the file's settings are loaded, and it becomes the project's file. The loaded settings are the baseline for
+      "nothing has changed" (§8.2). The window title does not show the open project.
+- **Close project** runs the save rule, then resets every input to its default, ticks the checkbox, forgets the *No* answer, the untick-warning answer and the open file, and
+  clears the Audit group's statistics and the last run's status (the status bar reads `Enter the required details`, §5.5). It is equivalent to relaunching the app.
+
+### 8.2 The save rule
+
+One rule, applied at four save points: **Start** (after the pre-flight checks pass, §6.1 step 4), **closing the window** (§6.4), **Close project** and **Open project...**.
+
+1. **Nothing has changed** since the project was opened or last saved (the current inputs equal the settings last loaded or saved; a fresh, untouched window counts as
+   unchanged) → do nothing, and do not ask.
+2. **Checkbox ticked** → save (§8.3) without asking.
+3. **Checkbox unticked and the user has already answered No** this session → do nothing.
+4. **Checkbox unticked and not yet answered** → ask *"Do you want to save this project's settings?"* with **Yes** and **No**. *Yes* saves and ticks the checkbox, so later
+   saves happen without asking. *No* does not save, and the app does not ask again until *Close project* or a fresh launch.
+
+So the three states read: *ticked* — always save; *unticked* — ask at the next save point; *unticked and declined* — never ask, never save, for the rest of the session.
+
+**Backing out.** *Cancel* on any of the prompts in §8.3, or on a save failure, backs out of the operation that triggered the save:
+
+| Save point             | Cancel means                                                             |
+|------------------------|--------------------------------------------------------------------------|
+| **Start**              | The audit does not start; the window is left as it was.                  |
+| **Closing the window** | The window stays open.                                                   |
+| **Close project**      | The project stays open, unchanged.                                       |
+| **Open project...**    | The picker is not shown; the current project stays open, unchanged.      |
+
+### 8.3 Where the file is saved
+
+- **Beside the report, per stage.** The file goes in the report's folder (the resolved *Location*). With a built location, Sample and Final are different folders, so each
+  stage has its own settings file; the two stages may use different databases.
+- **A project that has never been saved** (no file opened, nothing saved yet) → saved in the report's folder.
+- **A project opened from a file, or saved before in this session** → saved back to that file, without asking, even when the report location is currently incomplete (the
+  project's file is already known). If the report location is complete and its folder no longer matches the folder the file is in (for example, the stage was switched), the
+  app asks *"Where should the settings be saved?"* with **Report Folder**, **Original File** and **Cancel**. *Report Folder* saves to the report's folder, and from then on
+  that is the project's file; *Original File* saves back where it was opened from; *Cancel* backs out (§8.2).
+- **A different settings file is already there.** When the target is a `FileAuditorSettings.json` that is not the project's own file (a never-saved project, or after
+  *Report Folder*), the app warns *"A project settings file already exists in this folder ... Do you want to overwrite it?"* with **Overwrite**, **Skip Save** and
+  **Cancel**. *Overwrite* saves over it and it becomes the project's file; *Skip Save* does not save this time and the operation goes ahead; *Cancel* backs out.
+- **A save that cannot be done:** a never-saved project whose report location is incomplete (no Project folder, or a custom Location that is not a full path), a folder that
+  does not exist, or a failed write (read-only, access denied, disconnected drive). The app never creates a folder just to save the settings. It shows an error dialogue
+  naming the path and the reason, with **Skip Save** (the operation goes ahead without saving) and **Cancel** (backs out). On Start the pre-flight checks have already
+  confirmed the report folder exists and is writable, so a failure there is rare.
 
 ## 9. Code shape
 
@@ -366,10 +439,13 @@ XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj
 - `Startup/` — `App` and `Program`.
 - `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`) and `Groups/` (a `UserControl` per group box: Database, File Index
   Table, Report, Audit).
-- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon`) and `Groups/`.
-- `Services/` — `Settings/` (settings store), `Sql/` (connection strings, SQL identifiers, query builder, index table reader), `Checking/` (file checker and Win32 error
+- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel
+  folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon` and `DialogueChoice`) and `Groups/`.
+- `Services/` — `Settings/` (`SettingsStore`, which loads and saves one settings file at a path it is given and never creates a folder; `ProjectSettingsService`, which holds the
+  open project's file path and baseline settings and runs the save rule of §8.2 with its prompts, returning a `SavePointResult` that says whether the triggering operation may
+  proceed and whether the checkbox is to be ticked), `Sql/` (connection strings, SQL identifiers, query builder, index table reader), `Checking/` (file checker and Win32 error
   mapper), `Auditing/` (audit runner, pre-flight checker, request and progress types), `Reporting/` (report builder, writer and path resolver) and `Dialogues/` (dialogue
-  service). Return `ErrorOr<T>` for expected failures.
+  service, which also offers a three-button choice returning a `DialogueChoice` and the *Open Project* file picker). Return `ErrorOr<T>` for expected failures.
 - `Models/` — `Settings/` (settings record and the project and audit stage enums), `Auditing/` (audit query, index row, check outcome and result) and `Reporting/` (audit
   report and result kind).
 - `Common/` — `GlobalUsings.cs`; `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/` (`ClassicWindow` helpers); `Serialisation/`
@@ -382,7 +458,8 @@ and status bar; it stays at 100 lines or fewer by pushing content into the group
 `Common/Errors/`, not exceptions. Exceptions are caught at the boundary where they occur (SQL, file system) and translated into errors or check outcomes. SQL access is
 plain `Microsoft.Data.SqlClient`, with no ORM.
 
-**Storage.** The app writes only the per-user settings file (§8) and the report (§7) — never anything beside its executable, which runs from a shared file server.
+**Storage.** The app writes only the project settings file (§8) and the report (§7), both in the report's folder — never anything beside its executable, which runs from a
+shared file server, and nothing under `%APPDATA%`.
 
 ## 10. Builder's calls (decided by Claude, not the user)
 
@@ -396,6 +473,9 @@ plain `Microsoft.Data.SqlClient`, with no ORM.
 - Status bar messages and keyboard shortcuts.
 - Extra report header lines (Empty files, Project folder, stages).
 - `Total files` stays the table's row count on Stop or failure, with a `Not checked:` line (§7).
+- Project settings (milestone 2, §8): *Open project...* runs the save rule first and forgets the *No* answer, since the new file is a different project; a cancelled picker or
+  an unreadable file leaves the current project untouched; "nothing has changed" compares the current inputs with the settings last loaded or saved; an opened project
+  whose report location is incomplete saves back to its own file without asking; every close, including an operating-system logoff close, goes through the save rule.
 
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
 that failed, found by walking the path (§6.3); the close-mid-run prompt.
