@@ -208,6 +208,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void UpdateCommands()
     {
+        OpenProjectCommand.NotifyCanExecuteChanged();
+        CloseProjectCommand.NotifyCanExecuteChanged();
         StartCommand.NotifyCanExecuteChanged();
         StopCommand.NotifyCanExecuteChanged();
         ViewReportCommand.NotifyCanExecuteChanged();
@@ -352,6 +354,110 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             await _dialogues.ShowErrorAsync($"The report could not be opened:\n{PathText.Breakable(path)}\n\n{ex.Message}");
         }
+    }
+
+    private bool CanChangeProject() => !IsRunning;
+
+    [ RelayCommand(CanExecute = nameof(CanChangeProject)) ]
+    private async Task CloseProjectAsync()
+    {
+        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), Report.Current, Report.SaveProjectSettings);
+
+        if (!savePoint.Proceed)
+        {
+            return;
+        }
+
+        ResetProject();
+    }
+
+    [ RelayCommand(CanExecute = nameof(CanChangeProject)) ]
+    private async Task OpenProjectAsync()
+    {
+        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), Report.Current, Report.SaveProjectSettings);
+
+        if (!savePoint.Proceed)
+        {
+            return;
+        }
+
+        string startFolder = await ResolvePickerStartFolderAsync();
+        string? path       = await _dialogues.PickProjectFileAsync(startFolder);
+
+        if (path is null)
+        {
+            AbandonOpen(savePoint);
+
+            return;
+        }
+
+        ErrorOr<AppSettings> loaded = _project.Store.Load(path);
+
+        if (loaded.IsError)
+        {
+            AbandonOpen(savePoint);
+
+            await _dialogues.ShowErrorAsync($"The project could not be opened:\n{PathText.Breakable(path)}\n\n{loaded.FirstError.Description}");
+
+            return;
+        }
+
+        ResetProject();
+
+        AppSettings settings = loaded.Value;
+
+        Database.Load(settings);
+        FileIndexTable.Load(settings);
+        Report.Load(settings);
+
+        _project.MarkLoaded(path, Snapshot());
+    }
+
+    // The save point may have saved and unticked-then-answered Yes; if the operation is abandoned the project stays open, so that tick must be shown.
+    private void AbandonOpen(SavePointResult savePoint)
+    {
+        if (savePoint.TickCheckbox)
+        {
+            SetSaveProjectSettings(true);
+        }
+    }
+
+    // The folder probe runs off the UI thread, since the report folder may be on a slow or disconnected drive.
+    private async Task<string> ResolvePickerStartFolderAsync()
+    {
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        ReportPath current = Report.Current;
+
+        if (!current.IsComplete
+            || !Path.IsPathFullyQualified(current.Directory))
+        {
+            return profile;
+        }
+
+        string directory = current.Directory;
+
+        bool exists = await Task.Run(() => Directory.Exists(directory));
+
+        return exists ? directory : profile;
+    }
+
+    // Every group goes back to its defaults, as if the application had just been launched.
+    private void ResetProject()
+    {
+        AppSettings defaults = AppSettings.Default;
+
+        Database.Load(defaults);
+        FileIndexTable.Load(defaults);
+        Report.Load(defaults);
+
+        _project.Reset();
+        SetSaveProjectSettings(true);
+
+        _lastRunStatus = null;
+        Audit.Reset();
+
+        UpdateIdleStatus();
+        RefreshReportState();
     }
 
     [ RelayCommand ]

@@ -194,20 +194,20 @@ code conventions bind every task. House rules: [`CLAUDE.md`](../../../CLAUDE.md)
 - Consumes: Task 1's `PickProjectFileAsync`; Task 2's `SettingsStore`, `ProjectSettingsService.MarkLoaded` / `Reset`; the group view models' existing `Load(AppSettings)`.
 - Produces: `OpenProjectCommand`, `CloseProjectCommand` (both `CanExecute` = `!IsRunning`, re-evaluated in `UpdateCommands`).
 
-- [ ] **Step 1: Menu.** Insert the two items and a separator at the top of *File*, bound to the new commands. `MainWindow.axaml` must stay at 100 lines or fewer.
-- [ ] **Step 2: `ResetProject()`** — every group `Load(AppSettings.Default)`, `Report.SaveProjectSettings = true`, `project.Reset()`, `_lastRunStatus = null`,
+- [x] **Step 1: Menu.** Insert the two items and a separator at the top of *File*, bound to the new commands. `MainWindow.axaml` must stay at 100 lines or fewer.
+- [x] **Step 2: `ResetProject()`** — every group `Load(AppSettings.Default)`, `Report.SaveProjectSettings = true`, `project.Reset()`, `_lastRunStatus = null`,
   `Audit.Reset()`, then `UpdateIdleStatus()` and `RefreshReportState()`. *Close project* = save point (Cancel → stop) then `ResetProject()`.
-- [ ] **Step 3: *Open project...*** — save point (Cancel → stop); start folder = the report's directory when `Report.Current.IsComplete`, it is fully qualified and
+- [x] **Step 3: *Open project...*** — save point (Cancel → stop); start folder = the report's directory when `Report.Current.IsComplete`, it is fully qualified and
   `Directory.Exists` (via `Task.Run`), else `Environment.GetFolderPath(SpecialFolder.UserProfile)`; pick (null → stop); `store.Load(path)` (error → *Open failed*
   dialogue, stop); `ResetProject()`; load the settings into the groups; `project.MarkLoaded(path, Snapshot())` — the baseline is the snapshot after loading, so a
   normalised file does not read as changed.
-- [ ] **Step 4: Verify.** Clean build. In the running app:
+- [x] **Step 4: Verify.** Clean build. In the running app:
   - *Open project...* with no valid location starts in the user's folder; with the Task 2 scratch location it starts there. Cancel the picker → nothing changes.
   - Open a valid file → the fields load, the box is ticked; close the window without changes → no prompt.
   - Open a file containing `not json` → *Open failed* error; the current project is unchanged.
   - Opened project: switch the Project Stage (built location) or change the custom location, then Start/close → *folder changed* prompt; check all three buttons.
   - *Close project* with unsaved changes and the box ticked → saves, then the window is at defaults and the status bar reads *Enter the required details*.
-- [ ] **Step 5: Commit** — `feat(✨): open and close projects from the File menu`.
+- [x] **Step 5: Commit** — `feat(✨): open and close projects from the File menu`.
 
 ### Task 5: Documentation sync and ledger
 
