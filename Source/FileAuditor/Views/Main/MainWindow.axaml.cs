@@ -25,7 +25,7 @@ public partial class MainWindow : ClassicWindow
 
         if (_closeApproved
             || e.Cancel
-            || DataContext is not MainWindowViewModel { IsRunning: true } viewModel)
+            || DataContext is not MainWindowViewModel viewModel)
         {
             return;
         }

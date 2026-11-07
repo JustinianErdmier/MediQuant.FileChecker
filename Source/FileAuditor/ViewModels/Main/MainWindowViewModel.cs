@@ -26,6 +26,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private bool _reportExists;
 
+    // Set while the checkbox is being put back to ticked, so the revert does not raise the untick warning again.
+    private bool _isRevertingTick;
+
     /// <summary>Initialises a new instance with the default settings, for the XAML designer.</summary>
     public MainWindowViewModel()
         : this(new DialogueService(() => null))
@@ -89,28 +92,28 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public void RefreshReportState() => _ = ProbeReportAsync();
 
     /// <summary>
-    ///     Called when the window is asked to close. With no audit running the close may proceed; otherwise the user is asked, and on Yes the run is stopped and its report written
-    ///     before the close may proceed.
+    ///     Called whenever the window is asked to close. With an audit running the user is asked first, and on Yes the run is stopped and its report written. The project's
+    ///     settings are then saved or offered for saving under the same rule as Start.
     /// </summary>
     /// <returns><see langword="true" /> when the window may close.</returns>
     public async Task<bool> ConfirmCloseAsync()
     {
-        if (!IsRunning)
+        if (IsRunning)
         {
-            return true;
+            if (!await _dialogues.AskYesNoAsync(message: "An audit is in progress. Stop it and exit?"))
+            {
+                return false;
+            }
+
+            // The run may have ended while the question was open; cancelling a finished run is harmless.
+            _auditCts?.Cancel();
+
+            await _auditTask;
         }
 
-        if (!await _dialogues.AskYesNoAsync(message: "An audit is in progress. Stop it and exit?"))
-        {
-            return false;
-        }
+        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), Report.Current, Report.SaveProjectSettings);
 
-        // The run may have ended while the question was open; cancelling a finished run is harmless.
-        _auditCts?.Cancel();
-
-        await _auditTask;
-
-        return true;
+        return savePoint.Proceed;
     }
 
     partial void OnIsRunningChanged(bool value)
@@ -125,6 +128,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
     // Only a change of the resolved report path matters here; every other Report property change accompanies one.
     private void OnReportChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(ReportViewModel.SaveProjectSettings))
+        {
+            if (!Report.SaveProjectSettings
+                && !_project.UntickConfirmed
+                && !_isRevertingTick)
+            {
+                _ = ConfirmUntickAsync();
+            }
+
+            return;
+        }
+
         if (e.PropertyName != nameof(ReportViewModel.Current))
         {
             return;
@@ -134,6 +149,28 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _reportExists = false;
         UpdateCommands();
         RefreshReportState();
+    }
+
+    private async Task ConfirmUntickAsync()
+    {
+        const string message = "If you untick this box, this project's settings will no longer be saved automatically. You will be asked whether to save them instead.\n\n"
+                               + "Do you want to untick it?";
+
+        if (await _dialogues.ConfirmAsync(message, "_Untick"))
+        {
+            _project.UntickConfirmed = true;
+
+            return;
+        }
+
+        SetSaveProjectSettings(true);
+    }
+
+    private void SetSaveProjectSettings(bool value)
+    {
+        _isRevertingTick           = true;
+        Report.SaveProjectSettings = value;
+        _isRevertingTick           = false;
     }
 
     private async Task ProbeReportAsync()
@@ -213,12 +250,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        // Task 3: pass Report.SaveProjectSettings and tick the checkbox on TickCheckbox; until then the box counts as ticked.
-        SavePointResult savePoint = await _project.RunSavePointAsync(settings, reportPath, saveTicked: true);
+        SavePointResult savePoint = await _project.RunSavePointAsync(settings, reportPath, Report.SaveProjectSettings);
 
         if (!savePoint.Proceed)
         {
             return;
+        }
+
+        if (savePoint.TickCheckbox)
+        {
+            SetSaveProjectSettings(true);
         }
 
         _auditTask = RunAuditAsync(new AuditRequest(settings, reportPath));

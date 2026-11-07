@@ -15,7 +15,7 @@
     <ct:GroupBox Header="Report"
                  Margin="4,2">
         <Grid ColumnDefinitions="92,*,Auto"
-              RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
               RowSpacing="6"
               Margin="4">
             <CheckBox Grid.ColumnSpan="3"
@@ -96,6 +96,11 @@
                      Grid.ColumnSpan="2"
                      Text="{Binding FileName}"
                      IsReadOnly="{Binding IsBuilt}" />
+            <CheckBox x:Name="SaveProjectSettingsBox"
+                      Grid.Row="5"
+                      Grid.ColumnSpan="3"
+                      Content="Save project settings _with the report"
+                      IsChecked="{Binding SaveProjectSettings}" />
         </Grid>
     </ct:GroupBox>
 </UserControl>

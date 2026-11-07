@@ -165,23 +165,23 @@ code conventions bind every task. House rules: [`CLAUDE.md`](../../../CLAUDE.md)
 - Produces: `ReportViewModel.SaveProjectSettings` (`[ ObservableProperty ] bool`, default `true`, **not** part of `ApplyTo`/`Load`); `MainWindowViewModel.ConfirmCloseAsync()`
   now covers every close, not only mid-run.
 
-- [ ] **Step 1: Add the checkbox** as Report row 5 (below *File name*, spanning all columns), bound to `SaveProjectSettings`, text from Global Constraints. It is disabled
+- [x] **Step 1: Add the checkbox** as Report row 5 (below *File name*, spanning all columns), bound to `SaveProjectSettings`, text from Global Constraints. It is disabled
   during a run through the group's existing `IsEditable` binding.
-- [ ] **Step 2: Untick warning.** `MainWindowViewModel` watches `Report.PropertyChanged` for `SaveProjectSettings`. On a change to `false` while
+- [x] **Step 2: Untick warning.** `MainWindowViewModel` watches `Report.PropertyChanged` for `SaveProjectSettings`. On a change to `false` while
   `!project.UntickConfirmed` and not already reverting: show the warning; *Untick* → `UntickConfirmed = true`; *Cancel* → set it back to `true` under a re-entrancy
   guard. Ticking needs nothing.
-- [ ] **Step 3: Pass the real checkbox to Start** (replace Task 2's temporary `true`).
-- [ ] **Step 4: Save on every close.** `MainWindow.OnClosing` now cancels and re-issues *every* close (not only mid-run) until approved, keeping the `_isAsking` guard.
+- [x] **Step 3: Pass the real checkbox to Start** (replace Task 2's temporary `true`).
+- [x] **Step 4: Save on every close.** `MainWindow.OnClosing` now cancels and re-issues *every* close (not only mid-run) until approved, keeping the `_isAsking` guard.
   `ConfirmCloseAsync`: if running, the existing stop-and-exit prompt first (No → `false`; Yes → cancel the run and await it); then
   `RunSavePointAsync(Snapshot(), Report.Current, Report.SaveProjectSettings)` — `Cancel` → `false`, otherwise `true`. *File → Exit* and Alt+F4 go through the same path.
-- [ ] **Step 5: Verify.** Clean build. In the running app:
+- [x] **Step 5: Verify.** Clean build. In the running app:
   - Untick → warning; *Cancel* keeps it ticked; untick again → *Untick* → unticked; tick and untick again → no warning.
   - With the box unticked, change a field and close → save prompt; *No* → closes, no file. Relaunch, untick (warning again: new session), change a field, Start →
     prompt; *Yes* → saves and the box is ticked.
   - Launch and close untouched → no prompt, no file. Change a field and close with the box ticked and a custom location whose folder does not exist → *cannot be saved*
     error; *Cancel* keeps the window open; *Skip Save* closes.
   - Make the saved project file read-only, change a field, close → *cannot be saved* error with the write error's message. Remove the read-only attribute afterwards.
-- [ ] **Step 6: Commit** — `feat(✨): add the save-project-settings checkbox and save on close`.
+- [x] **Step 6: Commit** — `feat(✨): add the save-project-settings checkbox and save on close`.
 
 ### Task 4: Open project and Close project
 
