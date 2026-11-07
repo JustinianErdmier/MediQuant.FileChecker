@@ -78,15 +78,15 @@ code conventions bind every task. House rules: [`CLAUDE.md`](../../../CLAUDE.md)
   - `DialogueService.PickProjectFileAsync(string startFolder) : Task<string?>` — the chosen file's local path, or `null` when cancelled.
   - The existing `ShowErrorAsync`, `ConfirmAsync` and `AskYesNoAsync` keep their signatures and behaviour.
 
-- [ ] **Step 1: Add the third button.** Buttons sit in order Primary, Secondary, Tertiary along the bottom right; Primary is `IsDefault`; the last visible button is
+- [x] **Step 1: Add the third button.** Buttons sit in order Primary, Secondary, Tertiary along the bottom right; Primary is `IsDefault`; the last visible button is
   `IsCancel`. The window closes with a `DialogueChoice`; the title-bar ✕ yields the last visible button's choice (`Secondary` for two buttons, `Tertiary` for three,
   `Primary` for one). `ShowAsync` returns that choice; the three existing methods map `Primary` → `true`, anything else → `false`.
-- [ ] **Step 2: Add `PickProjectFileAsync`.** `owner.StorageProvider.OpenFilePickerAsync` with title `Open Project`, `AllowMultiple = false`, the two filters from Global
+- [x] **Step 2: Add `PickProjectFileAsync`.** `owner.StorageProvider.OpenFilePickerAsync` with title `Open Project`, `AllowMultiple = false`, the two filters from Global
   Constraints (patterns `FileAuditorSettings.json` and `*.json`), and `SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(startFolder)`. Return
   `TryGetLocalPath()` of the first file, or `null`. With no owner window (designer), return `null`.
-- [ ] **Step 3: Verify.** Clean build. Run the app and trigger an existing two-button dialogue (custom location set to a missing folder → *Create Folder* / *Cancel*):
+- [x] **Step 3: Verify.** Clean build. Run the app and trigger an existing two-button dialogue (custom location set to a missing folder → *Create Folder* / *Cancel*):
   both buttons and the ✕ still behave as before. The three-button path is exercised in Task 2.
-- [ ] **Step 4: Commit** — `feat(✨): add three-button dialogues and a project file picker`.
+- [x] **Step 4: Commit** — `feat(✨): add three-button dialogues and a project file picker`.
 
 ### Task 2: Per-file settings store and the project settings service
 
