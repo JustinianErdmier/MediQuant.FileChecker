@@ -8,13 +8,13 @@
                xmlns:tabs="clr-namespace:FileAuditor.Views.Tabs"
                mc:Ignorable="d"
                d:DesignWidth="640"
-               d:DesignHeight="640"
+               d:DesignHeight="668"
                x:Class="FileAuditor.Views.Main.MainWindow"
                x:DataType="vm:MainWindowViewModel"
                Title="File Auditor"
                Icon="avares://FileAuditor/Assets/FileAuditor.png"
                Width="640"
-               Height="672"
+               Height="668"
                CanResize="False"
                WindowStartupLocation="CenterScreen">
     <Design.DataContext>

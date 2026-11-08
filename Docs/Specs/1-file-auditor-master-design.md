@@ -106,7 +106,7 @@ the GitHub repository is the user's call, outside this design).
 
 ## 5. The main window
 
-A single, **fixed-size** window: 640 × 672 pixels (outer), not resizable, no maximise button; minimise and close only. Classic.Avalonia supplies the Win9x chrome. The height is
+A single, **fixed-size** window: 640 × 668 pixels (outer), not resizable, no maximise button; minimise and close only. Classic.Avalonia supplies the Win9x chrome. The height is
 the minimum the Missing Files tab needs with nothing clipped and no dead space, measured at the current display scale (milestone 4.1); it must be re-measured whenever a group on
 that tab changes. The tab control fills the window's star row (§5.2a), so the size is the same on both tabs and switching tabs never moves the window's edges. Tab order runs
 top to bottom, left to right.
@@ -136,7 +136,7 @@ default for Audit Stage, and the last two predate the tab control, the per-direc
 group (named *Progress* there), and the project settings (the *Save project settings with the report* checkbox and the *Open project...* and *Close project* menu items,
 milestone 2). All of them predate milestone 4's final layout (the Database and File Index Table groups side by side, the fixed tab height, the compact Unindexed tab and the File
 Types dialogue) and milestone 4.1's (the Project Settings group, disabled rather than hidden custom-location options, the right-hand *Include subfolders* column and the fixed
-672-pixel height), and they are kept as historical references, not refreshed. The XAML and this section are the contract.
+668-pixel height), and they are kept as historical references, not refreshed. The XAML and this section are the contract.
 
 ```text
 ┌ File Auditor ───────────────────────────────────────────────── _ × ┐
@@ -249,7 +249,7 @@ reverse.)
 ### 5.2a Tab control and Options group
 
 - A standard Win9x **tab control** sits below those two groups, one tab per audit direction: **Missing Files** and **Unindexed Files**. It fills the window's remaining
-  (star) row, so its height is whatever the fixed 672-pixel window leaves (§5), which is the Missing Files tab's content height; the window does not change size when the tab
+  (star) row, so its height is whatever the fixed 668-pixel window leaves (§5), which is the Missing Files tab's content height; the window does not change size when the tab
   changes. The Unindexed Files tab is taller, so its content sits in a scroll viewer that scrolls vertically when needed and never horizontally. The selected tab is not
   saved; the window opens on the first tab. Switching tabs is allowed while an audit runs.
 - The Missing Files tab holds, top to bottom: an **Options** group, the **Report** group (§5.3) and the **Audit** group (§5.4).
@@ -323,9 +323,10 @@ unchanged from milestone 2:
     - ticked, and no settings file is open or the open file is in the report folder: `Saved as FileAuditorSettings.json in the same folder as the audit reports.`
     - ticked, and the open settings file is in a different folder from the report folder: `Saved to the opened settings file, in a different folder from the audit reports.`
     - unticked: `This project's settings are not being saved.`
-- The folders are compared with the save rule's normalisation (`ProjectSettingsService.SameFolder`, §8.2). An incomplete report location counts as "no mismatch" when no file is
-  open, and as "different" when a file is open. The message is recomputed whenever the checkbox, the report location, the open project (*Open project...*, *Close project*) or
-  the project file's path (a save that moves it) changes.
+- The folders are compared with the save rule's normalisation (`ProjectSettingsService.IsInFolder`, which uses the save rule's `SameFolder`, §8.2). An incomplete report location
+  counts as "no mismatch" when no file is open, and as "different" when a file is open. The message is recomputed whenever the checkbox, the report location, the open project
+  (*Open project...*, *Close project*) or the project file's path (a save that moves it) changes.
+
 ### 5.4 Audit group (Missing Files tab)
 
 The Audit group sits at the bottom of its tab, below the Report group; each direction's tab has its own, so a tab's statistics are those of its own last run.
@@ -913,10 +914,10 @@ Settled by the build (milestone 1), with no change in behaviour (milestone 4's a
   modal, fixed-size, centred on its owner, buttons along the bottom right.
 - **Number and time formatting in the report:** counts are formatted `N0` with the invariant culture, so reports diff identically on any machine; elapsed time is shown in
   total hours (at least two digits), not rolled over into days.
-- **Window size and access keys (milestone 4, size revised in 4.1):** the window is 640 × 672 pixels (outer), measured at the current display scale; the tab control fills the
-  remaining row. On the Unindexed tab, *File t_ypes:* is `Y` and *E_xclude:* is `X`;
-  *Add...*, *Remove*, both *Edit...* buttons and the *Group file types by* radios carry none, because every letter is taken. In the File Types dialogue *New*, *Edit*, *Delete* and
-  *Clear* (milestone 4.1) and *Reset* are `N`, `E`, `D`, `L` and `R`, and *OK* and *Cancel* carry none. In the Project Settings group the checkbox's access key is `W`.
+- **Window size and access keys (milestone 4, size revised in 4.1):** the window is 640 × 668 pixels (outer), measured at the current display scale; the tab control fills the
+  remaining row. On the Unindexed tab, *File t_ypes:* is `Y` and *E_xclude:* is `X`; *Add...*, *Remove*, both *Edit...* buttons and the *Group file types by* radios carry none,
+  because every letter is taken. In the File Types dialogue *New*, *Edit*, *Delete* and *Clear* (milestone 4.1) and *Reset* are `N`, `E`, `D`, `L` and `R`, and *OK* and *Cancel*
+  carry none. In the Project Settings group the checkbox's access key is `W`.
 - **Concurrency and memory (milestone 4):** up to 16 folder listings at once; index paths held as 128-bit MD5 hashes (§6.5.2); the statistics refresh every 250 ms.
 - **Progress bar (milestone 4):** the Unindexed audit's moving block (§5.4a) is drawn by the view from a timer-driven column split, because the theme's marquee has a blank gap.
 - **Full-path validation:** a path is accepted as absolute only if `Path.IsPathFullyQualified` says so, so `C:x` and `\x` (which would resolve against the application's

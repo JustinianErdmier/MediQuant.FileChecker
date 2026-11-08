@@ -18,8 +18,10 @@ Decisions taken without the user, each with what it costs if wrong.
   "go". Cost if wrong: cosmetic.
 - **R3 (Task 1):** the commit trailers read `Claude Sonnet 5.5`, as the session's attribution reminder says, not the `Claude Opus 5.5` of the common rules (`5cf0ae3`,
   `ae79471` and `9bc3bb4`; signed, not rewritten). Cost if wrong: cosmetic.
-- **R4 (Task 3):** the window height is a fixed **672** pixels (outer 640 × 672), measured at the current display scale with *Custom* ticked and unticked (identical).
+- **R4 (Task 3):** the window height is a fixed **668** pixels (outer 640 × 668), measured at the current display scale with *Custom* ticked and unticked (identical).
   Cost if wrong: another display scale may clip or leave a gap; re-measure whenever a group changes.
+- **R5 (final review):** Task 4 (docs only) was reviewed by the final whole-branch review rather than a separate task review. Cost if wrong: doc defects found one stage later.
+
 ## User decisions
 
 The five requests that drive the milestone (2026-11-08):
@@ -44,12 +46,20 @@ The five requests that drive the milestone (2026-11-08):
 
 ## Outstanding items
 
-Minor findings from the task reviews, to go into the final-review fix wave:
+Fixed in the final-review polish wave (this commit):
 
-- **Task 1:** the status message is recomputed on every `ReportLocationState` change, including keystrokes (cheap, left as is).
-- **Task 3:** `Height="672"` has zero slack (re-measure if the groups change; scale-rounding risk); comment the folders header's 16-pixel right margin (the vertical scroll bar's
-  width); `MainWindow`'s `d:DesignHeight` is still 640 and should be 672.
-- **Task 3:** the Exclude editor was not opened directly (same window class and construction path as File Types).
+- The empty fifth row of the Report group, which left a gap under *File name* on the Missing Files tab; the window height is re-measured at **668** pixels (was 672).
+- `MainWindow`'s `d:DesignHeight` (now 668).
+- The folders header's 16-pixel right margin is commented (the vertical scroll bar's width).
+- The SDD nits: the blank line before §5.4, the ragged §11 bullet, and the reference to the private `SameFolder` in §5.
+
+Revisit when the groups or display scale change:
+
+- `Height="668"` has zero slack and was measured at the current display scale only; re-measure if a group changes or the app is run at another scale.
+
+Left as is:
+
+- **Task 1:** the status message is recomputed on every `ReportLocationState` change, including keystrokes (cheap).
 
 ## Incidents
 
@@ -65,7 +75,7 @@ Minor findings from the task reviews, to go into the final-review fix wave:
 
 ## Measurements
 
-- **Window:** 640 × 672 pixels (outer), at the current display scale; the longest Project Settings message is about 385 pixels wide, so it stays on one line.
+- **Window:** 640 × 668 pixels (outer), at the current display scale; the longest Project Settings message is about 385 pixels wide, so it stays on one line.
 
 ## Commits
 
@@ -80,4 +90,4 @@ ae79471 fix(🐛): keep the Include subfolders column visible for long folder pa
 
 ## Final review
 
-Pending.
+No Critical or Important findings. Six minor findings, plus the parked ones, were all addressed in the polish wave, in the commit that closes this ledger.

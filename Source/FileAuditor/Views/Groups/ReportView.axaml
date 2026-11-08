@@ -16,7 +16,6 @@
                  Margin="4,2">
         <Grid ColumnDefinitions="92,*,Auto"
               RowDefinitions="Auto,Auto,Auto,Auto,Auto"
-              RowSpacing="4"
               Margin="4">
             <CheckBox Grid.ColumnSpan="3"
                       Content="_Use a custom report location and file name"
@@ -25,6 +24,7 @@
             <StackPanel Grid.Row="1"
                         Grid.ColumnSpan="3"
                         Spacing="4"
+                        Margin="0,4,0,0"
                         IsEnabled="{Binding Shared.IsBuilt}">
                 <Grid ColumnDefinitions="92,140,*">
                     <Label Content="Pro_ject folder:"
@@ -67,11 +67,13 @@
             </StackPanel>
             <Label Grid.Row="2"
                    Content="Lo_cation:"
+                   Margin="0,4,0,0"
                    Target="{Binding #LocationBox}"
                    VerticalAlignment="Center" />
             <TextBox x:Name="LocationBox"
                      Grid.Row="2"
                      Grid.Column="1"
+                     Margin="0,4,0,0"
                      Text="{Binding Location}"
                      IsReadOnly="{Binding Shared.IsBuilt}" />
             <Button x:Name="BrowseButton"
@@ -80,36 +82,37 @@
                     Content="_Browse..."
                     MinWidth="75"
                     MinHeight="23"
-                    Margin="6,0,0,0"
+                    Margin="6,4,0,0"
                     HorizontalContentAlignment="Center"
                     IsEnabled="{Binding Shared.UseCustomLocation}"
                     Click="OnBrowseClick" />
             <Label Grid.Row="3"
                    Content="File nam_e:"
+                   Margin="0,4,0,0"
                    Target="{Binding #FileNameBox}"
                    VerticalAlignment="Center" />
             <TextBox x:Name="FileNameBox"
                      Grid.Row="3"
                      Grid.Column="1"
                      Grid.ColumnSpan="2"
+                     Margin="0,4,0,0"
                      Text="{Binding FileName}"
                      IsReadOnly="{Binding Shared.IsBuilt}" />
-            <StackPanel Grid.Row="4"
+            <StackPanel x:Name="GroupByPanel"
+                        Grid.Row="4"
                         Grid.ColumnSpan="3"
-                        Spacing="4">
-                <StackPanel x:Name="GroupByPanel"
-                            Orientation="Horizontal"
-                            Spacing="14"
-                            IsVisible="{Binding IsUnindexed}">
-                    <TextBlock Text="Group file types by:"
-                               VerticalAlignment="Center" />
-                    <RadioButton GroupName="GroupFileTypesBy"
-                                 Content="Listed type"
-                                 IsChecked="{Binding GroupByListedType}" />
-                    <RadioButton GroupName="GroupFileTypesBy"
-                                 Content="Found extension"
-                                 IsChecked="{Binding GroupByFoundExtension}" />
-                </StackPanel>
+                        Orientation="Horizontal"
+                        Spacing="14"
+                        Margin="0,4,0,0"
+                        IsVisible="{Binding IsUnindexed}">
+                <TextBlock Text="Group file types by:"
+                           VerticalAlignment="Center" />
+                <RadioButton GroupName="GroupFileTypesBy"
+                             Content="Listed type"
+                             IsChecked="{Binding GroupByListedType}" />
+                <RadioButton GroupName="GroupFileTypesBy"
+                             Content="Found extension"
+                             IsChecked="{Binding GroupByFoundExtension}" />
             </StackPanel>
         </Grid>
     </ct:GroupBox>
