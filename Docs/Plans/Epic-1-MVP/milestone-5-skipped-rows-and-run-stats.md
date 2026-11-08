@@ -162,16 +162,16 @@ Added by the user on 2026-11-08, after Task 2 (approved description item 5).
 
 - Consumes: `RemainingEstimator.RecentRate` and `RecentRate` (Task 3).
 
-- [ ] **Step 1:** Both Audit groups' statistics become three label/value column pairs in three rows (Global Constraints, *Statistics layout*). Columns are sized so the
+- [x] **Step 1:** Both Audit groups' statistics become three label/value column pairs in three rows (Global Constraints, *Statistics layout*). Columns are sized so the
   longest value of each fits at 640 px wide without clipping — at least `999,999,999` counts, `99:59:59` times and `9,999,999 (9,999,999)` for Files/second.
-- [ ] **Step 2:** *Files/second* shows the whole-run average, then the recent rate in parentheses (Global Constraints). Missing tab: the recent figure is
+- [x] **Step 2:** *Files/second* shows the whole-run average, then the recent rate in parentheses (Global Constraints). Missing tab: the recent figure is
   `RemainingEstimator.RecentRate` (processed rows per second, the rate behind *Remaining*). Unindexed tab: its own `RecentRate` over total files found. Update the XML docs.
-- [ ] **Step 3:** The grid loses a row, so re-measure the window's natural height on the Missing tab (as milestone 4.1 did: temporarily `SizeToContent="Height"`, read
+- [x] **Step 3:** The grid loses a row, so re-measure the window's natural height on the Missing tab (as milestone 4.1 did: temporarily `SizeToContent="Height"`, read
   it, remove it) with *Custom* ticked and unticked; set `Height` and `d:DesignHeight` in `MainWindow.axaml` to it. The Unindexed tab still scrolls vertically only.
-- [ ] **Step 4: Verify.** Clean build. Screenshot both Audit groups idle and mid-run (LocalDB for the Missing run, a scratch folder for the Unindexed one). Files/second
+- [x] **Step 4: Verify.** Clean build. Screenshot both Audit groups idle and mid-run (LocalDB for the Missing run, a scratch folder for the Unindexed one). Files/second
   shows `N (M)` once the warm-up has passed and the whole-run figure alone before it and after the run; nothing is clipped on either tab; the Missing tab has no gap
   and nothing cut off; report the new window size. Drop the database.
-- [ ] **Step 5: Commit** — `feat(✨): show the statistics in three columns with the recent rate beside Files/second`.
+- [x] **Step 5: Commit** — `feat(✨): show the statistics in three columns with the recent rate beside Files/second`.
 
 ### Task 5: Documentation sync and ledger
 

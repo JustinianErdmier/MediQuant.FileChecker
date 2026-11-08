@@ -33,6 +33,17 @@ public sealed class RecentRate
     /// <summary>Gets the rate from the latest <see cref="Next" /> call, or <see langword="null" /> during the warm-up.</summary>
     public double? Value { get; private set; }
 
+    /// <summary>Formats the Files/second text: the whole-run average, then the recent rate in parentheses, each a whole number with thousands separators.</summary>
+    /// <param name="wholeRun">The whole-run average, in items per second.</param>
+    /// <param name="recent">The recent rate, or <see langword="null" /> to show the whole-run average alone.</param>
+    /// <returns>The text, such as <c>54,112 (60,001)</c> or <c>54,112</c>.</returns>
+    public static string Format(double wholeRun, double? recent)
+    {
+        string whole = wholeRun.ToString(format: "N0", CultureInfo.CurrentCulture);
+
+        return recent is null ? whole : $"{whole} ({recent.Value.ToString(format: "N0", CultureInfo.CurrentCulture)})";
+    }
+
     /// <summary>Forgets every sample, so the next run starts its own warm-up.</summary>
     public void Reset()
     {

@@ -8,13 +8,18 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
 
     private const double MarqueeStep = 5;
 
+    private readonly RecentRate _recentRate = new();
+
     private double _marqueePosition;
 
     /// <summary>Gets or sets the elapsed time as <c>hh:mm:ss</c>.</summary>
     [ ObservableProperty ]
     public partial string Elapsed { get; set; } = "";
 
-    /// <summary>Gets or sets the files found per second over the whole run, to a whole number; blank until a full second has elapsed.</summary>
+    /// <summary>
+    ///     Gets or sets the files found per second over the whole run, to a whole number, followed while the run is under way and the warm-up has passed by the recent
+    ///     rate in parentheses; blank until a full second has elapsed.
+    /// </summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = "";
 
@@ -56,6 +61,8 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     /// <inheritdoc />
     public override void Reset()
     {
+        _recentRate.Reset();
+
         TotalFiles     = "";
         Indexed        = "";
         Unindexed      = "";
@@ -84,14 +91,15 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     /// <param name="isFinished">Whether the run has ended, which fills the progress bar; otherwise each refresh moves the block on.</param>
     public void Update(UnindexedProgress progress, TimeSpan elapsed, bool isFinished)
     {
-        long total = progress.TotalFiles;
+        long    total  = progress.TotalFiles;
+        double? recent = _recentRate.Next(total, elapsed);
 
         TotalFiles     = total.ToString(format: "N0", CultureInfo.CurrentCulture);
         Indexed        = progress.Indexed.ToString(format: "N0", CultureInfo.CurrentCulture);
         Unindexed      = progress.Unindexed.ToString(format: "N0", CultureInfo.CurrentCulture);
         Unverified     = progress.Unverified.ToString(format: "N0", CultureInfo.CurrentCulture);
         Elapsed        = $"{(long)elapsed.TotalHours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}";
-        FilesPerSecond = elapsed.TotalSeconds >= 1 ? (total / elapsed.TotalSeconds).ToString(format: "N0", CultureInfo.CurrentCulture) : "";
+        FilesPerSecond = elapsed.TotalSeconds >= 1 ? RecentRate.Format(total / elapsed.TotalSeconds, isFinished ? null : recent) : "";
 
         IsRunning     = !isFinished;
         Percent       = isFinished ? 100 : 0;
