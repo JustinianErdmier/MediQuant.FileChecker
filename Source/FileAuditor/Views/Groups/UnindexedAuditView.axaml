@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ct="clr-namespace:Classic.Avalonia.Theme.Controls;assembly=Classic.Avalonia.Theme"
+             xmlns:cc="clr-namespace:Classic.CommonControls;assembly=Classic.CommonControls.Avalonia"
+             xmlns:vm="clr-namespace:FileAuditor.ViewModels.Groups"
+             xmlns:mainVm="clr-namespace:FileAuditor.ViewModels.Main"
+             mc:Ignorable="d"
+             d:DesignWidth="480"
+             d:DesignHeight="140"
+             x:Class="FileAuditor.Views.Groups.UnindexedAuditView"
+             x:DataType="vm:UnindexedAuditViewModel">
+    <Design.DataContext>
+        <vm:UnindexedAuditViewModel />
+    </Design.DataContext>
+    <ct:GroupBox Header="Audit"
+                 Margin="4,2">
+        <StackPanel Margin="4"
+                    Spacing="6">
+            <Grid ColumnDefinitions="90,*,96,*"
+                  RowDefinitions="Auto,Auto,Auto,Auto"
+                  RowSpacing="3">
+                <TextBlock Text="Total files:" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding TotalFiles}" />
+                <TextBlock Grid.Column="2"
+                           Text="Elapsed:" />
+                <TextBlock Grid.Column="3"
+                           Text="{Binding Elapsed}" />
+                <TextBlock Grid.Row="1"
+                           Text="Indexed:" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="1"
+                           Text="{Binding Indexed}" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="2"
+                           Text="Files/second:" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="3"
+                           Text="{Binding FilesPerSecond}" />
+                <TextBlock Grid.Row="2"
+                           Text="Unindexed:" />
+                <TextBlock Grid.Row="2"
+                           Grid.Column="1"
+                           Text="{Binding Unindexed}" />
+                <TextBlock Grid.Row="3"
+                           Text="Unverified:" />
+                <TextBlock Grid.Row="3"
+                           Grid.Column="1"
+                           Text="{Binding Unverified}" />
+            </Grid>
+            <Panel Height="20">
+                <ProgressBar Minimum="0"
+                             Maximum="100"
+                             Value="{Binding Percent}"
+                             ShowProgressText="False"
+                             IsVisible="{Binding !IsRunning}" />
+                <!-- The total is unknown while a run is under way, so a fixed-width block moves across a sunken track instead of a fill that would read as a percentage. -->
+                <Border IsVisible="{Binding IsRunning}"
+                        BorderBrush="{DynamicResource {x:Static cc:SystemColors.ControlDarkBrushKey}}"
+                        BorderThickness="1,1,0,0">
+                    <Border BorderBrush="{DynamicResource {x:Static cc:SystemColors.ControlLightLightBrushKey}}"
+                            BorderThickness="0,0,1,1"
+                            Background="{DynamicResource {x:Static cc:SystemColors.ControlBrushKey}}"
+                            ClipToBounds="True">
+                        <Grid Margin="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="{Binding MarqueeBefore}" />
+                                <ColumnDefinition Width="{Binding MarqueeBlock}" />
+                                <ColumnDefinition Width="{Binding MarqueeAfter}" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="1"
+                                    Background="{DynamicResource {x:Static cc:SystemColors.HighlightBrushKey}}" />
+                        </Grid>
+                    </Border>
+                </Border>
+            </Panel>
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <Button Content="_View Report"
+                        MinWidth="75"
+                        MinHeight="23"
+                        HorizontalContentAlignment="Center"
+                        Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).ViewReportCommand}" />
+                <Button Grid.Column="2"
+                        Content="St_art"
+                        MinWidth="75"
+                        MinHeight="23"
+                        HorizontalContentAlignment="Center"
+                        IsDefault="True"
+                        Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).StartCommand}" />
+                <Button Grid.Column="3"
+                        Content="St_op"
+                        MinWidth="75"
+                        MinHeight="23"
+                        HorizontalContentAlignment="Center"
+                        Margin="6,0,0,0"
+                        Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).StopCommand}" />
+            </Grid>
+        </StackPanel>
+    </ct:GroupBox>
+</UserControl>

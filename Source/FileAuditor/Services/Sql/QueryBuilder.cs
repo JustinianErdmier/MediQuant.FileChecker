@@ -44,4 +44,112 @@ public static class QueryBuilder
                               $"SELECT {selectList} FROM {tableSql};",
                               hasId);
     }
+
+    /// <summary>The most folders the prefix filter is built for; more than this loads every row.</summary>
+    public const int MaxFilterFolders = 20;
+
+    private const char EscapeCharacter = '|';
+
+    /// <summary>Builds the statement that selects the path column, restricted to the rows under the given folders where that is possible.</summary>
+    /// <param name="table">The table name, either <c>table</c> or <c>schema.table</c>.</param>
+    /// <param name="pathColumn">The name of the column holding file paths.</param>
+    /// <param name="folders">
+    ///     The folders to check. For 1 to <see cref="MaxFilterFolders" /> folders the statement filters on a case-insensitive <c>LIKE</c> prefix per folder; for
+    ///     none, for more, or when any folder is empty (which has no prefix to match), the filter is dropped and every row is selected. The filter also selects
+    ///     every row that starts with a whitespace character, so that <see cref="IndexPathSet" /> can trim it as the spec requires.
+    /// </param>
+    /// <returns>The query, or <c>Query.InvalidIdentifier</c> when a name is malformed.</returns>
+    public static ErrorOr<PathQuery> BuildPaths(string table, string pathColumn, IReadOnlyList<string> folders)
+    {
+        ErrorOr<IReadOnlyList<string>> tableParts = SqlIdentifier.ParseMultipart(table, maxParts: 2);
+
+        if (tableParts.IsError)
+        {
+            return tableParts.Errors;
+        }
+
+        ErrorOr<IReadOnlyList<string>> pathParts = SqlIdentifier.ParseMultipart(pathColumn, maxParts: 1);
+
+        if (pathParts.IsError)
+        {
+            return pathParts.Errors;
+        }
+
+        string tableSql  = string.Join(separator: '.', tableParts.Value.Select(SqlIdentifier.Quote));
+        string columnSql = SqlIdentifier.Quote(pathParts.Value[index: 0]);
+        string sql       = $"SELECT {columnSql} AS [Path] FROM {tableSql}";
+
+        bool canFilter = folders.Count is >= 1 and <= MaxFilterFolders
+                         && folders.All(IsRepresentable);
+
+        if (!canFilter)
+        {
+            return new PathQuery($"{sql};", []);
+        }
+
+        List<KeyValuePair<string, string>> parameters = new(folders.Count);
+        List<string>                       clauses    = new(folders.Count);
+
+        for (int i = 0; i < folders.Count; i++)
+        {
+            string name = $"@p{i}";
+
+            parameters.Add(new KeyValuePair<string, string>(name, EscapePrefix(folders[i])));
+            clauses.Add($"{columnSql} COLLATE Latin1_General_100_CI_AS LIKE {name} ESCAPE '{EscapeCharacter}'");
+        }
+
+        // Values with leading whitespace would miss every prefix above, yet the index set trims them, so load them all (LTRIM only strips spaces before SQL 2022).
+        clauses.Add($"{columnSql} COLLATE Latin1_General_100_BIN2 LIKE @pw");
+        parameters.Add(new KeyValuePair<string, string>("@pw", WhitespacePattern()));
+
+        return new PathQuery($"{sql} WHERE {string.Join(separator: " OR ", clauses)};", parameters);
+    }
+
+    private static bool IsRepresentable(string folder) => folder.Length > 0;
+
+    /// <summary>Builds a pattern matching a first character that <see cref="char.IsWhiteSpace(char)" /> accepts, from its code point ranges.</summary>
+    private static string WhitespacePattern()
+    {
+        (int First, int Last)[] ranges =
+        [
+            (0x0009, 0x000D), (0x0020, 0x0020), (0x0085, 0x0085), (0x00A0, 0x00A0), (0x1680, 0x1680), (0x2000, 0x200A), (0x2028, 0x2029), (0x202F, 0x202F),
+            (0x205F, 0x205F), (0x3000, 0x3000)
+        ];
+
+        StringBuilder builder = new("[");
+
+        foreach ((int first, int last) in ranges)
+        {
+            builder.Append((char)first);
+
+            if (last > first)
+            {
+                builder.Append('-').Append((char)last);
+            }
+        }
+
+        return builder.Append("]%").ToString();
+    }
+
+    private static string EscapePrefix(string folder)
+    {
+        StringBuilder builder = new(folder.Length + 8);
+
+        foreach (char c in folder)
+        {
+            if (c is EscapeCharacter or '%' or '_' or '[')
+            {
+                builder.Append(EscapeCharacter);
+            }
+
+            builder.Append(c);
+        }
+
+        if (folder[^1] != '\\')
+        {
+            builder.Append('\\');
+        }
+
+        return builder.Append('%').ToString();
+    }
 }

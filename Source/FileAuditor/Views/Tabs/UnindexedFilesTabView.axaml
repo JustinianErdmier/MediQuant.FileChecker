@@ -1,0 +1,114 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ct="clr-namespace:Classic.Avalonia.Theme.Controls;assembly=Classic.Avalonia.Theme"
+             xmlns:vm="clr-namespace:FileAuditor.ViewModels.Tabs"
+             xmlns:groupsVm="clr-namespace:FileAuditor.ViewModels.Groups"
+             xmlns:mainVm="clr-namespace:FileAuditor.ViewModels.Main"
+             xmlns:groups="clr-namespace:FileAuditor.Views.Groups"
+             mc:Ignorable="d"
+             d:DesignWidth="480"
+             d:DesignHeight="560"
+             x:Class="FileAuditor.Views.Tabs.UnindexedFilesTabView"
+             x:DataType="vm:UnindexedFilesTabViewModel">
+    <Design.DataContext>
+        <vm:UnindexedFilesTabViewModel />
+    </Design.DataContext>
+    <StackPanel Spacing="2">
+        <ct:GroupBox Header="Folders to Check"
+                     Margin="4,2"
+                     IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable}">
+            <Grid ColumnDefinitions="72,*,Auto,Auto"
+                  RowDefinitions="Auto,Auto,Auto"
+                  RowSpacing="4"
+                  Margin="4">
+                <StackPanel Grid.ColumnSpan="3">
+                    <Grid ColumnDefinitions="110,*"
+                          Margin="4,0,0,0">
+                        <TextBlock Text="Include subfolders" />
+                        <TextBlock Grid.Column="1"
+                                   Text="Folder" />
+                    </Grid>
+                    <ListBox x:Name="FoldersList"
+                             Height="72"
+                             ItemsSource="{Binding Folders}"
+                             SelectedItem="{Binding SelectedFolder}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="groupsVm:ScanFolderItem">
+                                <Grid ColumnDefinitions="110,*">
+                                    <CheckBox HorizontalAlignment="Center"
+                                              AutomationProperties.Name="Include subfolders"
+                                              IsChecked="{Binding IncludeSubfolders}" />
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Path}"
+                                               TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center"
+                                               ToolTip.Tip="{Binding Path}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+                <StackPanel Grid.Column="3"
+                            Margin="6,17,0,0"
+                            Spacing="6">
+                    <Button x:Name="AddButton"
+                            Content="Add..."
+                            MinWidth="75"
+                            MinHeight="23"
+                            HorizontalContentAlignment="Center"
+                            Click="OnAddClick" />
+                    <Button x:Name="RemoveButton"
+                            Content="Remove"
+                            MinWidth="75"
+                            MinHeight="23"
+                            HorizontalContentAlignment="Center"
+                            Command="{Binding RemoveCommand}" />
+                </StackPanel>
+                <Label Grid.Row="1"
+                       Content="File t_ypes:"
+                       Target="{Binding #EditFileTypesButton}"
+                       VerticalAlignment="Center" />
+                <TextBox x:Name="FileTypesBox"
+                         Grid.Row="1"
+                         Grid.Column="1"
+                         Grid.ColumnSpan="2"
+                         IsReadOnly="True"
+                         Text="{Binding FileTypesText}" />
+                <Button x:Name="EditFileTypesButton"
+                        Grid.Row="1"
+                        Grid.Column="3"
+                        Content="Edit..."
+                        MinWidth="75"
+                        MinHeight="23"
+                        Margin="6,0,0,0"
+                        HorizontalContentAlignment="Center"
+                        Command="{Binding EditFileTypesCommand}" />
+                <Label Grid.Row="2"
+                       Content="E_xclude:"
+                       Target="{Binding #EditExcludeButton}"
+                       VerticalAlignment="Center" />
+                <TextBox x:Name="ExcludeBox"
+                         Grid.Row="2"
+                         Grid.Column="1"
+                         Grid.ColumnSpan="2"
+                         IsReadOnly="True"
+                         Text="{Binding ExcludeText}" />
+                <Button x:Name="EditExcludeButton"
+                        Grid.Row="2"
+                        Grid.Column="3"
+                        Content="Edit..."
+                        MinWidth="75"
+                        MinHeight="23"
+                        Margin="6,0,0,0"
+                        HorizontalContentAlignment="Center"
+                        Command="{Binding EditExcludeCommand}" />
+            </Grid>
+        </ct:GroupBox>
+        <groups:ReportView DataContext="{Binding Report}"
+                           IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable}" />
+        <groups:UnindexedAuditView DataContext="{Binding Audit}" />
+    </StackPanel>
+</UserControl>

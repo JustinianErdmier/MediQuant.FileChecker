@@ -109,7 +109,50 @@ public sealed class SettingsStore
             ProjectStage = Enum.IsDefined(settings.ProjectStage) ? settings.ProjectStage : defaults.ProjectStage,
             AuditStage = Enum.IsDefined(settings.AuditStage) ? settings.AuditStage : defaults.AuditStage,
             CustomLocation = settings.CustomLocation ?? defaults.CustomLocation,
-            MissingCustomFileName = settings.MissingCustomFileName ?? defaults.MissingCustomFileName
+            MissingCustomFileName = settings.MissingCustomFileName ?? defaults.MissingCustomFileName,
+            ScanFolders = NormaliseFolders(settings.ScanFolders),
+            FileTypes = NormaliseTypes(settings.FileTypes, defaults.FileTypes!),
+            ExcludeTypes = NormaliseTypes(settings.ExcludeTypes, fallback: []),
+            UnindexedCustomFileName = settings.UnindexedCustomFileName ?? defaults.UnindexedCustomFileName
         };
+    }
+
+    // A null list is empty; a null element or one without a path is dropped.
+    private static ScanFolder[] NormaliseFolders(ScanFolder[]? folders)
+        => folders?.Where(folder => folder?.Path is not null)
+                  .ToArray()
+           ?? [];
+
+    // A null list takes the fallback (a copy, never the shared default array). A null element is dropped. Each valid entry is normalised; an invalid one is kept as
+    // written (trimmed), so that the tab shows it and the pre-flight names it when Start is pressed (spec §4), instead of the file silently losing it.
+    private static string[] NormaliseTypes(string[]? types, string[] fallback)
+    {
+        if (types is null)
+        {
+            return [ ..fallback ];
+        }
+
+        SortedSet<string> kept = new(StringComparer.Ordinal);
+
+        foreach (string? type in types)
+        {
+            if (type is null)
+            {
+                continue;
+            }
+
+            ErrorOr<string[]> parsed = FileTypeList.Parse(type);
+
+            if (!parsed.IsError)
+            {
+                kept.UnionWith(parsed.Value);
+            }
+            else
+            {
+                kept.Add(type.Trim());
+            }
+        }
+
+        return kept.ToArray();
     }
 }

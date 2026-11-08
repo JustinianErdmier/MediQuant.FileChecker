@@ -13,7 +13,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private readonly PreflightChecker _preflight;
 
-    private readonly AuditRunner _runner = new();
+    private readonly AuditRunner _missingRunner = new();
+
+    private readonly UnindexedAuditRunner _unindexedRunner = new();
 
     private readonly ProjectSettingsService _project;
 
@@ -57,18 +59,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         _dialogues = dialogues;
         _project   = project;
-        _preflight = new PreflightChecker(dialogues);
+        _preflight = new PreflightChecker(dialogues, project);
 
         Database       = new DatabaseViewModel(settings);
         FileIndexTable = new FileIndexTableViewModel(settings);
         ReportLocation = new ReportLocationState();
         MissingFiles   = new MissingFilesTabViewModel(ReportLocation);
+        UnindexedFiles = new UnindexedFilesTabViewModel(ReportLocation, dialogues);
 
         Database.PropertyChanged            += OnInputChanged;
         FileIndexTable.PropertyChanged      += OnInputChanged;
-        MissingFiles.PropertyChanged        += OnInputChanged;
-        ReportLocation.PropertyChanged      += OnLocationChanged;
-        MissingFiles.Report.PropertyChanged += OnReportChanged;
+        MissingFiles.PropertyChanged          += OnInputChanged;
+        UnindexedFiles.PropertyChanged        += OnInputChanged;
+        ReportLocation.PropertyChanged        += OnLocationChanged;
+        MissingFiles.Report.PropertyChanged   += OnReportChanged;
+        UnindexedFiles.Report.PropertyChanged += OnReportChanged;
 
         StartCommand.PropertyChanged        += OnCommandChanged;
         OpenProjectCommand.PropertyChanged  += OnCommandChanged;
@@ -101,14 +106,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ ObservableProperty ]
     public partial int SelectedTabIndex { get; set; }
 
-    /// <summary>Gets the Audit group that drives the status bar: the running audit's while one runs, otherwise the selected tab's.</summary>
-    public AuditViewModel StatusAudit => AuditFor(_runningDirection ?? SelectedDirection);
+    /// <summary>Gets the Unindexed Files tab.</summary>
+    public UnindexedFilesTabViewModel UnindexedFiles { get; }
 
-    // Maps the selected tab to its direction. Only Missing has a tab, so the switch has just the discard arm, which
-    // selects it for any index; milestone 4 adds `1 => AuditDirection.Unindexed` before the discard.
+    /// <summary>Gets the Audit group that drives the status bar: the running audit's while one runs, otherwise the selected tab's.</summary>
+    public AuditStatusBase StatusAudit => AuditFor(_runningDirection ?? SelectedDirection);
+
+    // Maps the selected tab to its direction; the tabs are in the order of the XAML.
     private AuditDirection SelectedDirection
         => SelectedTabIndex switch
         {
+            1     => AuditDirection.Unindexed,
             var _ => AuditDirection.Missing
         };
 
@@ -116,7 +124,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     /// <summary>Collects every input into a settings record.</summary>
     /// <returns>The current settings.</returns>
-    public AppSettings Snapshot() => MissingFiles.ApplyTo(ReportLocation.ApplyTo(FileIndexTable.ApplyTo(Database.ApplyTo(AppSettings.Default))));
+    public AppSettings Snapshot() => UnindexedFiles.ApplyTo(MissingFiles.ApplyTo(ReportLocation.ApplyTo(FileIndexTable.ApplyTo(Database.ApplyTo(AppSettings.Default)))));
 
     /// <summary>
     ///     Re-probes whether the report file exists, for when it may have appeared or vanished outside the application. The probe is debounced and runs off the UI thread, because
@@ -294,29 +302,28 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        foreach (AuditDirection direction in Enum.GetValues<AuditDirection>().Where(IsTabbed))
+        foreach (AuditDirection direction in Enum.GetValues<AuditDirection>())
         {
             AuditFor(direction).StatusMessage = _lastRunStatus.GetValueOrDefault(direction) ?? (CanStartFor(direction) ? "Ready" : "Enter the required details");
         }
     }
 
-    // The directions that have a tab. Milestone 4 checklist for adding Unindexed: this predicate; the constructor's Report and tab PropertyChanged subscriptions (OnInputChanged
-    // and OnReportChanged for the new tab and its Report); Snapshot; LoadAll; ReportFor; AuditFor; SelectedDirection; the pre-flight direction (StartAsync captures it from
-    // SelectedDirection, so nothing more is needed once that maps); and the TabItem in MainWindow.axaml.
-    private static bool IsTabbed(AuditDirection direction) => direction == AuditDirection.Missing;
-
+    // Every direction has a tab. Checklist for adding another: the constructor's tab and Report PropertyChanged subscriptions (OnInputChanged and OnReportChanged); Snapshot;
+    // LoadAll; ReportFor; AuditFor; SelectedDirection; StartAsync (the run and its pre-flight inputs); and the TabItem in MainWindow.axaml.
     private ReportViewModel ReportFor(AuditDirection direction)
         => direction switch
         {
-            AuditDirection.Missing => MissingFiles.Report,
-            var _                  => throw new ArgumentOutOfRangeException(nameof(direction), direction, message: null)
+            AuditDirection.Missing   => MissingFiles.Report,
+            AuditDirection.Unindexed => UnindexedFiles.Report,
+            var _                    => throw new ArgumentOutOfRangeException(nameof(direction), direction, message: null)
         };
 
-    private AuditViewModel AuditFor(AuditDirection direction)
+    private AuditStatusBase AuditFor(AuditDirection direction)
         => direction switch
         {
-            AuditDirection.Missing => MissingFiles.Audit,
-            var _                  => throw new ArgumentOutOfRangeException(nameof(direction), direction, message: null)
+            AuditDirection.Missing   => MissingFiles.Audit,
+            AuditDirection.Unindexed => UnindexedFiles.Audit,
+            var _                    => throw new ArgumentOutOfRangeException(nameof(direction), direction, message: null)
         };
 
     private bool CanStart() => CanStartFor(SelectedDirection);
@@ -360,19 +367,27 @@ public sealed partial class MainWindowViewModel : ObservableObject
             SetSaveProjectSettings(true);
         }
 
-        _auditTask = RunAuditAsync(new AuditRequest(settings, reportPath), direction);
+        AuditRequest request = new(settings, reportPath);
+
+        AuditRun run;
+
+        if (direction == AuditDirection.Unindexed)
+        {
+            run = new UnindexedAuditRun(UnindexedFiles.Audit, _unindexedRunner, request);
+        }
+        else
+        {
+            run = new MissingAuditRun(MissingFiles.Audit, _missingRunner, request);
+        }
+
+        _auditTask = RunAuditAsync(run, direction);
 
         await _auditTask;
     }
 
-    private async Task RunAuditAsync(AuditRequest request, AuditDirection direction)
+    private async Task RunAuditAsync(AuditRun run, AuditDirection direction)
     {
-        AuditViewModel audit = AuditFor(direction);
-
-        AuditProgress progress = new()
-        {
-            Phase = "Counting files..."
-        };
+        AuditStatusBase audit = run.Audit;
 
         Stopwatch               clock = Stopwatch.StartNew();
         CancellationTokenSource cts   = new();
@@ -380,7 +395,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _auditCts = cts;
 
         audit.Reset();
-        audit.StatusMessage = progress.Phase;
+        run.Begin();
+
+        audit.StatusMessage = run.Phase;
         _runningDirection   = direction;
         IsRunning           = true;
 
@@ -389,31 +406,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
             Interval = TimeSpan.FromMilliseconds(RefreshMilliseconds)
         };
 
-        timer.Tick += (_, _) => Refresh(audit, progress, clock, isFinished: false);
+        timer.Tick += (_, _) => Refresh(run, clock, isFinished: false);
         timer.Start();
 
-        ErrorOr<AuditReport> outcome;
-
-        try
-        {
-            // Off the UI thread, so the row stream's continuations never queue behind the dispatcher.
-            outcome = await Task.Run(() => _runner.RunAsync(request, progress, cts.Token));
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            outcome = Error.Unexpected(code: "Audit.Unexpected", ex.Message);
-        }
+        (string status, string? error) = await run.ExecuteAsync(cts.Token);
 
         timer.Stop();
         clock.Stop();
-        Refresh(audit, progress, clock, isFinished: true);
+        Refresh(run, clock, isFinished: true);
 
         _auditCts = null;
         cts.Dispose();
 
         // The final status is shown before any error dialogue, so the window behind it already reads correctly.
-        (string status, string? error) = Describe(outcome);
-
         _lastRunStatus[direction] = status;
         audit.StatusMessage       = status;
         _runningDirection         = null;
@@ -425,13 +430,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    private static void Refresh(AuditViewModel audit, AuditProgress progress, Stopwatch clock, bool isFinished)
+    private static void Refresh(AuditRun run, Stopwatch clock, bool isFinished)
     {
-        audit.Update(progress, clock.Elapsed, isFinished);
+        run.Update(clock.Elapsed, isFinished);
 
         if (!isFinished)
         {
-            audit.StatusMessage = progress.Phase;
+            run.Audit.StatusMessage = run.Phase;
         }
     }
 
@@ -544,6 +549,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         FileIndexTable.Load(settings);
         ReportLocation.Load(settings);
         MissingFiles.Load(settings);
+        UnindexedFiles.Load(settings);
     }
 
     // The save point may have saved and unticked-then-answered Yes; if the operation is abandoned the project stays open, so that tick must be shown.
@@ -586,7 +592,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         _lastRunStatus.Clear();
 
-        foreach (AuditDirection direction in Enum.GetValues<AuditDirection>().Where(IsTabbed))
+        foreach (AuditDirection direction in Enum.GetValues<AuditDirection>())
         {
             AuditFor(direction)
                 .Reset();
@@ -601,32 +607,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [ RelayCommand ]
     private void Exit() => ExitRequested?.Invoke(this, EventArgs.Empty);
-
-    private static (string Status, string? Error) Describe(ErrorOr<AuditReport> outcome)
-    {
-        if (outcome.IsError)
-        {
-            Error first = outcome.FirstError;
-
-            if (first.Code == AuditErrors.StoppedBeforeCheckingCode)
-            {
-                return ("Stopped", null);
-            }
-
-            bool readFailed = first.Code is SqlErrors.QueryFailedCode or AuditErrors.ReadFailedCode;
-
-            return ("Failed", readFailed ? $"The audit could not read the file index table:\n\n{first.Description}" : first.Description);
-        }
-
-        AuditReport report = outcome.Value;
-
-        return report.Result switch
-        {
-            AuditResultKind.Completed     => ("Completed", null),
-            AuditResultKind.StoppedByUser => ("Stopped", null),
-            var _                         => ("Failed", $"The audit failed part-way through:\n\n{report.FailureMessage}\n\nThe report so far has been written.")
-        };
-    }
 
     /// <summary>Raised when the user asks for the About box.</summary>
     public event EventHandler? AboutRequested;

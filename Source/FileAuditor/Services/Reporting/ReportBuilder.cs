@@ -3,11 +3,7 @@ namespace FileAuditor.Services.Reporting;
 /// <summary>Builds the plain-text audit report (SDD §7). The output is deterministic: invariant-culture numbers, ordinal case-insensitive ordering and CRLF line endings.</summary>
 public static class ReportBuilder
 {
-    private const string ColumnGap = "   ";
-
-    private const int LabelWidth = 17;
-
-    private const string NewLine = "\r\n";
+    private const string ColumnGap = ReportFormat.ColumnGap;
 
     private static readonly CheckOutcome[] MissingOrder =
     [
@@ -42,45 +38,21 @@ public static class ReportBuilder
         lines.Add(string.Empty);
         AddSection(lines, title: "Unverified Files", emptyText: "No unverified files.", UnverifiedOrder, report);
 
-        StringBuilder builder = new();
-
-        foreach (string line in lines)
-        {
-            builder.Append(line)
-                   .Append(NewLine);
-        }
-
-        return builder.ToString();
+        return ReportFormat.Join(lines);
     }
 
     private static void AddHeader(List<string> lines, AuditReport report)
     {
         AppSettings settings = report.Settings;
-        DateTime    started  = report.StartedUtc.ToLocalTime();
-        DateTime    finished = report.FinishedUtc.ToLocalTime();
 
         lines.Add(item: "File Auditor Missing Report");
         lines.Add(item: "===========================");
         lines.Add(string.Empty);
-        lines.Add(Labelled(label: "Server:", settings.Server));
-        lines.Add(Labelled(label: "Database:", settings.Database));
-        lines.Add(Labelled(label: "Table:", settings.Table));
-        lines.Add(Labelled(label: "Path column:", settings.PathColumn));
+        ReportFormat.AddConnectionLines(lines, settings);
         lines.Add(Labelled(label: "ID column:", HasIdColumn(settings) ? settings.IdColumn : "(none)"));
         lines.Add(Labelled(label: "Empty files:", settings.ReportEmptyFiles ? "Reported as missing" : "Not reported"));
-
-        if (!settings.UseCustomReportLocation)
-        {
-            lines.Add(Labelled(label: "Project folder:", settings.ProjectFolder));
-            lines.Add(Labelled(label: "Project stage:", settings.ProjectStage.ToString()));
-            lines.Add(Labelled(label: "Audit stage:", settings.AuditStage.ToString()));
-        }
-
-        lines.Add(string.Empty);
-        lines.Add(Labelled(label: "Started:", Timestamp(started)));
-        lines.Add(Labelled(label: "Finished:", Timestamp(finished)));
-        lines.Add(Labelled(label: "Elapsed:", Elapsed(report.FinishedUtc - report.StartedUtc)));
-        lines.Add(Labelled(label: "Result:", ResultText(report)));
+        ReportFormat.AddProjectLines(lines, settings);
+        ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Result, report.FailureMessage);
     }
 
     private static void AddSummary(List<string> lines, AuditReport report)
@@ -210,33 +182,11 @@ public static class ReportBuilder
             var _                                       => outcome.ToString()
         };
 
-    private static string ResultText(AuditReport report)
-        => report.Result switch
-        {
-            AuditResultKind.Completed     => "Completed",
-            AuditResultKind.StoppedByUser => "Stopped by user",
-            var _                         => $"Failed — {Flatten(report.FailureMessage ?? string.Empty)}".TrimEnd()
-        };
-
-    private static string Labelled(string label, string value) => (label.PadRight(LabelWidth) + Flatten(value)).TrimEnd();
+    private static string Labelled(string label, string value) => ReportFormat.Labelled(label, value);
 
     private static bool HasIdColumn(AppSettings settings) => !string.IsNullOrWhiteSpace(settings.IdColumn);
 
-    private static string Count(long value) => value.ToString(format: "N0", CultureInfo.InvariantCulture);
+    private static string Count(long value) => ReportFormat.Count(value);
 
-    private static string Timestamp(DateTime value) => value.ToString(format: "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-
-    private static string Elapsed(TimeSpan elapsed)
-    {
-        TimeSpan clamped = elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed;
-        long     hours   = (long)clamped.TotalHours;
-
-        return string.Create(CultureInfo.InvariantCulture, $"{hours:00}:{clamped.Minutes:00}:{clamped.Seconds:00}");
-    }
-
-    // Keeps every value on one line, so a multi-line system or SQL message cannot break the layout.
-    private static string Flatten(string text)
-        => text.Replace(oldValue: "\r\n", newValue: " ")
-               .Replace(oldChar: '\n', newChar: ' ')
-               .Replace(oldChar: '\r', newChar: ' ');
+    private static string Flatten(string text) => ReportFormat.Flatten(text);
 }
