@@ -82,8 +82,10 @@ say.
 | Solution                            | `MediQuant.FileAuditor.slnx`                    |
 | Project / root namespace / assembly | `FileAuditor` under `Source/FileAuditor/`       |
 | Settings file (per project)         | `FileAuditorSettings.json`, beside the report   |
-| Report file (built)                 | `FileAuditorReport_<Audit Stage>.txt`           |
-| Report file (custom)                | `FileAuditorReport.txt` (default, editable)     |
+| Missing report file (built)         | `FileAuditorMissingReport_<Audit Stage>.txt`    |
+| Missing report file (custom)        | `FileAuditorMissingReport.txt` (default, editable) |
+| Unindexed report file (built)       | `FileAuditorUnindexedReport_<Audit Stage>.txt` (milestone 4) |
+| Unindexed report file (custom)      | `FileAuditorUnindexedReport.txt` (default, editable; milestone 4) |
 | Version                             | 1.0.0                                           |
 | Company / copyright                 | MediQuant / Copyright © 2026 MediQuant          |
 
@@ -92,8 +94,12 @@ the GitHub repository is the user's call, outside this design).
 
 ## 5. The main window
 
-A single, **fixed-size** window (not resizable, no maximise button; minimise and close only). Classic.Avalonia supplies the Win9x chrome. Tab order runs top to
-bottom, left to right.
+A single, **fixed-size** window (not resizable, no maximise button; minimise and close only; its height fits its content). Classic.Avalonia supplies the Win9x chrome. Tab
+order runs top to bottom, left to right.
+
+The window holds one audit **direction** per tab (a standard Win9x tab control). Today the only direction is **Missing Files**: every file the index table points to is on
+disk. Milestone 4 adds **Unindexed Files**: every file on disk is in the index table. The inputs both directions use (the Database and File Index Table groups) stay above
+the tabs; the Report group is shown on every tab and its values are shared (§5.3).
 
 **Win9x conventions.** Every window looks and behaves like a native Windows 95/98 utility:
 
@@ -108,44 +114,49 @@ bottom, left to right.
   wraps only after a `\` or `/` separator, never at a space or hyphen inside a folder name (`PathText.Breakable`).
 - **No modern affordances** that Win9x lacked: no rounded corners, no flyouts, no toast notifications, no accent colours, no hamburger menus.
 
-Layout, top to bottom. The approved mock-ups are [`main-window-layout.html`](../UserInterfaceDesign/Mockups/main-window-layout.html) and
+Layout, top to bottom. The approved mock-ups are [`direction-tabs-layout.html`](../UserInterfaceDesign/Mockups/direction-tabs-layout.html), which shows the target layout
+with the tab control (including milestone 4's *Unindexed Files* tab), [`main-window-layout.html`](../UserInterfaceDesign/Mockups/main-window-layout.html) and
 [`report-section-states.html`](../UserInterfaceDesign/Mockups/report-section-states.html). They are a design reference only: the latter's state 1 predates the Interim
-default for Audit Stage, and both predate the final Report-file rows, the access keys, the *Audit* group (named *Progress* there), and the project settings (the *Save project
-settings with the report* checkbox and the *Open project...* and *Close project* menu items, milestone 2). The XAML and this section are the contract.
+default for Audit Stage, and the last two predate the tab control, the *Options* group, the final Report-file rows, the access keys, the *Audit* group (named *Progress*
+there), and the project settings (the *Save project settings with the report* checkbox and the *Open project...* and *Close project* menu items, milestone 2). The XAML and
+this section are the contract.
 
 ```text
-┌ File Auditor ─────────────────────────────────────── _ × ┐
-│ File  Help                                               │
-│ ┌ Database ────────────────────────────────────────────┐ │
-│ │ Server:       [                                    ] │ │
-│ │ Database:     [                                    ] │ │
-│ └──────────────────────────────────────────────────────┘ │
-│ ┌ File Index Table ────────────────────────────────────┐ │
-│ │ Table:        [                                    ] │ │
-│ │ Path column:  [                                    ] │ │
-│ │ ID column:    [                          ] (Optional)│ │
-│ │ [ ] Report empty (zero-byte) files as missing        │ │
-│ └──────────────────────────────────────────────────────┘ │
-│ ┌ Report ──────────────────────────────────────────────┐ │
-│ │ [ ] Use a custom report location and file name       │ │
-│ │ Project folder: [D12345  ]                           │ │
-│ │ ┌ Project Stage ─────────┐ ┌ Audit Stage ──────────┐ │ │
-│ │ │ ( ) Sample  (•) Final  │ │ (•) Interim ( ) Final │ │ │
-│ │ └────────────────────────┘ └───────────────────────┘ │ │
-│ │ Location:     [U:\Projects\D12345\DE\Final\ ] Browse...│ │
-│ │ File name:    [FileAuditorReport_Interim.txt       ] │ │
-│ │ [x] Save project settings with the report            │ │
-│ └──────────────────────────────────────────────────────┘ │
-│ ┌ Audit ───────────────────────────────────────────────┐ │
-│ │ Total files:  124,500     Elapsed:       00:02:14    │ │
-│ │ Checked:      61,200      Remaining:     00:02:18    │ │
-│ │ Missing:      12          Files/second:  456.72      │ │
-│ │ Unverified:   3                                      │ │
-│ │ [██████████████████                                ] │ │
-│ │ [View Report]                       [Start]  [Stop]  │ │
-│ └──────────────────────────────────────────────────────┘ │
-│ Checking files...                              │ 49%   │ │
-└──────────────────────────────────────────────────────────┘
+┌ File Auditor ───────────────────────────────────────────────── _ × ┐
+│ File  Help                                                         │
+│ ┌ Database ──────────────────────────────────────────────────────┐ │
+│ │ Server:       [                                            ]   │ │
+│ │ Database:     [                                            ]   │ │
+│ └────────────────────────────────────────────────────────────────┘ │
+│ ┌ File Index Table ──────────────────────────────────────────────┐ │
+│ │ Table:        [                                            ]   │ │
+│ │ Path column:  [                                            ]   │ │
+│ │ ID column:    [                                ] (Optional)    │ │
+│ └────────────────────────────────────────────────────────────────┘ │
+│  ┌─────────────┐                                                   │
+│ ┌┘Missing Files└─────────────────────────────────────────────────┐ │
+│ │ ┌ Options ───────────────────────────────────────────────────┐ │ │
+│ │ │ [x] Report empty (zero-byte) files as missing              │ │ │
+│ │ └────────────────────────────────────────────────────────────┘ │ │
+│ │ ┌ Report ────────────────────────────────────────────────────┐ │ │
+│ │ │ [ ] Use a custom report location and file name             │ │ │
+│ │ │ Project folder: [D12345  ]                                 │ │ │
+│ │ │ ( ) Sample  (•) Final      (•) Interim  ( ) Final          │ │ │
+│ │ │ Location:    [U:\Projects\D12345\DE\Final\]  Browse...     │ │ │
+│ │ │ File name:   [FileAuditorMissingReport_Interim.txt]        │ │ │
+│ │ │ [x] Save project settings with the report                  │ │ │
+│ │ └────────────────────────────────────────────────────────────┘ │ │
+│ │ ┌ Audit ─────────────────────────────────────────────────────┐ │ │
+│ │ │ Total files: 124,500    Elapsed:      00:02:14             │ │ │
+│ │ │ Checked:     61,200     Remaining:    00:02:18             │ │ │
+│ │ │ Missing:     12         Files/second: 456.72               │ │ │
+│ │ │ Unverified:  3                                             │ │ │
+│ │ │ [██████████████████                            ]           │ │ │
+│ │ │ [View Report]                      [Start]  [Stop]         │ │ │
+│ │ └────────────────────────────────────────────────────────────┘ │ │
+│ └────────────────────────────────────────────────────────────────┘ │
+│ Checking files...                                        │ 49%     │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 5.1 Database group
@@ -158,10 +169,22 @@ settings with the report* checkbox and the *Open project...* and *Close project*
 
 - **Table**: required. Accepts `table` or `schema.table`.
 - **Path column**: required.
-- **ID column**: optional, with a muted "(Optional)" note beside it.
-- **Report empty (zero-byte) files as missing**: checkbox, checked by default. When ticked, an existing file of length 0 counts as *missing (empty)*.
+- **ID column**: optional, with a muted "(Optional)" note beside it. It is shared by both directions.
+
+The Database and File Index Table groups stay above the tab control and are used by every direction.
+
+### 5.2a Tab control and Options group
+
+- A standard Win9x **tab control** sits below the File Index Table group, one tab per audit direction: **Missing Files** now, **Unindexed Files** with milestone 4. The
+  selected tab is not saved; the window opens on the first tab.
+- The Missing Files tab holds, top to bottom: an **Options** group, the **Report** group (§5.3) and the **Audit** group (§5.4).
+- **Options** holds **Report empty (zero-byte) files as missing**: checkbox, checked by default. When ticked, an existing file of length 0 counts as *missing (empty)*. It
+  applies to the missing-files direction only, which is why it is not in the shared File Index Table group.
 
 ### 5.3 Report group
+
+Each tab shows a complete Report group. Its values are **one set shared by every tab**: change one on a tab and every other tab shows the change. The only per-tab item is
+the **File name**, which belongs to the tab's direction (names are in §4). The *Save project settings with the report* checkbox is shared too.
 
 - **Use a custom report location and file name**: checkbox, unchecked by default. It is the group's first control, because it decides whether the rest apply.
 - **Project folder**: text input with watermark `D12345`.
@@ -171,9 +194,11 @@ settings with the report* checkbox and the *Open project...* and *Close project*
   selected.
 - **Location** and **File name**:
     - *Unticked (built):* both are read-only previews. Location is `U:\Projects\<Project Folder>\DE\<Project Stage>\`; File name is
-      `FileAuditorReport_<Audit Stage>.txt`. An empty Project folder shows as the literal placeholder `<Project Folder>`. **Browse...** is disabled.
+      the tab's built name, `FileAuditorMissingReport_<Audit Stage>.txt` on the Missing Files tab. An empty Project folder shows as the literal placeholder
+      `<Project Folder>`. **Browse...** is disabled.
     - *Ticked (custom):* Project folder and both stage groups are disabled. Location becomes an editable directory path, empty by default, with **Browse...** opening a *folder*
-      picker (directories only). File name becomes editable, defaulting to `FileAuditorReport.txt`.
+      picker (directories only). File name becomes editable, defaulting to the tab's custom default, `FileAuditorMissingReport.txt` on the Missing Files tab; each tab keeps
+      its own custom file name.
 - **Save project settings with the report**: checkbox on the group's last row, below *File name*. It is **ticked by default** — on launch, after *Open project...* and after
   *Close project* — and its state is not stored in the settings file; it is a per-session preference. It is disabled while an audit is running. Ticking it needs no
   confirmation. **Unticking** first shows a warning dialogue (*"If you untick this box, this project's settings will no longer be saved automatically. You will be asked
@@ -182,6 +207,8 @@ settings with the report* checkbox and the *Open project...* and *Close project*
 
 ### 5.4 Audit group
 
+The Audit group sits at the bottom of its tab, below the Report group; each direction's tab has its own, so a tab's statistics are those of its own last run.
+
 - Read-only statistics in two columns: **Total files**, **Checked**, **Missing**, **Unverified**; **Elapsed**, **Remaining**, **Files/second**. Counts use thousands
   separators (`N0`); times are `hh:mm:ss`; rate has two decimals. Blank before the first run.
 - A progress bar (percentage of rows checked).
@@ -189,16 +216,21 @@ settings with the report* checkbox and the *Open project...* and *Close project*
 
 ### 5.5 Status bar
 
-Two sunken panes: a message pane that fills the width (`Ready`, `Counting files...`, `Checking files...`, `Writing report...`, `Completed`, `Stopped`,
-`Failed`) and a fixed-width percentage pane at the right edge. With no run active, the message reads `Ready` only while **Start** is enabled, and
-`Enter the required details` while it is not. Once a run has ended, its result (`Completed`, `Stopped` or `Failed`) stays until the next run starts.
+One status bar for the window, with two sunken panes: a message pane that fills the width (`Ready`, `Counting files...`, `Checking files...`, `Writing report...`,
+`Completed`, `Stopped`, `Failed`) and a fixed-width percentage pane at the right edge. **While an audit runs**, the bar shows that run's phase and percentage whichever tab
+is selected, so switching tabs never hides a run. **Otherwise** it shows the selected tab's own state: with no run on that tab, the message reads `Ready` only while that
+tab's **Start** is enabled, and `Enter the required details` while it is not. Once a run has ended, its result (`Completed`, `Stopped` or `Failed`) stays on that tab until
+its next run starts. Each tab keeps its own last result.
 
 ### 5.6 Menu bar
 
 - **File**: **Open project...** (access key P), **Close project** (access key C), separator, **Start** (F5), **Stop** (Esc), **View Report** (Ctrl+R), separator,
   **Exit** (Alt+F4). Start, Stop and View Report enable and disable with their buttons. *Open project...* and *Close project* have no button; they are disabled while an
-  audit is running and while Start, *Open project...* or *Close project* is in progress (§5.8).
-- **Help**: **About File Auditor**.
+  audit is running and while Start, *Open project...* or *Close project* is in progress (§5.8). **Start** and **View Report** (and F5, Ctrl+R) act on the **selected
+  tab's** audit and follow that tab's buttons. **Stop** (and Esc) acts on the **running** audit, whichever tab is selected.
+- **Help**: **Help Topics** (access key H, shortcut F1), separator, **About File Auditor**. *Help Topics* opens the File Auditor user guide, a wiki article, in the default
+  browser by shell execute. The article's address is one hard-coded constant, `HelpLinks.UserGuideUrl`, which is an empty string until the article exists; while it is
+  empty, the item and F1 are disabled.
 
 ### 5.7 About box
 
@@ -208,14 +240,16 @@ A small modal, fixed-size Win9x About dialog: the app icon, **File Auditor**, **
 
 | Command         | Enabled when                                                                                                  |
 |-----------------|---------------------------------------------------------------------------------------------------------------|
-| Start           | Not running and not busy, and Server, Database, Table, Path column are filled, and the report path is complete (see below) |
-| Stop            | Running                                                                                                                     |
-| View Report     | Not running, and a report file exists at the current resolved path                                                          |
+| Start           | Not running and not busy, and Server, Database, Table, Path column are filled, and the selected tab's report path is complete (see below) |
+| Stop            | Running (any tab)                                                                                                           |
+| View Report     | Not running, and a report file exists at the selected tab's current resolved path                                           |
 | Open project... | Not running and not busy                                                                                                    |
 | Close project   | Not running and not busy                                                                                                    |
+| Help Topics     | The user-guide address (`HelpLinks.UserGuideUrl`) is not empty                                                              |
 
-The report path is complete when, *built*: Project folder is filled (an Audit Stage is always selected); *custom*: Location and File name are filled. All inputs,
-including the *Save project settings with the report* checkbox, are disabled while a run is in progress.
+The report path is complete when, *built*: Project folder is filled (an Audit Stage is always selected); *custom*: Location and the tab's File name are filled. All inputs,
+including the *Save project settings with the report* checkbox, are disabled while a run is in progress. Start and View Report follow the selected tab; Stop follows the
+running audit.
 
 **Busy.** Start, *Open project...* and *Close project* are *busy* from the moment the command begins until it ends, including while its pre-flight checks, save prompts, file
 picker or error dialogues are open (Start's busy period runs on into the audit itself). They never overlap: while one is busy the other two are disabled, and so is Start. The
@@ -313,9 +347,12 @@ Plain text, UTF-8 without BOM, Windows (CRLF) line endings. Timestamps are local
 case-insensitive) so re-runs produce stable diffs. Each file line is `<IdColumn> <IdValue>   <Path>` when an ID column is set, otherwise just `<Path>`. Columns are aligned
 with spaces.
 
+This is the **missing-files** report (`FileAuditorMissingReport_<Audit Stage>.txt`); milestone 4 specifies the unindexed-files report, titled *File Auditor Unindexed
+Report*.
+
 ```text
-File Auditor Report
-===================
+File Auditor Missing Report
+===========================
 
 Server:          KDCSQL15
 Database:        InterimBJC_Soarian_DocStorage
@@ -380,8 +417,10 @@ Settings belong to the **project**, not the Windows user. They are saved as `Fil
 repository with the report and any teammate can open the same project. The per-user `%APPDATA%\MediQuant\FileAuditor\settings.json` of earlier builds is no longer read or
 written; it is left on disk untouched and is not migrated.
 
-The file holds every input: server, database, table, path column, ID column, empty-files option, project folder, project stage, audit stage (default Interim),
-custom-location flag, custom location, custom file name. No credentials. The *Save project settings with the report* checkbox is not stored in it. The file is written
+The file holds every input of every direction: server, database, table, path column, ID column, empty-files option, project folder, project stage, audit stage (default
+Interim), custom-location flag, custom location, and the custom file name of the missing-files report (`MissingCustomFileName`, default
+`FileAuditorMissingReport.txt`). Milestone 4 adds the unindexed direction's folders, file types and custom file name. Files saved by builds before milestone 3 are not
+loaded (nothing had been released). No credentials. The *Save project settings with the report* checkbox is not stored in it. The file is written
 with a temp file + `File.Move(overwrite: true)`; a save never creates a folder. A null string value or an undefined enum value in the file falls back, field by field, to its
 default; other values are kept. Window size and position are not saved — the window is fixed-size. The milestone 2 spec
 (`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`) has the full prompt texts.
@@ -427,7 +466,8 @@ So the three states read: *ticked* — always save; *unticked* — ask at the ne
 ### 8.3 Where the file is saved
 
 - **Beside the report, per stage.** The file goes in the report's folder (the resolved *Location*). With a built location, Sample and Final are different folders, so each
-  stage has its own settings file; the two stages may use different databases.
+  stage has its own settings file; the two stages may use different databases. The folder comes from the shared report location alone, so it is the same whichever tab is
+  selected, and whether the location is complete is judged from that shared state, not from a tab's file name.
 - **A project that has never been saved** (no file opened, nothing saved yet) → saved in the report's folder.
 - **A project opened from a file, or saved before in this session** → saved back to that file, without asking, even when the report location is currently incomplete (the
   project's file is already known). If the report location is complete and its folder no longer matches the folder the file is in (for example, the stage was switched; the
@@ -454,22 +494,27 @@ app icon, and `Assets/Win95Icons/` the Windows 95 icon set. Dialogue icons are t
 XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj`. The code folders are:
 
 - `Startup/` — `App` and `Program`.
-- `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`) and `Groups/` (a `UserControl` per group box: Database, File Index
-  Table, Report, Audit).
-- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon` and `DialogueChoice`)
-  and `Groups/`.
+- `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`), `Groups/` (a `UserControl` per group box: Database, File Index
+  Table, Report, Audit) and `Tabs/` (a `UserControl` per audit direction, the content of a tab: `MissingFilesTabView`).
+- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon` and `DialogueChoice`),
+  `Groups/` and `Tabs/` (`MissingFilesTabViewModel`, which owns the direction's *Report empty files* option, its `ReportViewModel` and its `AuditViewModel`). `Groups/` also
+  holds `ReportLocationState`, which is deliberately not a `*ViewModel` (it has no view of its own): the Report group's shared values, owned by the main window. Each
+  direction's `ReportViewModel` reads it and adds the direction's file name, so the tabs' Report groups cannot drift apart. `MainWindowViewModel` routes Start and View Report
+  to the selected tab's direction and Stop and the status bar to the running one.
 - `Services/` — `Settings/` (`SettingsStore`, which loads and saves one settings file at a path it is given and never creates a folder; `ProjectSettingsService`, which holds the
   open project's file path and baseline settings and runs the save rule of §8.2 with its prompts, returning a `SavePointResult` that says whether the triggering operation may
   proceed and whether the checkbox is to be ticked), `Sql/` (connection strings, SQL identifiers, query builder, index table reader), `Checking/` (file checker and Win32 error
   mapper), `Auditing/` (audit runner, pre-flight checker, request and progress types), `Reporting/` (report builder, writer and path resolver) and `Dialogues/` (dialogue
   service, which also offers a three-button choice returning a `DialogueChoice` and the *Open Project* file picker). Return `ErrorOr<T>` for expected failures.
-- `Models/` — `Settings/` (settings record and the project and audit stage enums), `Auditing/` (audit query, index row, check outcome and result) and `Reporting/` (audit
-  report and result kind).
-- `Common/` — `GlobalUsings.cs`; `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/` (`ClassicWindow` helpers); `Serialisation/`
-  (the source-generated settings JSON context).
+- `Models/` — `Settings/` (settings record and the project and audit stage enums), `Auditing/` (audit query, index row, check outcome and result, and `AuditDirection`,
+  the enum of directions, `Missing` now and `Unindexed` with milestone 4, whose member names the report file names are tied to) and `Reporting/` (audit report and result
+  kind).
+- `Common/` — `GlobalUsings.cs`; `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/` (`ClassicWindow` helpers); `Links/`
+  (`HelpLinks`, the user-guide address); `Serialisation/` (the source-generated settings JSON context).
 
-Services are wired by hand in `App`; there is no dependency-injection container. `MainWindow.axaml` composes the group-box views and holds the menu bar, command row
-and status bar; it stays at 100 lines or fewer by pushing content into the group-box `UserControl`s.
+Services are wired by hand in `App`; there is no dependency-injection container. `MainWindow.axaml` composes the shared group-box views and the tab control (each tab's
+content is a `Tabs/` view) and holds the menu bar and status bar; it stays at 100 lines or fewer by pushing content into the group-box and tab `UserControl`s.
+`ReportPathResolver.Resolve` takes the settings and an `AuditDirection`, so a direction's report name comes from one place.
 
 **Errors.** Services return `ErrorOr<T>`: expected failures (bad input, SQL errors, an unwritable report, unreadable settings) are values with custom errors from
 `Common/Errors/`, not exceptions. Exceptions are caught at the boundary where they occur (SQL, file system) and translated into errors or check outcomes. SQL access is
@@ -493,6 +538,11 @@ shared file server, and nothing under `%APPDATA%`.
 - Project settings (milestone 2, §8): *Open project...* runs the save rule first and forgets the *No* answer, since the new file is a different project; a cancelled picker or
   an unreadable file leaves the current project untouched; "nothing has changed" compares the current inputs with the settings last loaded or saved; an opened project
   whose report location is incomplete saves back to its own file without asking; every close, including an operating-system logoff close, goes through the save rule.
+
+- Direction tabs (milestone 3): the tab control appears now with one tab, so the window is complete and consistent; *Report empty files as missing* moves to an *Options*
+  group on the Missing Files tab; the Report group's shared values live in one object that every tab's Report view reads, so mirroring is automatic; Start, View Report and
+  the idle status follow the selected tab, Stop and the running status follow the running audit; the selected tab is not saved; the missing report's title is *File Auditor
+  Missing Report*; the custom-name setting is `MissingCustomFileName`; *Help Topics* is F1 (the Windows standard), disabled while the article address is empty.
 
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
 that failed, found by walking the path (§6.3); the close-mid-run prompt.

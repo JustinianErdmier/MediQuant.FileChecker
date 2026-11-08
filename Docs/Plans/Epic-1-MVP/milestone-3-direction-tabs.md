@@ -142,9 +142,9 @@ this plan must leave room for its second tab but builds none of it. The master S
 - Create: `Docs/Ledgers/Epic-1-MVP/milestone-3-ledger.md`
 - Modify: `MediQuant.FileAuditor.slnx`
 
-- [ ] **Step 1:** Amend the SDD in every section the spec's §5 lists, so it describes the tabbed window, the shared Report location, the paired names, the routing
+- [x] **Step 1:** Amend the SDD in every section the spec's §5 lists, so it describes the tabbed window, the shared Report location, the paired names, the routing
   of commands and the status bar, *Help Topics*, and the project file. Update the window diagram. Keep the SDD the authority.
-- [ ] **Step 2:** Write the ledger (rulings, user decisions, plan defects, outstanding items by when to revisit, incidents, not exercised, commits, final review
+- [x] **Step 2:** Write the ledger (rulings, user decisions, plan defects, outstanding items by when to revisit, incidents, not exercised, commits, final review
   "Pending.").
-- [ ] **Step 3: Verify** — clean build; Markdown prose ≤ 180 characters; every file under `Docs/` is in the `.slnx`.
-- [ ] **Step 4: Commit** — `docs(📝): sync the SDD with direction tabs and close the milestone 3 ledger`.
+- [x] **Step 3: Verify** — clean build; Markdown prose ≤ 180 characters; every file under `Docs/` is in the `.slnx`.
+- [x] **Step 4: Commit** — `docs(📝): sync the SDD with direction tabs and close the milestone 3 ledger`.
