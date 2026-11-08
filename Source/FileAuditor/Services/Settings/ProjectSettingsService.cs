@@ -57,7 +57,10 @@ public sealed class ProjectSettingsService
 
     /// <summary>Runs the save rule: saves the settings when they have changed and the rules allow it, asking whether and where to as needed.</summary>
     /// <param name="current">The current settings.</param>
-    /// <param name="report">The report location, which decides where a new project file goes.</param>
+    /// <param name="report">
+    ///     The report folder, which decides where a new project file goes. Only its folder, completeness and custom flag are read, never its file name, so Start may pass
+    ///     a direction's path and the other save points the shared folder from <see cref="ReportPathResolver.ResolveFolder" />.
+    /// </param>
     /// <param name="saveTicked">Whether the "save project settings with the report" checkbox is ticked.</param>
     /// <returns>Whether the triggering operation may proceed, and whether the checkbox should be ticked.</returns>
     public async Task<SavePointResult> RunSavePointAsync(AppSettings current, ReportPath report, bool saveTicked)

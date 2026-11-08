@@ -6,8 +6,9 @@ public sealed class PreflightChecker(DialogueService dialogues)
 {
     /// <summary>Runs the checks in order: identifiers, custom file name, custom location form, report folder, existing report.</summary>
     /// <param name="settings">The settings to audit with.</param>
+    /// <param name="direction">The audit direction, which decides the report file name.</param>
     /// <returns>The resolved report path when the run may start; <see langword="null" /> when a check failed or the user declined (the user has been told).</returns>
-    public async Task<ReportPath?> RunAsync(AppSettings settings)
+    public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirection direction)
     {
         ErrorOr<AuditQuery> query = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn);
 
@@ -27,7 +28,7 @@ public sealed class PreflightChecker(DialogueService dialogues)
             return null;
         }
 
-        ReportPath report = ReportPathResolver.Resolve(settings, AuditDirection.Missing);
+        ReportPath report = ReportPathResolver.Resolve(settings, direction);
 
         if (report.IsCustom)
         {

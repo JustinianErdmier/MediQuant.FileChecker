@@ -6,7 +6,8 @@ namespace FileAuditor.ViewModels.Groups;
 /// </summary>
 public sealed partial class ReportViewModel : ObservableObject
 {
-    private string _missingCustomFileName = AppSettings.Default.MissingCustomFileName;
+    // The custom file name for this view model's own direction. Only ApplyTo and Load map it to the direction's settings property.
+    private string _customFileName;
 
     private bool _isRefreshing;
 
@@ -20,8 +21,9 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <param name="direction">The audit direction whose report this group describes.</param>
     public ReportViewModel(ReportLocationState shared, AuditDirection direction)
     {
-        Shared    = shared;
-        Direction = direction;
+        Shared          = shared;
+        Direction       = direction;
+        _customFileName = direction == AuditDirection.Missing ? AppSettings.Default.MissingCustomFileName : ReportPathResolver.UnindexedDefaultFileName;
         Current   = ReportPathResolver.Resolve(Resolved(), direction);
 
         Shared.PropertyChanged += OnSharedChanged;
@@ -46,19 +48,25 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <summary>Gets the location values shared with every direction.</summary>
     public ReportLocationState Shared { get; }
 
-    /// <summary>Copies this direction's own inputs (its custom file name) into the given settings.</summary>
+    /// <summary>
+    ///     Copies this direction's own inputs (its custom file name) into the given settings. The unindexed direction has no setting for its file name yet, so it carries
+    ///     nothing and keeps its default.
+    /// </summary>
     /// <param name="settings">The settings to start from.</param>
     /// <returns>A copy of <paramref name="settings" /> carrying this direction's inputs.</returns>
     public AppSettings ApplyTo(AppSettings settings)
-        => Direction == AuditDirection.Missing ? settings with { MissingCustomFileName = _missingCustomFileName } : settings;
+        => Direction == AuditDirection.Missing ? settings with { MissingCustomFileName = _customFileName } : settings;
 
-    /// <summary>Sets this direction's own inputs from the given settings, then refreshes from the shared state.</summary>
+    /// <summary>
+    ///     Sets this direction's own inputs from the given settings, then refreshes from the shared state. The unindexed direction has no setting yet, so its file name keeps
+    ///     the default.
+    /// </summary>
     /// <param name="settings">The settings to load.</param>
     public void Load(AppSettings settings)
     {
         if (Direction == AuditDirection.Missing)
         {
-            _missingCustomFileName = settings.MissingCustomFileName;
+            _customFileName = settings.MissingCustomFileName;
         }
 
         Refresh();
@@ -83,10 +91,7 @@ public sealed partial class ReportViewModel : ObservableObject
             return;
         }
 
-        if (Direction == AuditDirection.Missing)
-        {
-            _missingCustomFileName = value;
-        }
+        _customFileName = value;
 
         UpdateCurrent();
     }
@@ -109,7 +114,7 @@ public sealed partial class ReportViewModel : ObservableObject
 
         _isRefreshing = true;
         Location      = Shared.UseCustomLocation ? Shared.CustomLocation : path.DisplayDirectory;
-        FileName      = Shared.UseCustomLocation ? _missingCustomFileName : path.FileName;
+        FileName      = Shared.UseCustomLocation ? _customFileName : path.FileName;
         _isRefreshing = false;
 
         UpdateCurrent();

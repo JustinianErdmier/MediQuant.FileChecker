@@ -66,6 +66,12 @@ public sealed partial class ReportLocationState : ObservableObject
             CustomLocation = CustomLocation
         };
 
+    /// <summary>
+    ///     Resolves the report folder from the shared values alone, which is what decides where the project's settings file goes (SDD §8.3). The result has no file name, so
+    ///     it is the same whichever tab is selected.
+    /// </summary>
+    /// <returns>The report folder, complete when the location is filled in.</returns>
+    public ReportPath ResolveFolder() => ReportPathResolver.ResolveFolder(ApplyTo(AppSettings.Default));
     /// <summary>Sets the shared values from the given settings.</summary>
     /// <param name="settings">The settings to load.</param>
     public void Load(AppSettings settings)

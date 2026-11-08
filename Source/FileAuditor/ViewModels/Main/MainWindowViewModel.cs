@@ -104,6 +104,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>Gets the Audit group that drives the status bar: the running audit's while one runs, otherwise the selected tab's.</summary>
     public AuditViewModel StatusAudit => AuditFor(_runningDirection ?? SelectedDirection);
 
+    // Maps the selected tab to its direction. Only Missing has a tab, so the switch has just the discard arm, which
+    // selects it for any index; milestone 4 adds `1 => AuditDirection.Unindexed` before the discard.
     private AuditDirection SelectedDirection
         => SelectedTabIndex switch
         {
@@ -147,7 +149,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return false;
         }
 
-        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), SelectedReport.Current, ReportLocation.SaveProjectSettings);
+        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), ReportLocation.ResolveFolder(), ReportLocation.SaveProjectSettings);
 
         return savePoint.Proceed;
     }
@@ -298,7 +300,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    // The directions that have a tab; milestone 4 adds Unindexed here, to ReportFor and AuditFor, and to SelectedDirection.
+    // The directions that have a tab. Milestone 4 checklist for adding Unindexed: this predicate; the constructor's Report and tab PropertyChanged subscriptions (OnInputChanged
+    // and OnReportChanged for the new tab and its Report); Snapshot; LoadAll; ReportFor; AuditFor; SelectedDirection; the pre-flight direction (StartAsync captures it from
+    // SelectedDirection, so nothing more is needed once that maps); and the TabItem in MainWindow.axaml.
     private static bool IsTabbed(AuditDirection direction) => direction == AuditDirection.Missing;
 
     private ReportViewModel ReportFor(AuditDirection direction)
@@ -337,7 +341,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         AuditDirection direction = SelectedDirection;
         AppSettings settings     = Snapshot();
-        ReportPath? reportPath   = await _preflight.RunAsync(settings);
+        ReportPath? reportPath   = await _preflight.RunAsync(settings, direction);
 
         if (reportPath is null)
         {
@@ -475,7 +479,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ RelayCommand(CanExecute = nameof(CanChangeProject)) ]
     private async Task CloseProjectAsync()
     {
-        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), SelectedReport.Current, ReportLocation.SaveProjectSettings);
+        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), ReportLocation.ResolveFolder(), ReportLocation.SaveProjectSettings);
 
         if (!savePoint.Proceed)
         {
@@ -488,7 +492,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ RelayCommand(CanExecute = nameof(CanChangeProject)) ]
     private async Task OpenProjectAsync()
     {
-        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), SelectedReport.Current, ReportLocation.SaveProjectSettings);
+        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), ReportLocation.ResolveFolder(), ReportLocation.SaveProjectSettings);
 
         if (!savePoint.Proceed)
         {
@@ -555,7 +559,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task<string> ResolvePickerStartFolderAsync()
     {
         string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        ReportPath current = SelectedReport.Current;
+        ReportPath current = ReportLocation.ResolveFolder();
 
         if (!current.IsComplete
             || !Path.IsPathFullyQualified(current.Directory))
