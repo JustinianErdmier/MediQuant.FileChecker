@@ -14,7 +14,7 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     [ ObservableProperty ]
     public partial string Elapsed { get; set; } = "";
 
-    /// <summary>Gets or sets the files found per second over the whole run, to two decimal places; blank until a full second has elapsed.</summary>
+    /// <summary>Gets or sets the files found per second over the whole run, to a whole number; blank until a full second has elapsed.</summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = "";
 
@@ -91,7 +91,7 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
         Unindexed      = progress.Unindexed.ToString(format: "N0", CultureInfo.CurrentCulture);
         Unverified     = progress.Unverified.ToString(format: "N0", CultureInfo.CurrentCulture);
         Elapsed        = $"{(long)elapsed.TotalHours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}";
-        FilesPerSecond = elapsed.TotalSeconds >= 1 ? (total / elapsed.TotalSeconds).ToString(format: "0.00", CultureInfo.CurrentCulture) : "";
+        FilesPerSecond = elapsed.TotalSeconds >= 1 ? (total / elapsed.TotalSeconds).ToString(format: "N0", CultureInfo.CurrentCulture) : "";
 
         IsRunning     = !isFinished;
         Percent       = isFinished ? 100 : 0;

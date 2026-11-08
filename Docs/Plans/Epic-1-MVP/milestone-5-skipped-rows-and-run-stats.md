@@ -97,13 +97,13 @@ The approved description, verbatim in substance:
 
 - Produces: `AuditStatusBase.IsStopEnabled` (`bool`, observable, `false` by default).
 
-- [ ] **Step 1:** Both view models format *Files/second* as `N0` (Global Constraints); update their XML docs ("a whole number").
-- [ ] **Step 2:** `RunAuditAsync` sets the running direction's `audit.IsStopEnabled = true` when the run begins and `false` when it ends (before `IsRunning = false`). Each tab's
+- [x] **Step 1:** Both view models format *Files/second* as `N0` (Global Constraints); update their XML docs ("a whole number").
+- [x] **Step 2:** `RunAuditAsync` sets the running direction's `audit.IsStopEnabled = true` when the run begins and `false` when it ends (before `IsRunning = false`). Each tab's
   Stop button binds `IsEnabled="{Binding IsStopEnabled}"` beside its existing `Command`. `StopCommand`, the menu item and the Esc hot key are unchanged.
-- [ ] **Step 3: Verify.** Clean build. With LocalDB, start a Missing audit long enough to switch tabs (a large scratch table): the Unindexed tab's Stop is disabled, the Missing
+- [x] **Step 3: Verify.** Clean build. With LocalDB, start a Missing audit long enough to switch tabs (a large scratch table): the Unindexed tab's Stop is disabled, the Missing
   tab's is enabled; Esc (foreground guard first) stops the run while the Unindexed tab is selected; afterwards both Stops are disabled. Repeat starting from the Unindexed tab
   (a scratch folder with enough files, or confirm by reading `IsEnabled` while it runs). Files/second reads as a whole number with separators on both tabs. Drop the database.
-- [ ] **Step 4: Commit** — `fix(🐛): enable Stop only on the running audit's tab and show Files/second as a whole number`.
+- [x] **Step 4: Commit** — `fix(🐛): enable Stop only on the running audit's tab and show Files/second as a whole number`.
 
 ### Task 3: A steadier Remaining estimate
 

@@ -403,6 +403,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         audit.StatusMessage = run.Phase;
         _runningDirection   = direction;
+        audit.IsStopEnabled = true;
         IsRunning           = true;
 
         DispatcherTimer timer = new()
@@ -426,6 +427,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _lastRunStatus[direction] = status;
         audit.StatusMessage       = status;
         _runningDirection         = null;
+        audit.IsStopEnabled       = false;
         IsRunning                 = false;
 
         if (error is not null)

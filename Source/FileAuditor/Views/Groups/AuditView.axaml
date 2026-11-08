@@ -84,6 +84,7 @@
                         MinHeight="23"
                         HorizontalContentAlignment="Center"
                         Margin="6,0,0,0"
+                        IsEnabled="{Binding IsStopEnabled}"
                         Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).StopCommand}" />
             </Grid>
         </StackPanel>

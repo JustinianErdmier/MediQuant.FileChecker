@@ -11,7 +11,7 @@ public sealed partial class AuditViewModel : AuditStatusBase
     [ ObservableProperty ]
     public partial string Elapsed { get; set; } = "";
 
-    /// <summary>Gets or sets the files checked per second over the whole run, to two decimal places; blank until a full second has elapsed.</summary>
+    /// <summary>Gets or sets the files checked per second over the whole run, as a whole number; blank until a full second has elapsed.</summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = "";
 
@@ -76,7 +76,7 @@ public sealed partial class AuditViewModel : AuditStatusBase
         Skipped        = progress.Skipped.ToString(format: "N0", CultureInfo.CurrentCulture);
         Elapsed        = FormatTime(elapsed);
         Remaining      = FormatTime(rate > 0 && total > handled ? TimeSpan.FromSeconds((total - handled) / rate) : TimeSpan.Zero);
-        FilesPerSecond = wholeRunSeconds >= 1 ? (done / wholeRunSeconds).ToString(format: "0.00", CultureInfo.CurrentCulture) : "";
+        FilesPerSecond = wholeRunSeconds >= 1 ? (done / wholeRunSeconds).ToString(format: "N0", CultureInfo.CurrentCulture) : "";
 
         Percent       = total > 0 ? Math.Min(val1: 100, handled * 100.0 / total) : isFinished && progress.HasTotal ? 100 : 0;
         StatusPercent = progress.HasTotal ? $"{Percent:0}%" : "";

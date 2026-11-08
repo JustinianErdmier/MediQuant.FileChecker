@@ -11,6 +11,10 @@ public abstract partial class AuditStatusBase : ObservableObject
     [ ObservableProperty ]
     public partial string StatusPercent { get; set; } = "";
 
+    /// <summary>Gets or sets whether this tab's Stop button is enabled: true only while this tab's audit is the one running.</summary>
+    [ ObservableProperty ]
+    public partial bool IsStopEnabled { get; set; }
+
     /// <summary>Blanks every statistic and the progress bar, ready for a new run.</summary>
     public abstract void Reset();
 }
