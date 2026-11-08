@@ -70,15 +70,15 @@ The user's request, verbatim in substance:
 - Modify: `Views/Groups/ReportView.axaml`, `Views/Main/MainWindow.axaml`, `ViewModels/Main/MainWindowViewModel.cs`, `Services/Settings/ProjectSettingsService.cs`
   (expose what the message needs, e.g. a `FilePath` change notification or a method returning whether the open file is in a given folder)
 
-- [ ] **Step 1:** In `ReportView`, the project folder row and both stage groups are always visible; they are disabled while *Use a custom report location* is ticked
+- [x] **Step 1:** In `ReportView`, the project folder row and both stage groups are always visible; they are disabled while *Use a custom report location* is ticked
   (as before milestone 4's change). Remove the save checkbox from `ReportView`.
-- [ ] **Step 2:** `ProjectSettingsView` (group `Project Settings`, full width, below the side-by-side top groups and above the tabs): the checkbox bound to the
+- [x] **Step 2:** `ProjectSettingsView` (group `Project Settings`, full width, below the side-by-side top groups and above the tabs): the checkbox bound to the
   shared `SaveProjectSettings`, then the message (`TextWrapping="Wrap"`). `ProjectSettingsViewModel` computes the message per Global Constraints and raises it
   whenever an input changes. Disabled with the other inputs while a run or a busy command is under way.
-- [ ] **Step 3: Verify.** Clean build. In the app: tick/untick (warning still appears once per session); with a custom location set to a scratch folder, Start
+- [x] **Step 3: Verify.** Clean build. In the app: tick/untick (warning still appears once per session); with a custom location set to a scratch folder, Start
   saves the project, then reopen it — message is the "same folder" text; change the location to another scratch folder — message switches to the "different
   folder" text; *Close project* — back to the "same folder" text; Custom ticked shows the project options disabled, not hidden, on both tabs. Screenshot both tabs.
-- [ ] **Step 4: Commit** — `feat(✨): add a Project Settings group and disable report options instead of hiding them`.
+- [x] **Step 4: Commit** — `feat(✨): add a Project Settings group and disable report options instead of hiding them`.
 
 ### Task 2: The folders list column order and truncation
 

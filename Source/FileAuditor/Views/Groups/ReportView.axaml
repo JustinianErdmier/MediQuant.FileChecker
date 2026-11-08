@@ -21,11 +21,11 @@
             <CheckBox Grid.ColumnSpan="3"
                       Content="_Use a custom report location and file name"
                       IsChecked="{Binding Shared.UseCustomLocation}" />
-            <!-- The built location's inputs are hidden, not disabled, while a custom location is used. -->
+            <!-- The built location's inputs are disabled, not hidden, while a custom location is used. -->
             <StackPanel Grid.Row="1"
                         Grid.ColumnSpan="3"
                         Spacing="4"
-                        IsVisible="{Binding Shared.IsBuilt}">
+                        IsEnabled="{Binding Shared.IsBuilt}">
                 <Grid ColumnDefinitions="92,140,*">
                     <Label Content="Pro_ject folder:"
                            Target="{Binding #ProjectFolderBox}"
@@ -110,9 +110,6 @@
                                  Content="Found extension"
                                  IsChecked="{Binding GroupByFoundExtension}" />
                 </StackPanel>
-                <CheckBox x:Name="SaveProjectSettingsBox"
-                          Content="Save project settings _with the report"
-                          IsChecked="{Binding Shared.SaveProjectSettings}" />
             </StackPanel>
         </Grid>
     </ct:GroupBox>

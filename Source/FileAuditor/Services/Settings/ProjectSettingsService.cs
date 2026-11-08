@@ -27,7 +27,30 @@ public sealed class ProjectSettingsService
     public Task<ErrorOr<AppSettings>> LoadAsync(string filePath) => Task.Run(() => _store.Load(filePath));
 
     /// <summary>Gets the full path of the project's settings file, or <see langword="null" /> until one is opened or first saved.</summary>
-    public string? FilePath { get; private set; }
+    public string? FilePath
+    {
+        get;
+
+        private set
+        {
+            if (field == value)
+            {
+                return;
+            }
+
+            field = value;
+
+            FilePathChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>Raised whenever <see cref="FilePath" /> changes: a project is opened, reset, or first saved or saved to a new target.</summary>
+    public event EventHandler? FilePathChanged;
+
+    /// <summary>Determines whether the project's settings file is in the given folder, compared by the same rule as the save rule.</summary>
+    /// <param name="folder">The folder to compare with, typically the report folder.</param>
+    /// <returns><see langword="true" /> when a file is open and its folder is the same as <paramref name="folder" />; <see langword="false" /> when none is open.</returns>
+    public bool IsInFolder(string folder) => FilePath is not null && SameFolder(Path.GetDirectoryName(FilePath) ?? string.Empty, folder);
 
     /// <summary>Gets or sets a value indicating whether the untick warning was confirmed this session.</summary>
     public bool UntickConfirmed { get; set; }

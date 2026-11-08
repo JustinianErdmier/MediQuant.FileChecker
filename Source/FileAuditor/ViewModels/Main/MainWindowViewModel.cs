@@ -61,11 +61,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _project   = project;
         _preflight = new PreflightChecker(dialogues, project);
 
-        Database       = new DatabaseViewModel(settings);
-        FileIndexTable = new FileIndexTableViewModel(settings);
-        ReportLocation = new ReportLocationState();
-        MissingFiles   = new MissingFilesTabViewModel(ReportLocation);
-        UnindexedFiles = new UnindexedFilesTabViewModel(ReportLocation, dialogues);
+        Database        = new DatabaseViewModel(settings);
+        FileIndexTable  = new FileIndexTableViewModel(settings);
+        ReportLocation  = new ReportLocationState();
+        ProjectSettings = new ProjectSettingsViewModel(ReportLocation, project);
+        MissingFiles    = new MissingFilesTabViewModel(ReportLocation);
+        UnindexedFiles  = new UnindexedFilesTabViewModel(ReportLocation, dialogues);
 
         Database.PropertyChanged            += OnInputChanged;
         FileIndexTable.PropertyChanged      += OnInputChanged;
@@ -98,6 +99,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     /// <summary>Gets the Missing Files tab.</summary>
     public MissingFilesTabViewModel MissingFiles { get; }
+
+    /// <summary>Gets the Project Settings group.</summary>
+    public ProjectSettingsViewModel ProjectSettings { get; }
 
     /// <summary>Gets the Report group's values that every tab shares.</summary>
     public ReportLocationState ReportLocation { get; }

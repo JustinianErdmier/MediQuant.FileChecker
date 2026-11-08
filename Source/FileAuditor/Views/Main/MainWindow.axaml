@@ -75,6 +75,8 @@
                                            DataContext="{Binding FileIndexTable}"
                                            IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
             </Grid>
+            <groups:ProjectSettingsView DataContext="{Binding ProjectSettings}"
+                                        IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
             <TabControl SelectedIndex="{Binding SelectedTabIndex}"
                         Height="575"
                         Margin="4,2">
