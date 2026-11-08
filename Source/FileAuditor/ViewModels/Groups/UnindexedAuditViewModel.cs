@@ -98,7 +98,7 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
         Indexed        = progress.Indexed.ToString(format: "N0", CultureInfo.CurrentCulture);
         Unindexed      = progress.Unindexed.ToString(format: "N0", CultureInfo.CurrentCulture);
         Unverified     = progress.Unverified.ToString(format: "N0", CultureInfo.CurrentCulture);
-        Elapsed        = $"{(long)elapsed.TotalHours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}";
+        Elapsed        = TimeText.Format(elapsed.TotalSeconds);
         FilesPerSecond = elapsed.TotalSeconds >= 1 ? RecentRate.Format(total / elapsed.TotalSeconds, isFinished ? null : recent) : "";
 
         IsRunning     = !isFinished;

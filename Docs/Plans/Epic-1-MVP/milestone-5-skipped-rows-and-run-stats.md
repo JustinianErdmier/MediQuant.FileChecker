@@ -138,8 +138,8 @@ The approved description, verbatim in substance:
     - **Target:** `(total − processed) ÷ rate`; a rate `≤ 0` keeps the last shown value (or `Calculating...` if nothing has been shown yet).
     - **Display:** the first shown value is the target; after that, each call subtracts `Δt` (wall time between calls, from the checking clock) from the shown value, then moves
       it toward the target by `1 − e^(−Δt / 3 s)` of the difference; never below zero. Formatted `hh:mm:ss` as today (hours may exceed 24).
-    - **Stalls (added in fix round 1):** while the processed count has not moved, the shown value holds (no countdown, no easing) and the rate keeps decaying; values are
-      clamped to 36,000,000 s and formatted by one overflow-safe formatter shared with *Elapsed*, so no `TimeSpan` is built from an unbounded number.
+    - **Stalls (added in fix round 1):** while the processed count has been unchanged for about a second, the shown value holds (no countdown, no easing) and the rate keeps
+      decaying; values are clamped to 36,000,000 s and formatted by one overflow-safe formatter shared with *Elapsed*, so no `TimeSpan` is built from an unbounded number.
 - [x] **Step 2:** `AuditViewModel.Update` uses the estimator; remove the old inline formula. XML docs on the new type and members; the 30 s, 3 s and 5 s values are named
   constants with a comment on why.
 - [x] **Step 3: Verify.** Clean build. In `FileAuditorM5Scratch`, a table sized for a 60–120 s run (calibrate the row count with a short trial; repeated paths to a few

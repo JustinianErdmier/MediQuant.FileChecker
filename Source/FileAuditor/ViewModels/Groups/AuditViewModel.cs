@@ -79,7 +79,7 @@ public sealed partial class AuditViewModel : AuditStatusBase
         Missing        = progress.Missing.ToString(format: "N0", CultureInfo.CurrentCulture);
         Unverified     = progress.Unverified.ToString(format: "N0", CultureInfo.CurrentCulture);
         Skipped        = progress.Skipped.ToString(format: "N0", CultureInfo.CurrentCulture);
-        Elapsed        = RemainingEstimator.FormatTime(elapsed.TotalSeconds);
+        Elapsed        = TimeText.Format(elapsed.TotalSeconds);
         Remaining      = _remainingEstimator.Next(handled, total, progress.CheckingElapsed, progress.HasTotal, isFinished);
         FilesPerSecond = wholeRunSeconds >= 1 ? RecentRate.Format(done / wholeRunSeconds, isFinished ? null : _remainingEstimator.RecentRate) : "";
 

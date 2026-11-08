@@ -17,10 +17,13 @@ public sealed class RemainingEstimator
 
     private const string Finished = "00:00:00";
 
-    // Ten thousand hours: far beyond any real run, small enough that no conversion can overflow.
-    private const double MaxSeconds = 36_000_000;
+    // How long, in seconds of checking time, the processed count must stand still before the display holds. One refresh is 250 ms, and a single quiet refresh is
+    // ordinary jitter on a slow share, not a stall.
+    private const double StallHoldSeconds = 1;
 
     private readonly RecentRate _rate = new();
+
+    private double _changedSeconds;
 
     private double _lastSeconds;
 
@@ -36,9 +39,10 @@ public sealed class RemainingEstimator
     {
         _rate.Reset();
 
-        _lastSeconds   = 0;
-        _lastProcessed = -1;
-        _shown       = null;
+        _changedSeconds = 0;
+        _lastSeconds    = 0;
+        _lastProcessed  = -1;
+        _shown          = null;
     }
 
     /// <summary>Takes a sample and returns the Remaining text.</summary>
@@ -67,9 +71,13 @@ public sealed class RemainingEstimator
             return CalculatingText;
         }
 
-        double seconds   = checkingElapsed.TotalSeconds;
-        double step      = Math.Max(val1: 0, seconds - _lastSeconds);
-        bool   unchanged = processed == _lastProcessed;
+        double seconds = checkingElapsed.TotalSeconds;
+        double step    = Math.Max(val1: 0, seconds - _lastSeconds);
+
+        if (processed != _lastProcessed)
+        {
+            _changedSeconds = seconds;
+        }
 
         _lastSeconds   = seconds;
         _lastProcessed = processed;
@@ -81,10 +89,11 @@ public sealed class RemainingEstimator
             return Finished;
         }
 
-        // A stalled run has no progress to extrapolate from: hold the display where it is (the rate keeps decaying underneath) rather than count down to zero.
-        if (_shown is not null && unchanged)
+        // A stalled run has no progress to extrapolate from: once the count has stood still for a second, hold the display where it is (the rate keeps decaying
+        // underneath) rather than count down to zero.
+        if (_shown is not null && seconds - _changedSeconds >= StallHoldSeconds)
         {
-            return FormatTime(_shown.Value);
+            return TimeText.Format(_shown.Value);
         }
 
         double? target = rate > 0 ? (total - processed) / rate : null;
@@ -96,7 +105,7 @@ public sealed class RemainingEstimator
                 return CalculatingText;
             }
 
-            _shown = Math.Min(MaxSeconds, target.Value);
+            _shown = Math.Min(TimeText.MaxSeconds, target.Value);
         }
         else if (target is not null)
         {
@@ -104,19 +113,9 @@ public sealed class RemainingEstimator
 
             shown += (target.Value - shown) * (1 - Math.Exp(-step / EasingSeconds));
 
-            _shown = Math.Clamp(shown, min: 0, MaxSeconds);
+            _shown = Math.Clamp(shown, min: 0, TimeText.MaxSeconds);
         }
 
-        return FormatTime(_shown.Value);
-    }
-
-    /// <summary>Formats a duration as <c>hh:mm:ss</c> (hours may exceed 24) without going through <see cref="TimeSpan" />, so any value is safe.</summary>
-    /// <param name="seconds">The duration in seconds; negative and non-finite values are clamped.</param>
-    /// <returns>The duration as text.</returns>
-    internal static string FormatTime(double seconds)
-    {
-        long whole = double.IsNaN(seconds) ? 0 : (long)Math.Clamp(seconds, min: 0, MaxSeconds);
-
-        return $"{whole / 3600:00}:{whole / 60 % 60:00}:{whole % 60:00}";
+        return TimeText.Format(_shown.Value);
     }
 }
