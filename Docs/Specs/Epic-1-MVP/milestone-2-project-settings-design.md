@@ -92,7 +92,8 @@ the user answers *Yes*.
   different databases.
 - **A project that has never been saved** (no file was opened, nothing saved yet) → saved in the report's folder.
 - **A project opened from a file** (or saved before in this session) → saved back to that file. If the report's folder no longer matches the folder the file is in
-  (for example, the stage was switched), the app asks: *"The report folder has changed. Where should this project's settings be saved?"* with **Report Folder**,
+  (for example, the stage was switched), the app asks: *"The report folder has changed.", a blank line, "This project's settings were opened from:", the file's path, a
+  blank line, "The report is now written to:", the report's folder, a blank line, "Where should the settings be saved?"* with **Report Folder**,
   **Original File** and **Cancel**. *Report Folder* saves to the report's folder, and from then on that is the project's file; *Original File* saves back where it
   was opened from; *Cancel* backs out of the operation that triggered the save (§3.7).
 - **A different settings file is already there.** When the target is a `FileAuditorSettings.json` that is not the project's own file (a never-saved project, or

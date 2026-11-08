@@ -20,6 +20,8 @@ Decisions taken without the user, each with what it costs if wrong.
 | R2 | Pre-flight | The live ledger lived outside the repository during the run and was cleaned into this document by Task 5.                                                       | Writing the docs ledger between tasks would have added commits outside the task reviews, as in milestone 1.                                      | None.                                                                                                            |
 | R3 | 2          | An opened project whose report location is incomplete saves back to its own file without asking.                                                                | The project's file is already known, so the report location is not needed; spec §3.7's "incomplete" case applies only to a never-saved project.  | A user who blanked the Project folder still gets the old file updated.                                           |
 | R4 | 3          | Every close, including an operating-system logoff or shutdown close, waits on the save rule's prompts.                                                          | The spec says "every close".                                                                                                                     | A logoff with unsaved changes may be held by a prompt.                                                           |
+| R5 | Task 3    | A title-bar ✕ or Esc on the save question counts as No (remembered for the session), per the plan's Global Constraints.                                       | The plan says closing a dialogue is the declining answer.                                                                                        | A "never mind" at close leaves without saving.                                                                   |
+| R6 | Task 2    | Overwrite stays the default button on the existing-file prompt.                                                                                                 | It matches milestone 1's report-overwrite prompt.                                                                                               | Enter overwrites another project's file.                                                                         |
 
 ## User decisions
 
@@ -44,20 +46,26 @@ was planned and replaced in Task 3.
 
 ### Final review wave (this milestone)
 
-- **MUST fix — a JSON file that is not a settings file loads as defaults** (Task 4). A file with no recognised settings property (for example `{"foo":1}`) is accepted by
-  `SettingsStore.Load`, but spec §3.6 says "not a settings file" is an error. `Load` should reject a file in which no `AppSettings` property is present. Cost if the
-  ruling is wrong: an empty-but-valid project file `{}` would be refused.
-- **Task 4 minor:** the window stays interactive while the picker start-folder probe runs on a slow drive (bound the probe with a short timeout); `Store.Load` runs on the UI
-  thread (wrap it in `Task.Run`).
-- **Task 1 minor:** the hidden Tertiary button keeps `IsCancel=True` (bind it to `HasTertiary`); with no owner, `ChooseAsync` returns Secondary for a three-button dialogue;
-  `SecondaryText` null with `TertiaryText` set gives two cancel buttons (unreachable through the service); `TryGetFolderFromPathAsync` probes on the UI thread (Task 4 pre-checks
-  the folder off-thread).
-- **Task 2 minor:** `SameFolder` lacks `GetFullPath` normalisation (forward slashes, `..`); the cannot-save reason repeats the "The settings file could not be saved:" prefix; the
-  `Store` property on `ProjectSettingsService` is public (used by Task 4); the `AppSettings.Default` doc is stale; a `.tmp` file is left behind on a failed write.
-- **Task 3 minor:** a stale comment above `OnReportChanged`; the `_isRevertingTick` comment overstates; `ConfirmUntickAsync` is fire-and-forget (matches the existing pattern).
-- **Task 4 note:** the *Open failed* detail for invalid JSON echoes the file's own content from the `System.Text.Json` message (for example `'not json' is an invalid JSON
-  literal`); it comes from the `SettingsStore` Unreadable description (Task 2).
+Fixed in `8515420` (busy gate and load/probe/save-point fixes) and `eed820e` (non-project JSON and settings-save tidy-ups):
 
+- **Fixed (`eed820e`) — a JSON file that is not a settings file loaded as defaults** (Task 4). `SettingsStore.Load` now refuses a JSON document that is not an object or holds
+  none of the `AppSettings` property names, so `{"foo":1}` and `{}` are both "the file is not a File Auditor project." (Cost if the ruling is wrong: an empty-but-valid project
+  file `{}` is refused.)
+- **Fixed (`8515420`) — Start, Open project, Close project and closing the window could overlap.** A private busy flag, true while any of the three commands executes, disables
+  the other two, Start and the inputs, and a window close while busy (no audit running) is refused. This closes the race where a stalled Start resumed after Close project.
+- **Fixed (`8515420`) Task 4 minor:** the picker start-folder probe is abandoned after two seconds; `Load` runs off the UI thread through `ProjectSettingsService.LoadAsync`
+  (the `Store` property is now private, which also closes the Task 2 minor about its visibility); a picked file with no local path shows the *Open failed* error.
+- **Fixed (`8515420`) Task 2 minor:** `SameFolder` compares `Path.GetFullPath` of both sides. Every save point also refuses an invalid built Project folder
+  (`ReportPathResolver.IsSingleFolderName`, shared with the pre-flight).
+- **Fixed (`eed820e`) Task 2 minor:** the cannot-save reason is the bare exception message (carried in the error's metadata, `SettingsErrors.BareDetail`); a failed write
+  deletes its `.tmp` file; the `AppSettings.Default` doc is corrected.
+- **Fixed (`eed820e`) Task 1 minor:** the Tertiary button's `IsCancel` is bound to `HasTertiary`.
+- **Fixed (`eed820e`; the `_isRevertingTick` comment in `8515420`) Task 3 minor:** the stale `OnReportChanged` comment and the `_isRevertingTick` comment.
+- **Still open, Task 1 minor:** with no owner, `ChooseAsync` returns Secondary for a three-button dialogue (designer only); `SecondaryText` null with `TertiaryText` set gives
+  two cancel buttons (unreachable through the service); `TryGetFolderFromPathAsync` probes on the UI thread (the start folder is pre-checked off-thread, with the new timeout).
+- **Still open, Task 3 minor:** `ConfirmUntickAsync` is fire-and-forget (matches the existing pattern).
+- **Still open, Task 4 note:** the *Open failed* detail for invalid JSON echoes the file's own content from the `System.Text.Json` message (for example `'not json' is an
+  invalid JSON literal`); it comes from the `SettingsStore` Unreadable description (Task 2).
 ### Later / nice to have
 
 - Recent-projects list, command-line opening and file associations (spec non-goals).

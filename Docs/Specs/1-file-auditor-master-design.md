@@ -195,8 +195,9 @@ Two sunken panes: a message pane that fills the width (`Ready`, `Counting files.
 
 ### 5.6 Menu bar
 
-- **File**: **Open project...** (`p`), **Close project** (`C`), separator, **Start** (F5), **Stop** (Esc), **View Report** (Ctrl+R), separator, **Exit** (Alt+F4). Start, Stop
-  and View Report enable and disable with their buttons. *Open project...* and *Close project* have no button; they are disabled while an audit is running.
+- **File**: **Open project...** (access key P), **Close project** (access key C), separator, **Start** (F5), **Stop** (Esc), **View Report** (Ctrl+R), separator,
+  **Exit** (Alt+F4). Start, Stop and View Report enable and disable with their buttons. *Open project...* and *Close project* have no button; they are disabled while an
+  audit is running and while Start, *Open project...* or *Close project* is in progress (§5.8).
 - **Help**: **About File Auditor**.
 
 ### 5.7 About box
@@ -207,14 +208,20 @@ A small modal, fixed-size Win9x About dialog: the app icon, **File Auditor**, **
 
 | Command         | Enabled when                                                                                                  |
 |-----------------|---------------------------------------------------------------------------------------------------------------|
-| Start           | Not running, and Server, Database, Table, Path column are filled, and the report path is complete (see below) |
-| Stop            | Running                                                                                                       |
-| View Report     | Not running, and a report file exists at the current resolved path                                            |
-| Open project... | Not running                                                                                                   |
-| Close project   | Not running                                                                                                   |
+| Start           | Not running and not busy, and Server, Database, Table, Path column are filled, and the report path is complete (see below) |
+| Stop            | Running                                                                                                                     |
+| View Report     | Not running, and a report file exists at the current resolved path                                                          |
+| Open project... | Not running and not busy                                                                                                    |
+| Close project   | Not running and not busy                                                                                                    |
 
 The report path is complete when, *built*: Project folder is filled (an Audit Stage is always selected); *custom*: Location and File name are filled. All inputs,
 including the *Save project settings with the report* checkbox, are disabled while a run is in progress.
+
+**Busy.** Start, *Open project...* and *Close project* are *busy* from the moment the command begins until it ends, including while its pre-flight checks, save prompts, file
+picker or error dialogues are open (Start's busy period runs on into the audit itself). They never overlap: while one is busy the other two are disabled, and so is Start. The
+inputs, including the checkbox, are disabled as well, so nothing can be edited and then wiped by a project being opened. Closing the window while one of them is busy but no
+audit is running is refused; the window can be closed once the command's prompt has been answered or its work has finished. Closing during an audit keeps its own
+stop-and-exit question (§6.4).
 
 **View Report** opens the report in the user's default program for `.txt` (shell execute). No ellipsis: it needs no further input. **Browse...** keeps its ellipsis.
 
@@ -385,7 +392,11 @@ default; other values are kept. Window size and position are not saved — the w
 - **Open project...** runs the save rule (§8.2) for the current project; *Cancel* there stops. It then shows a file picker titled *Open Project*, filtered to JSON files, with
   `FileAuditorSettings.json` suggested. The picker starts in the report's *Location* when that is a full path to a folder that exists, otherwise in the user's profile folder.
     - *Picker cancelled:* nothing changes; the current project stays open as it was, remembered answers included.
-    - *File cannot be read* (invalid JSON, access denied, not a settings file): an error dialogue; the current project stays open unchanged.
+    - *File cannot be read* (invalid JSON, access denied, not a settings file, or a picked file that is not on a local or network drive): an error dialogue; the current
+      project stays open unchanged. A file is *not a settings file* — "the file is not a File Auditor project." — when its JSON is not an object or the object holds none of
+      the settings properties, so `{"foo":1}` and `{}` are both refused rather than opened as a project of defaults. A file with at least one settings property opens, and
+      the properties it lacks take their defaults. The file is read off the UI thread, and the picker's start-folder probe is abandoned after two seconds (the profile
+      folder is used instead), so a slow or disconnected drive does not freeze the window.
     - *File read:* the project is reset as for *Close project*, the file's settings are loaded, and it becomes the project's file. The loaded settings are the baseline for
       "nothing has changed" (§8.2). The window title does not show the open project.
 - **Close project** runs the save rule, then resets every input to its default, ticks the checkbox, forgets the *No* answer, the untick-warning answer and the open file, and
@@ -419,9 +430,15 @@ So the three states read: *ticked* — always save; *unticked* — ask at the ne
   stage has its own settings file; the two stages may use different databases.
 - **A project that has never been saved** (no file opened, nothing saved yet) → saved in the report's folder.
 - **A project opened from a file, or saved before in this session** → saved back to that file, without asking, even when the report location is currently incomplete (the
-  project's file is already known). If the report location is complete and its folder no longer matches the folder the file is in (for example, the stage was switched), the
-  app asks *"Where should the settings be saved?"* with **Report Folder**, **Original File** and **Cancel**. *Report Folder* saves to the report's folder, and from then on
-  that is the project's file; *Original File* saves back where it was opened from; *Cancel* backs out (§8.2).
+  project's file is already known). If the report location is complete and its folder no longer matches the folder the file is in (for example, the stage was switched; the
+  two folders are compared as full paths, ignoring case and a trailing separator), the app asks, in a question dialogue:
+  *"The report folder has changed.", a blank line, "This project's settings were opened from:", the file's path, a blank line, "The report is now written to:", the report's
+  folder, a blank line, "Where should the settings be saved?"* with **Report Folder**, **Original File** and **Cancel**. *Report Folder* saves to the report's folder, and
+  from then on that is the project's file; *Original File* saves back where it was opened from; *Cancel* backs out (§8.2).
+- **A built location is complete only with a valid Project folder.** At every save point, not only Start, a built report location counts as usable only when the Project
+  folder is a single folder name (the rule of §6.1: not rooted, no `\` or `/`, not `.` or `..`, no characters that are not allowed in a file name). Otherwise the settings
+  are never written through it: a never-saved project gets the *report location is incomplete* error below, and an opened project saves back to its own file without the
+  folder-changed question.
 - **A different settings file is already there.** When the target is a `FileAuditorSettings.json` that is not the project's own file (a never-saved project, or after
   *Report Folder*), the app warns *"A project settings file already exists in this folder ... Do you want to overwrite it?"* with **Overwrite**, **Skip Save** and
   **Cancel**. *Overwrite* saves over it and it becomes the project's file; *Skip Save* does not save this time and the operation goes ahead; *Cancel* backs out.
@@ -439,8 +456,8 @@ XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj
 - `Startup/` — `App` and `Program`.
 - `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`) and `Groups/` (a `UserControl` per group box: Database, File Index
   Table, Report, Audit).
-- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel
-  folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon` and `DialogueChoice`) and `Groups/`.
+- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon` and `DialogueChoice`)
+  and `Groups/`.
 - `Services/` — `Settings/` (`SettingsStore`, which loads and saves one settings file at a path it is given and never creates a folder; `ProjectSettingsService`, which holds the
   open project's file path and baseline settings and runs the save rule of §8.2 with its prompts, returning a `SavePointResult` that says whether the triggering operation may
   proceed and whether the checkbox is to be ticked), `Sql/` (connection strings, SQL identifiers, query builder, index table reader), `Checking/` (file checker and Win32 error
