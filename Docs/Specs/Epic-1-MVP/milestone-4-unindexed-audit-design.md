@@ -75,9 +75,12 @@ row, so no ID).
   name is not matched by the whitelist, or is matched by the blacklist (§3.3). "Configuration files" are covered by the lists: an extension that is not listed is
   never checked (the user's decision).
 - A file reached through two input folders (one folder inside another) is checked and reported **once**, under the deepest input folder that contains it.
-- **Links are followed.** Junctions, symbolic links and DFS links to folders are walked like ordinary folders (DFS namespaces on file shares appear as links, and
-  skipping them would silently drop content). Files are reported by the path they were reached through. To prevent loops, a folder whose target was already
-  walked in this run is not walked again; its contents were already checked, so nothing is lost.
+- **Links.** A junction or symbolic link to a folder is resolved to its target. A link whose target lies **inside the scope of an input folder** (the input itself, plus
+  the folders beneath it when it includes subfolders) is **not walked**: that input's own visit lists the files, so the direct visit always wins. A link whose target
+  lies **outside every input's scope** is walked (DFS namespaces on file shares appear as links, and skipping them would silently drop content); files are reported by the
+  path they were reached through, and are indexed when the index holds that path **or** the canonical path (the link's prefix replaced by its target). To prevent loops,
+  a folder is walked once per run, keyed by its canonical path; its contents were already checked, so nothing is lost. A link whose target cannot be resolved (DFS) is
+  an ordinary folder.
 
 ### 3.3 File types: whitelist and blacklist
 
@@ -147,12 +150,15 @@ whitespace in the column's values is trimmed.
 2. **Load the index.** Read only the path column (no ID). Where possible, ask SQL only for rows under the chosen folders (a `LIKE '<folder>\%'` prefix per folder,
    with `%`, `_` and `[` escaped), so tables that span many projects send only the relevant rows. Because values are trimmed before they are matched, the filter also
    loads every row that **starts with a whitespace character**, which no folder prefix could match (a further `OR` clause); with more than 20 folders, or an empty folder
-   path, it is dropped and every row is loaded. Each path is trimmed, **upper-cased and hashed to 128 bits**, and only the hashes are kept in memory: measured at about
-   **48 MB per million rows** (the hashes plus the set that holds them; the first estimate of 16 bytes a row was too low), so three million rows take roughly 150 MB. A
-   128-bit hash makes a false match (anti-goal 1) practically impossible.
+   path, it is dropped and every row is loaded. Each folder is made canonical (a full path with one trailing separator) once, and the same list feeds the filter and the walk,
+   so the filter never changes the result; files reached through a link that leads outside every input may be indexed under their target path, which the filter did not load,
+   so the run holds them back and decides them with a second, filtered query once the walk ends. Each path is trimmed, **upper-cased and hashed to 128 bits**, and only the
+   hashes are kept in memory: measured at about **48 MB per million rows** (the hashes plus the set that holds them; the first estimate of 16 bytes a row was too low), so
+   three million rows take roughly 150 MB. A 128-bit hash makes a false match (anti-goal 1) practically impossible.
 3. **Walk the folders.** Folder listings run **concurrently**, up to a fixed limit (for example 16), because each listing over a network share is a round trip.
    Each listing returns the files' attributes, so hidden and system files are skipped without extra disk access, and each file is checked against the in-memory
-   hashes as it is found — a microsecond lookup. Files are not batched across threads: the lookup is too cheap to be worth it; the parallelism is in listing.
+   hashes as it is found — a microsecond lookup. Files are not batched across threads: the lookup is too cheap to be worth it; the parallelism is in listing. Stop
+   abandons the listings in progress (their files are not reported).
 4. **Write the report** (§3.7).
 
 The user agreed the index may be loaded fully into memory (as hashes); the builder chooses the exact hashing, concurrency limit and data structures.
@@ -283,7 +289,11 @@ blacklist starts empty; a missing grouping choice is *Listed type*. The remember
 - Hashing uses an in-box .NET algorithm (no new package); a dedicated hashing package would need the user's approval.
 - Counting: *Total files* = *Indexed* + *Unindexed*; folders that cannot be listed are counted apart as *Unverified* (folders). The tab shows *Indexed* in place of
   *Checked* (every file found is checked at once, so *Checked* would always equal *Total files*).
-- Links (junctions, symbolic links, DFS) are followed, with a guard so a folder target is walked once per run.
+- Links follow the rule of §3.2: a link into an input's scope is not walked (the direct visit wins, so results do not depend on timing); one that leads outside every
+  input is walked, with a canonical-path match against the index and a loop guard keyed by canonical path.
+- A hand-edited project file's invalid File types or Exclude entries are kept as written when it opens, shown in the tab's summary, and named by the pre-flight at Start, rather
+  than silently dropped. The File Types dialogue takes one value per line and refuses a line holding a space or a comma.
+- The HTML mock-ups predate this milestone's layout and are kept as historical references; the SDD §5 and the XAML are the contract.
 - While a run is under way, Stop and the status bar follow the running audit, not the selected tab.
 - Stop while the index is loading writes no report.
 - The SQL prefix filter is case-insensitive, so a case-sensitive column collation cannot drop rows.

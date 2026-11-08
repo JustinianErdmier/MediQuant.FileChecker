@@ -131,9 +131,9 @@ Layout, top to bottom. The approved mock-ups are [`direction-tabs-layout.html`](
 with the tab control (including milestone 4's *Unindexed Files* tab), [`main-window-layout.html`](../UserInterfaceDesign/Mockups/main-window-layout.html) and
 [`report-section-states.html`](../UserInterfaceDesign/Mockups/report-section-states.html). They are a design reference only: the latter's state 1 predates the Interim
 default for Audit Stage, and the last two predate the tab control, the per-direction report names, the *Options* group, the final Report-file rows, the access keys, the *Audit*
-group (named *Progress* there), and the project settings (the *Save project settings with the report* checkbox and the *Open project...* and *Close project* menu
-items, milestone 2), and none of them shows milestone 4's final layout (the Database and File Index Table groups side by side, the fixed tab height, the compact Unindexed tab
-and the File Types dialogue). The XAML and this section are the contract.
+group (named *Progress* there), and the project settings (the *Save project settings with the report* checkbox and the *Open project...* and *Close project* menu items,
+milestone 2). All of them predate milestone 4's final layout (the Database and File Index Table groups side by side, the fixed tab height, the compact Unindexed tab and the File
+Types dialogue), and they are kept as historical references, not refreshed. The XAML and this section are the contract.
 
 ```text
 ┌ File Auditor ───────────────────────────────────────────────── _ × ┐
@@ -467,13 +467,14 @@ Start on the Unindexed Files tab runs the pre-flight checks of §6.1 (the ID col
 
 Each is an error dialogue that stops the Start, unless marked *warning*. The first problem found is the one shown, with the offending entry.
 
-- **Folders:** at least one folder; each a fully qualified path that exists (probed off the UI thread, since it may be on a slow share); no folder listed twice (ignoring case
-  and a trailing separator).
+- **Folders:** at least one folder; each a fully qualified path that exists (probed off the UI thread, since it may be on a slow share); no folder listed twice, compared in
+  canonical form (a full path with one trailing separator, ignoring case), so `U:\A` and `u:/a/` are the same folder.
 - **File types syntax.** An *entry* is one or more dot-separated *parts*, such as `pdf`, `tar.gz`, `zip.001` or `zip.*`. A leading dot is optional (`pdf` and `.pdf` are the same)
   and a leading `*.` means the same as a leading dot. Entries are case-insensitive and are kept in lower case with a leading dot, duplicates dropped, sorted. `*` stands for any
   run of characters and `?` for exactly one, the usual glob meanings; there are no character sets, and a wildcard stays within one part (it never matches a dot). An entry is
   invalid when it is empty after the leading dot, has an empty part (`a..b`), or contains a path separator or a character Windows forbids in file names other than `*` and `?`.
-  The File Types dialogue accepts only valid entries, so an invalid one can reach Start only through a hand-edited project file.
+  The File Types dialogue accepts only valid entries, one value per line (a line holding a space or a comma is refused as not valid), so an invalid one can reach Start only
+  through a hand-edited project file. Opening such a file keeps the invalid entries as written, so the tab's summary shows them, and Start names the first one in an error.
 - **File types** has at least one entry.
 - **Exclude** has no entry that matches every file (error: it would exclude everything).
 
@@ -503,7 +504,11 @@ SELECT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filter>;   -- 
   Latin1_General_100_CI_AS`, so a case-sensitive column collation cannot drop rows), with `|`, `%`, `_` and `[` escaped, joined with `OR`. The filter ignores *Include subfolders*
   (a folder's prefix is a superset of its direct files), so tables that span many projects send only the relevant rows. A further `OR` clause selects every row whose value
   **starts with a whitespace character**, because the values are trimmed before they are matched (§6.5.3) and such a row would miss every prefix. With no folder, more than 20
-  folders, or an empty folder path, the filter is dropped and every row is loaded. The filter is an optimisation only; it never changes the result.
+  folders, or an empty folder path, the filter is dropped and every row is loaded. Each folder is made canonical once (a full path with one trailing separator) and the same
+  list goes to the filter and to the walk, so the filter loads exactly the rows whose prefixes the walk reports under, whatever form the folder was typed in (`U:/A/./B`, other
+  letter case, a trailing separator). So the filter never changes the result, with one exception that the run handles itself: a file reached through a link that leads outside
+  every input (§6.5.3) may be indexed under its target path, which no input's prefix covers. Such files are held back during the walk, and once it ends a second query, filtered
+  by the folders that cover their canonical paths, loads the rows needed to decide them.
 - **Hashes.** Each path is trimmed, upper-cased (invariant culture) and hashed to **128 bits** (MD5 of its UTF-16 bytes: an in-box algorithm chosen for speed and even spread, not
   security); only the hashes are kept, in a set. `NULL` values are skipped. A 128-bit hash makes a false match, which would hide an unindexed file (anti-goal), practically
   impossible. Memory is about **48 MB per million rows**, measured (one million rows loaded in 1.6 seconds on a local SQL Server), so three million rows take roughly 150 MB.
@@ -524,11 +529,14 @@ Status `Checking files...`.
   only when a File types entry matches it and no Exclude entry does.
 - **Nested inputs.** A file reached through two input folders (one inside another) is checked and reported **once**, under the deepest input folder whose scope covers its
   folder. With inputs `A` (with subfolders) and `A\B` (without), `A\B\x.pdf` is reported under `A\B` and `A\B\C\y.pdf` under `A`.
-- **Links are followed.** Junctions, symbolic links and DFS links to folders are walked like folders (DFS namespaces on file shares appear as links, and skipping them would
-  silently drop content), and files are reported by the path they were reached through. To end loops, a folder whose resolved target was already listed in this run is not
-  listed again; if it was first listed without descending and a later visit needs its subfolders, the later visit lists those. When a target is reachable both directly and
-  through a link, whichever path is listed first wins, so attribution and reported paths can differ between runs, and content reachable through links to a folder and to one of
-  its descendants can be reported twice, under different link paths.
+- **Links.** A junction or symbolic link to a folder is resolved to its target. When the target lies **inside the scope of an input folder** (the input itself, plus the folders
+  beneath it when it includes subfolders), the link is **not walked**: that input's own visit lists those files, so the direct visit always wins and attribution does not depend
+  on timing. When the target lies **outside every input's scope**, the link is walked (DFS namespaces on file shares appear as links, and skipping them would silently drop
+  content), the files found through it are reported by the path they were reached through, and each also carries its **canonical path**, the link's prefix replaced by the
+  resolved target. A file counts as indexed when the index holds either path. Folders beneath a walked link are keyed by their canonical path for the loop guard, so a physical
+  folder is listed once however many links reach it, and a link loop ends at its first repeat. A link whose target cannot be resolved (a DFS link, for one) is an ordinary
+  folder. If a folder was first listed without descending and a later visit needs its subfolders, the later visit lists those. Which link path a file reached through two
+  outside links is reported under is whichever is listed first.
 - **Unverified folders.** A folder that cannot be listed (permission denied, share unreachable, path too long, any other I/O failure; a folder deleted mid-run is *Other errors*)
   is reported once as **unverified** and nothing beneath it is walked. Its contents are not checked, so it is counted separately (*Unverified*, in folders), never in *Total
   files*. A listing that fails part-way reports none of that folder's files, so a folder is either wholly checked or wholly unverified.
@@ -537,9 +545,10 @@ Status `Checking files...`.
 
 - **Counting.** Every file found is checked at once, so *Total files* = *Indexed* + *Unindexed*; the audit never opens a file, so no single file can fail. The UI refreshes four
   times a second. There is no up-front count, no percentage and no *Remaining* (§5.4a).
-- **Stop** while the index is loading: no report is written and the status bar reads `Stopped`. After that, Stop (button, menu and Esc) stops starting new listings, lets the
-  running ones finish and writes the report with `Result: Stopped by user`; the counts are what was found and checked, and there is no *Not checked* line, since the total is
-  unknown. A Stop that arrives after the walk has finished but before the run reads its stop request produces a *Stopped by user* report for a complete walk; this is cosmetic.
+- **Stop** while the index is loading: no report is written and the status bar reads `Stopped`. After that, Stop (button, menu and Esc) stops starting new listings, abandons the
+  ones in progress (their files are not reported) and writes the report with `Result: Stopped by user`; the counts are what was found and checked, and there is no *Not checked*
+  line, since the total is unknown. Files held back for the second index query (§6.5.2) are not checked if Stop arrives before it ends, so they are in neither count. A Stop that
+  arrives after the walk has finished but before the run reads its stop request produces a *Stopped by user* report for a complete walk; this is cosmetic.
 - **SQL failure** while loading (connection, bad table or column): an error dialogue, and no report, since nothing has been walked. **Report write failure:** an error dialogue.
 - **Closing the window mid-run** asks the question of §6.4; *Yes* stops the run as above (no report if the index was still loading) and exits.
 

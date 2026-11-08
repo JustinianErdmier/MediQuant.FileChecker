@@ -20,11 +20,11 @@ Decisions taken without the user, each with what it costs if wrong.
 | R2  | Pre-flight | The live ledger (`progress.md`) lived outside the repository during the run and Task 6 cleaned it into this document.                                                          | Writing the docs ledger between tasks would add commits outside the task reviews.                                         | None.                                                                                          |
 | R3  | 1          | The "matches every file" checks use a new `FileTypePattern.MatchesEverything` (one part, only wildcards, at most one `?`) instead of the literal "only wildcards" reading.     | `?` or `.*.*` in Exclude must not be refused as "matches every file".                                                     | None known. Superseded by R10.                                                                 |
 | R4  | 1          | The entry `*` normalises to `.*` (one part): it matches any name that has an extension, not a name without a dot. An empty part in a file name (`x.`) never matches.            | Agrees with the spec's table and with "a name with no dot matches nothing".                                               | None.                                                                                          |
-| R5  | 1          | The commit trailer is `Claude Sonnet 5.5`, as the session's attribution reminder says, not the `Claude Opus 5.5` of the common rules.                                         | The session attribution takes precedence.                                                                                 | Cosmetic (one commit).                                                                         |
+| R5  | 1          | The commit trailer is `Claude Sonnet 5.5`, as the session's attribution reminder says, not the `Claude Opus 5.5` of the common rules.                                         | The session attribution takes precedence.                                                                                 | Cosmetic (two commits, `cc33399` and `24b0b3e`, carry the Sonnet trailer).                     |
 | R6  | 2          | The SQL prefix filter falls back to loading every row only for no folder, more than 20 folders, or an empty folder path. `\|`, `%`, `_` and `[` are escaped, not a reason to fall back. | The escaping represents them exactly, so the optimisation stays on wherever it is safe.                                   | None; verified with folders containing each character.                                         |
 | R7  | 3          | One traversal over the union of the input folders (each folder listed once, its owner worked out from the inputs) instead of one walk per input.                                | A file under nested inputs can then never be reported twice, and no folder is listed twice.                               | None; verified with nested inputs in both orders.                                              |
-| R8  | 3          | When a link target is reachable both directly and through a link, whichever path is listed first wins, so attribution and reported paths can vary between runs.                 | Spec §3.2 already says files are reported by the path they were reached through.                                          | Reports of trees with cross-links may differ between runs.                                     |
-| R9  | 3          | Content reachable through links to a folder and to its descendant (`L1`→`M`, `L2`→`M\N`) may be listed twice, under different link paths.                                       | The plan's loop-guard key is the resolved target for links and the full path otherwise.                                   | Rare duplicate lines in link-heavy trees.                                                      |
+| R8  | 3, final review | A link whose target lies inside the scope of any input folder is not walked: the direct visit wins, so attribution is deterministic. A link whose target lies outside every input is walked, its files carry a canonical path (the link prefix replaced by the target), a file counts as indexed when the index holds either path, and folders are keyed by canonical path. This replaces the first-wins ruling. | The final review showed that first-wins reported indexed files as unindexed (index rows hold the real path); the controller superseded the ruling (`4efa941`). | Index rows that hold a link path into an in-scope folder no longer match (such files are reported unindexed under their real path). A file reached through two outside links is reported under whichever is listed first. |
+| R9  | 3          | Content reachable through links to a folder and to its descendant (`L1`→`M`, `L2`→`M\N`) may be listed twice, under different link paths. Superseded by R8.        | The plan's loop-guard key was the resolved target for links and the full path otherwise.                                  | None now: the guard is keyed by canonical path, so a physical folder is listed once.           |
 | R10 | 4          | Unverified folders with *Invalid characters* (or any other unlisted reason) go under *Other errors* with their reason text and no system message.                              | Spec §3.7 has five groups.                                                                                                | None.                                                                                          |
 | R11 | 4          | A Stop that arrives after the walk finished but before the token is read writes a *Stopped by user* report for a complete walk.                                                | The runner tells a stop from completion by the token afterwards.                                                          | Cosmetic.                                                                                      |
 | R12 | 5          | `MatchesEverything` is one part, only wildcards, **at least one `*`**, at most one `?`. This supersedes R3.                                                                    | The brief's wording alone would treat `?` as matching every file, against "`?` must not be refused"; caught in the UI run. | None; SDD §6.5.1 and spec §3.3 are reworded.                                                   |
@@ -35,6 +35,8 @@ Decisions taken without the user, each with what it costs if wrong.
 | R17 | 5          | The window may widen to fit the side-by-side groups (target 640 px); a small `Folder` header was kept above the path column.                                                   | The two groups need the width; the header labels the column next to *Include subfolders*.                                 | A wider window, reversible with the user's trial. It built at 640 px.                          |
 | R18 | 5          | The folder list is sized to the *Add...* / *Remove* stack beside it (a few rows), not to exactly three rows.                                                                   | "3 rows" was the controller's suggestion, not the user's.                                                                 | None.                                                                                          |
 | R19 | 5          | While a run is under way the progress bar is a timer-driven fixed-width block on a sunken track, not `IsIndeterminate`.                                                        | The theme's marquee is blank for about 2.4 s of each 5 s cycle and its transform cannot be restyled.                      | A custom visual instead of the theme's. SDD §5.4a and spec §3.6 are reworded.                  |
+| R20 | final review | A hand-edited project file's invalid File types or Exclude entries are kept as written (trimmed), shown in the tab's summary and named by the pre-flight at Start, instead of being dropped when the file loads. | Spec §4 says an invalid entry is a pre-flight error naming it; dropping it on load made that unreachable (the controller's ruling, `4efa941`). | The tab can show an entry the editor would refuse; the user must fix it before Start.          |
+| R21 | final review | The HTML mock-ups are frozen as historical references and are not refreshed for milestone 4's layout; the SDD §5 and the XAML are the contract.                    | The controller's ruling; the layout changed repeatedly during the build and the mock-ups no longer match it.              | The mock-ups mislead anyone who reads them as the target; the SDD says they do not.            |
 
 ## User decisions
 
@@ -90,12 +92,20 @@ Implementation defects, all fixed in a review round before the task was accepted
 - **Task 5, Important (two):** the sweeping progress bar read as a real percentage, against the spec's marquee; and the window was about 880 px tall and jumped about 170 px between
   tabs, overflowing a 768 px screen. Fixed in `f376d08` together with the user's layout decisions (R19).
 - Tasks 1 and 4 passed their reviews with no Important finding.
+- **Final review, Important (three):** a link into an input's own scope made first-wins attribution report files as unindexed whenever the index held the real path, and a link
+  leading outside every input could not be matched against an index that held the target path (fixed in `4efa941`, R8); input folders were not canonicalised, so a folder typed
+  as `U:/A/./B` loaded the wrong rows and escaped the duplicate check (fixed in `4efa941`: one canonical list feeds the filter, the walk and the duplicate check); invalid
+  hand-edited file-type entries were dropped on load, so they were never shown or named (fixed in `4efa941`, R20).
 
 ## Outstanding items
 
 ### Final review wave (this milestone)
 
-Minor findings from the task reviews, to be fixed in the final-review fix wave.
+Minor findings from the task reviews, fixed in the final-review fix wave unless marked open below. Fixed in `de70382`: the `FileTypeList.Parse` split, the shared default array
+(fixed in `4efa941`), the `ReportViewModel` spacing, the `stackalloc` size and its memory summary, the blank lines, the long summary lines, the two-elements-on-a-line XAML, the
+hard-coded marquee colours, the File Types dialogue (Edit disabled with no selection, a visible selected row, a space or comma refused), the `Alt+Y` / `Alt+X` targets, the final
+newlines, and the double-unverified upgrade edge and the Stop wording (`4efa941`). **Still open** (not worth a change on their own): the baseline JSON re-serialised on every
+call, per-pattern dot scans, the forwarding wrappers in `ReportBuilder`, and documenting that the Summary numbers come from two sources.
 
 - **Task 1:** `FileTypeList.Parse` splits only on `, space \t \r \n` (use `char.IsWhiteSpace`); `SettingsStore` returns the shared `Default.FileTypes` array instance (return a
   copy); `ReportViewModel` lost a space after `=`; the baseline JSON is re-serialised on every call (cache it if per-keystroke change tracking appears); per-pattern dot scans
@@ -114,14 +124,14 @@ Minor findings from the task reviews, to be fixed in the final-review fix wave.
 
 ### Later / nice to have
 
-- **Mock-ups:** `direction-tabs-layout.html` and the other mock-ups predate the side-by-side top groups, the compact Unindexed tab and the File Types dialogue; refresh them if
-  they are to stay a reference (the SDD §5 is the contract).
+- **Mock-ups:** `direction-tabs-layout.html` and the other mock-ups predate the side-by-side top groups, the compact Unindexed tab and the File Types dialogue; they are kept as
+  historical references (R21), and the SDD §5 is the contract.
 - **The side-by-side groups are a trial:** if the user reverses it, the window returns to a taller layout and the SDD §5 diagram and text change with it. The 761 px height
   overflows a 768 px screen.
 - **Theme marquee:** if Classic.Avalonia's indeterminate bar gains a restylable or gap-free animation, replace the custom moving block (R19).
 - **Help topics:** the user guide article should describe the unindexed audit, its file-type syntax and its report (the constant `HelpLinks.UserGuideUrl` is still empty).
 - **Task 2 deferred:** `COLLATE` on a `varchar` column in another code page could best-fit convert (unrealistic here); folding differences between SQL's `Latin1_General_100` and
-  .NET upper-casing for exotic letters could only hide a file, never invent one.
+  .NET upper-casing for exotic letters could make the filter and the hash disagree, which could report a file as unindexed, not only hide one; exotic, deferred.
 - **Task 3 deferred:** a per-entry `FileName.ToString()` allocation, and each folder's full listing held in memory (fine for realistic trees).
 - **Cold network shares:** the walk was measured only on a local SSD (see *Measurements*); a first run on a real share, with DFS links, may want a different listing limit.
 - Milestone 3's, 2's and 1's deferred minors that remain open are listed in the [milestone 3 ledger](milestone-3-ledger.md), the [milestone 2 ledger](milestone-2-ledger.md) and the
@@ -150,6 +160,9 @@ Minor findings from the task reviews, to be fixed in the final-review fix wave.
 - **Closing the window mid-run** on the Unindexed tab (the stop-and-exit prompt) was not driven.
 - **Case-sensitive column collations** in a real project database: covered at service level (a case-sensitive column collation on LocalDB), not on a project's own table.
 - **The final layout** was measured with UI Automation and screenshots, but has not been reviewed by the user at their screen size.
+
+- **Links outside every input** (the second, filtered index query for files indexed under their target path) were exercised at service level against LocalDB with one target
+  folder, in forward-slash and `.\` input forms and with a hand-edited project file opened in the app; not with more than 20 target folders (which loads every row) or at scale.
 
 ## Measurements
 
