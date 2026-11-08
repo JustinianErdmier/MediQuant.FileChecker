@@ -59,8 +59,8 @@ public static class ReportBuilder
         DateTime    started  = report.StartedUtc.ToLocalTime();
         DateTime    finished = report.FinishedUtc.ToLocalTime();
 
-        lines.Add(item: "File Auditor Report");
-        lines.Add(item: "===================");
+        lines.Add(item: "File Auditor Missing Report");
+        lines.Add(item: "===========================");
         lines.Add(string.Empty);
         lines.Add(Labelled(label: "Server:", settings.Server));
         lines.Add(Labelled(label: "Database:", settings.Database));

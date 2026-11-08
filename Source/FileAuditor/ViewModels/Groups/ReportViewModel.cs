@@ -1,163 +1,120 @@
 namespace FileAuditor.ViewModels.Groups;
 
-/// <summary>The Report group: the project folder, the two stage choices and the report location, either built from them or typed in (SDD §5.3).</summary>
+/// <summary>
+///     One audit direction's Report group: the shared location values come from <see cref="ReportLocationState" />, and only the file name belongs to the direction
+///     (SDD §5.3).
+/// </summary>
 public sealed partial class ReportViewModel : ObservableObject
 {
-    private string _customFileName = "FileAuditorReport.txt";
-
-    private string _customLocation = "";
+    // The custom file name for this view model's own direction. Only ApplyTo and Load map it to the direction's settings property.
+    private string _customFileName;
 
     private bool _isRefreshing;
 
-    /// <summary>Initialises a new instance with the default settings, for the XAML designer.</summary>
+    /// <summary>Initialises a new instance with its own default shared state, for the XAML designer.</summary>
     public ReportViewModel()
-        : this(AppSettings.Default)
+        : this(new ReportLocationState(), AuditDirection.Missing)
     { }
 
-    /// <summary>Initialises a new instance populated from the given settings.</summary>
-    /// <param name="settings">The settings to load.</param>
-    public ReportViewModel(AppSettings settings)
+    /// <summary>Initialises a new instance over the shared state.</summary>
+    /// <param name="shared">The location values every direction shares.</param>
+    /// <param name="direction">The audit direction whose report this group describes.</param>
+    public ReportViewModel(ReportLocationState shared, AuditDirection direction)
     {
-        Current = ReportPathResolver.Resolve(settings);
-        Load(settings);
+        Shared          = shared;
+        Direction       = direction;
+        _customFileName = direction == AuditDirection.Missing ? AppSettings.Default.MissingCustomFileName : ReportPathResolver.UnindexedDefaultFileName;
+        Current   = ReportPathResolver.Resolve(Resolved(), direction);
+
+        Shared.PropertyChanged += OnSharedChanged;
+
+        Refresh();
     }
 
     /// <summary>Gets the report path the current inputs resolve to.</summary>
     public ReportPath Current { get; private set; }
 
+    /// <summary>Gets the audit direction whose report this group describes.</summary>
+    public AuditDirection Direction { get; }
+
     /// <summary>Gets or sets the text of the File name box: a read-only preview when built, the typed name when custom.</summary>
     [ ObservableProperty ]
     public partial string FileName { get; set; } = "";
-
-    /// <summary>Gets a value indicating whether the Audit Stage group is editable: built, and not forced to Interim by the Sample stage.</summary>
-    public bool IsAuditStageEnabled => IsBuilt && !IsSampleProject;
-
-    /// <summary>Gets a value indicating whether the report location is built, so the project folder and stage groups apply.</summary>
-    public bool IsBuilt => !UseCustomLocation;
-
-    /// <summary>Gets or sets a value indicating whether the Final audit stage is selected.</summary>
-    [ ObservableProperty ]
-    public partial bool IsFinalAudit { get; set; }
-
-    /// <summary>Gets or sets a value indicating whether the Final project stage is selected.</summary>
-    [ ObservableProperty ]
-    public partial bool IsFinalProject { get; set; } = true;
-
-    /// <summary>Gets or sets a value indicating whether the Interim audit stage is selected.</summary>
-    [ ObservableProperty ]
-    public partial bool IsInterimAudit { get; set; } = true;
-
-    /// <summary>Gets or sets a value indicating whether the Sample project stage is selected.</summary>
-    [ ObservableProperty ]
-    public partial bool IsSampleProject { get; set; }
 
     /// <summary>Gets or sets the text of the Location box: a read-only preview when built, the typed folder when custom.</summary>
     [ ObservableProperty ]
     public partial string Location { get; set; } = "";
 
-    /// <summary>Gets or sets the project folder used to build the report location.</summary>
-    [ ObservableProperty ]
-    public partial string ProjectFolder { get; set; } = "";
+    /// <summary>Gets the location values shared with every direction.</summary>
+    public ReportLocationState Shared { get; }
 
     /// <summary>
-    ///     Gets or sets a value indicating whether the project's settings are saved automatically with the report. It is a per-session choice and is deliberately not part of
-    ///     <see cref="ApplyTo" /> or <see cref="Load" />.
+    ///     Copies this direction's own inputs (its custom file name) into the given settings. The unindexed direction has no setting for its file name yet, so it carries
+    ///     nothing and keeps its default.
     /// </summary>
-    [ ObservableProperty ]
-    public partial bool SaveProjectSettings { get; set; } = true;
-
-    /// <summary>Gets or sets a value indicating whether the report goes to a custom location and file name.</summary>
-    [ ObservableProperty ]
-    public partial bool UseCustomLocation { get; set; }
-
-    /// <summary>Copies this group's inputs into the given settings.</summary>
     /// <param name="settings">The settings to start from.</param>
-    /// <returns>A copy of <paramref name="settings" /> carrying this group's inputs.</returns>
+    /// <returns>A copy of <paramref name="settings" /> carrying this direction's inputs.</returns>
     public AppSettings ApplyTo(AppSettings settings)
-        => settings with
-        {
-            ProjectFolder = ProjectFolder,
-            ProjectStage = IsSampleProject ? ProjectStage.Sample : ProjectStage.Final,
-            AuditStage = IsFinalAudit ? AuditStage.Final : AuditStage.Interim,
-            UseCustomReportLocation = UseCustomLocation,
-            CustomLocation = _customLocation,
-            CustomFileName = _customFileName
-        };
+        => Direction == AuditDirection.Missing ? settings with { MissingCustomFileName = _customFileName } : settings;
 
-    /// <summary>Sets this group's inputs from the given settings.</summary>
+    /// <summary>
+    ///     Sets this direction's own inputs from the given settings, then refreshes from the shared state. The unindexed direction has no setting yet, so its file name keeps
+    ///     the default.
+    /// </summary>
     /// <param name="settings">The settings to load.</param>
     public void Load(AppSettings settings)
     {
-        _customLocation = settings.CustomLocation;
-        _customFileName = settings.CustomFileName;
-
-        ProjectFolder     = settings.ProjectFolder;
-        IsSampleProject   = settings.ProjectStage == ProjectStage.Sample;
-        IsFinalProject    = !IsSampleProject;
-        IsInterimAudit    = IsSampleProject || settings.AuditStage == AuditStage.Interim;
-        IsFinalAudit      = !IsInterimAudit;
-        UseCustomLocation = settings.UseCustomReportLocation;
-
-        Refresh();
-    }
-
-    partial void OnProjectFolderChanged(string value) => Refresh();
-
-    partial void OnIsSampleProjectChanged(bool value)
-    {
-        if (value)
+        if (Direction == AuditDirection.Missing)
         {
-            IsInterimAudit = true;
-            IsFinalAudit   = false;
+            _customFileName = settings.MissingCustomFileName;
         }
 
-        OnPropertyChanged(nameof(IsAuditStageEnabled));
-        Refresh();
-    }
-
-    partial void OnIsFinalProjectChanged(bool value) => Refresh();
-
-    partial void OnIsInterimAuditChanged(bool value) => Refresh();
-
-    partial void OnIsFinalAuditChanged(bool value) => Refresh();
-
-    partial void OnUseCustomLocationChanged(bool value)
-    {
-        OnPropertyChanged(nameof(IsBuilt));
-        OnPropertyChanged(nameof(IsAuditStageEnabled));
         Refresh();
     }
 
     partial void OnLocationChanged(string value)
     {
-        if (_isRefreshing || !UseCustomLocation)
+        if (_isRefreshing
+            || !Shared.UseCustomLocation)
         {
             return;
         }
 
-        _customLocation = value;
-        UpdateCurrent();
+        Shared.CustomLocation = value;
     }
 
     partial void OnFileNameChanged(string value)
     {
-        if (_isRefreshing || !UseCustomLocation)
+        if (_isRefreshing
+            || !Shared.UseCustomLocation)
         {
             return;
         }
 
         _customFileName = value;
+
         UpdateCurrent();
     }
+
+    // Everything but the save tick can change the location, so the boxes and Current follow it.
+    private void OnSharedChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ReportLocationState.SaveProjectSettings))
+        {
+            Refresh();
+        }
+    }
+
+    private AppSettings Resolved() => ApplyTo(Shared.ApplyTo(AppSettings.Default));
 
     /// <summary>Rewrites the Location and File name boxes for the current mode and recomputes <see cref="Current" />.</summary>
     private void Refresh()
     {
-        ReportPath path = ReportPathResolver.Resolve(ApplyTo(AppSettings.Default));
+        ReportPath path = ReportPathResolver.Resolve(Resolved(), Direction);
 
         _isRefreshing = true;
-        Location      = UseCustomLocation ? _customLocation : path.DisplayDirectory;
-        FileName      = UseCustomLocation ? _customFileName : path.FileName;
+        Location      = Shared.UseCustomLocation ? Shared.CustomLocation : path.DisplayDirectory;
+        FileName      = Shared.UseCustomLocation ? _customFileName : path.FileName;
         _isRefreshing = false;
 
         UpdateCurrent();
@@ -165,7 +122,7 @@ public sealed partial class ReportViewModel : ObservableObject
 
     private void UpdateCurrent()
     {
-        Current = ReportPathResolver.Resolve(ApplyTo(AppSettings.Default));
+        Current = ReportPathResolver.Resolve(Resolved(), Direction);
         OnPropertyChanged(nameof(Current));
     }
 }

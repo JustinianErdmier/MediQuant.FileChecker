@@ -16,7 +16,7 @@ namespace FileAuditor.Models.Settings;
 /// <param name="AuditStage">The audit stage.</param>
 /// <param name="UseCustomReportLocation">Whether the report is written to a custom location.</param>
 /// <param name="CustomLocation">The custom report folder, used when <paramref name="UseCustomReportLocation" /> is set.</param>
-/// <param name="CustomFileName">The custom report file name, used when <paramref name="UseCustomReportLocation" /> is set.</param>
+/// <param name="MissingCustomFileName">The custom report file name of the missing-files audit, used when <paramref name="UseCustomReportLocation" /> is set.</param>
 public sealed record AppSettings(string       Server                  = "",
                                  string       Database                = "",
                                  string       Table                   = "",
@@ -28,7 +28,7 @@ public sealed record AppSettings(string       Server                  = "",
                                  AuditStage   AuditStage              = AuditStage.Interim,
                                  bool         UseCustomReportLocation = false,
                                  string       CustomLocation          = "",
-                                 string       CustomFileName          = "FileAuditorReport.txt")
+                                 string       MissingCustomFileName   = "FileAuditorMissingReport.txt")
 {
     /// <summary>Gets the default settings: the settings a new or closed project starts from.</summary>
     public static AppSettings Default { get; } = new();

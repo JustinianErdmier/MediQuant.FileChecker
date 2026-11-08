@@ -7,18 +7,28 @@ public static class ReportPathResolver
 
     private const string ProjectFolderPlaceholder = "<Project Folder>";
 
+    /// <summary>The custom-location file name an unindexed-files report gets until the setting that changes it exists.</summary>
+    public const string UnindexedDefaultFileName = "FileAuditorUnindexedReport.txt";
+
     /// <summary>
-    ///     Resolves the report path. Built: <c>U:\Projects\&lt;Project Folder&gt;\DE\&lt;Project Stage&gt;\FileAuditorReport_&lt;Audit Stage&gt;.txt</c>, complete once the project
-    ///     folder is filled in. Custom: the typed location and file name, complete once both are filled in.
+    ///     Resolves the report path for an audit direction. Built:
+    ///     <c>U:\Projects\&lt;Project Folder&gt;\DE\&lt;Project Stage&gt;\FileAuditor&lt;Missing|Unindexed&gt;Report_&lt;Audit Stage&gt;.txt</c>,
+    ///     complete once the project folder is filled in.
+    ///     Custom: the typed location and file name, complete once both are filled in.
     /// </summary>
+    /// <remarks>
+    ///     For <see cref="AuditDirection.Unindexed" /> with a custom location the file name is the built-in default <c>FileAuditorUnindexedReport.txt</c> for now;
+    ///     the setting that lets the user change it arrives with the unindexed-files audit.
+    /// </remarks>
     /// <param name="settings">The current settings.</param>
+    /// <param name="direction">The audit direction the report belongs to.</param>
     /// <returns>The resolved report path.</returns>
-    public static ReportPath Resolve(AppSettings settings)
+    public static ReportPath Resolve(AppSettings settings, AuditDirection direction)
     {
         if (settings.UseCustomReportLocation)
         {
             string location = settings.CustomLocation.Trim();
-            string fileName = settings.CustomFileName.Trim();
+            string fileName = direction == AuditDirection.Missing ? settings.MissingCustomFileName.Trim() : UnindexedDefaultFileName;
 
             return new ReportPath(location, fileName, location.Length > 0 && fileName.Length > 0, IsCustom: true);
         }
@@ -27,10 +37,36 @@ public static class ReportPathResolver
         AuditStage auditStage    = settings.ProjectStage == ProjectStage.Sample ? AuditStage.Interim : settings.AuditStage;
         string     directory     = Path.Combine(BuiltRoot, projectFolder.Length > 0 ? projectFolder : ProjectFolderPlaceholder, path3: "DE", settings.ProjectStage.ToString());
 
-        return new ReportPath(directory, $"FileAuditorReport_{auditStage}.txt", projectFolder.Length > 0, IsCustom: false);
+        return new ReportPath(directory, $"FileAuditor{direction}Report_{auditStage}.txt", projectFolder.Length > 0, IsCustom: false);
     }
 
-    /// <summary>Determines whether a project folder is a single, valid folder name: not empty, not rooted, no separators, not <c>.</c> or <c>..</c>, no invalid characters.</summary>
+    /// <summary>
+    ///     Resolves the report folder alone, without a direction: the project file's folder follows the shared location, never a tab's file name (SDD §8.3). Built: the
+    ///     built folder, complete once the project folder is filled in. Custom: the typed location, complete once it is not empty.
+    /// </summary>
+    /// <param name="settings">The current settings.</param>
+    /// <returns>A path whose <see cref="ReportPath.FileName" /> is empty; only its folder, completeness and custom flag mean anything.</returns>
+    public static ReportPath ResolveFolder(AppSettings settings)
+    {
+        if (settings.UseCustomReportLocation)
+        {
+            string location = settings.CustomLocation.Trim();
+
+            return new ReportPath(location, FileName: "", location.Length > 0, IsCustom: true);
+        }
+
+        ReportPath built = Resolve(settings, AuditDirection.Missing);
+
+        return built with
+        {
+            FileName = ""
+        };
+    }
+
+    /// <summary>
+    ///     Determines whether a project folder is a single, valid folder name: not empty, not rooted, no separators, not <c>.</c> or <c>..</c>, no invalid
+    ///     characters.
+    /// </summary>
     /// <param name="folder">The trimmed project folder.</param>
     /// <returns><see langword="true" /> when it can safely be combined into the built report path.</returns>
     public static bool IsSingleFolderName(string folder)

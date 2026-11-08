@@ -109,7 +109,7 @@ public sealed class SettingsStore
             ProjectStage = Enum.IsDefined(settings.ProjectStage) ? settings.ProjectStage : defaults.ProjectStage,
             AuditStage = Enum.IsDefined(settings.AuditStage) ? settings.AuditStage : defaults.AuditStage,
             CustomLocation = settings.CustomLocation ?? defaults.CustomLocation,
-            CustomFileName = settings.CustomFileName ?? defaults.CustomFileName
+            MissingCustomFileName = settings.MissingCustomFileName ?? defaults.MissingCustomFileName
         };
     }
 }
