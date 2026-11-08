@@ -3,6 +3,9 @@ namespace FileAuditor.Models.Auditing;
 /// <summary>The single outcome every audited path lands in (SDD §6.3). Each report sets the order in which it lists the Unverified members.</summary>
 public enum CheckOutcome
 {
+    /// <summary>The Missing Files audit met an index path value marked <c>SKIP</c> or <c>SKIPPED</c>; the row is counted but never checked or listed.</summary>
+    Skipped,
+
     /// <summary>The file exists (and, when empty files are reported, has a length greater than zero).</summary>
     Found,
 

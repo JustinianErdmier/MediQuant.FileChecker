@@ -66,10 +66,11 @@ public static class ReportBuilder
         lines.Add(Labelled(label: "Found:", Count(report.FoundCount)));
         lines.Add(Labelled(label: "Missing:", Count(missing)));
         lines.Add(Labelled(label: "Unverified:", Count(unverified)));
+        lines.Add(Labelled(label: "Skipped:", Count(report.SkippedCount)));
 
         if (report.Result != AuditResultKind.Completed)
         {
-            lines.Add(Labelled(label: "Not checked:", Count(report.TotalFiles - report.FoundCount - report.Problems.Count)));
+            lines.Add(Labelled(label: "Not checked:", Count(report.TotalFiles - report.FoundCount - report.Problems.Count - report.SkippedCount)));
         }
     }
 

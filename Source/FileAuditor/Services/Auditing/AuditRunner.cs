@@ -99,7 +99,7 @@ public sealed class AuditRunner
                                         {
                                             CheckResult result = checker.Check(row);
 
-                                            if (result.Outcome != CheckOutcome.Found)
+                                            if (result.Outcome is not (CheckOutcome.Found or CheckOutcome.Skipped))
                                             {
                                                 problems.Add(result);
                                             }
@@ -137,6 +137,7 @@ public sealed class AuditRunner
         }
 
         long            checkedCount   = progress.Checked;
+        long            skippedCount   = progress.Skipped;
         AuditResultKind kind           = AuditResultKind.Completed;
         string?         failureMessage = null;
 
@@ -163,8 +164,9 @@ public sealed class AuditRunner
                                  DateTime.UtcNow,
                                  kind,
                                  failureMessage,
-                                 Math.Max(total, checkedCount),
+                                 Math.Max(total, checkedCount + skippedCount),
                                  checkedCount - problems.Count,
+                                 skippedCount,
                                  problems.ToArray());
 
         ErrorOr<Success> written = ReportWriter.Write(request.ReportPath.FullPath, ReportBuilder.Build(report));

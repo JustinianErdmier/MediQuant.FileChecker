@@ -76,17 +76,17 @@ The approved description, verbatim in substance:
   `AuditProgress.Processed` (`long`, `Checked + Skipped`); `AuditReport` gains `long SkippedCount` after `FoundCount`; `AuditViewModel.Skipped` (`string`).
 - Task 3 consumes `AuditProgress.Processed`, `TotalFiles`, `HasTotal` and `CheckingElapsed`.
 
-- [ ] **Step 1:** `SkipMarker.IsSkipped` implements the Global Constraints rule. `FileChecker.CheckCore` returns `CheckOutcome.Skipped` for a marker before the empty-path
+- [x] **Step 1:** `SkipMarker.IsSkipped` implements the Global Constraints rule. `FileChecker.CheckCore` returns `CheckOutcome.Skipped` for a marker before the empty-path
   check. `AuditProgress.Record(CheckOutcome.Skipped)` increments the skipped counter and **not** `Checked`. `AuditRunner` never adds a skipped result to `problems`, passes the
   skipped count to the report, and uses `Math.Max(total, checked + skipped)` for *Total files*. `ReportBuilder` adds `Skipped:` after `Unverified:` and computes *Not checked*
   as Total − Found − Problems − Skipped. `GroupTitle` and the section orders never see `Skipped`.
-- [ ] **Step 2:** The Audit group shows `Skipped:` and its count in row 3, columns 2–3 (beside *Unverified*), formatted `N0`, blank before the first run (`Reset`). `Percent`
+- [x] **Step 2:** The Audit group shows `Skipped:` and its count in row 3, columns 2–3 (beside *Unverified*), formatted `N0`, blank before the first run (`Reset`). `Percent`
   and the existing *Remaining* formula use `Processed` instead of `Checked`; *Checked* and *Files/second* keep `Checked`.
-- [ ] **Step 3: Verify.** Clean build. In `FileAuditorM5Scratch`, a table of about 20 rows: existing scratch files, a missing one, an empty-path row, and the Review Focus 2
+- [x] **Step 3: Verify.** Clean build. In `FileAuditorM5Scratch`, a table of about 20 rows: existing scratch files, a missing one, an empty-path row, and the Review Focus 2
   values. Run the Missing audit: the stats and the report (`Get-Content`) show the expected Skipped count; no marker appears in either section; the three non-markers land as
   stated. Then a table of about 200,000 rows with every tenth row a marker: start, stop after a few seconds via the Stop button's `InvokePattern`, and check the report's
   arithmetic and that on-screen Checked + Skipped ≤ Total. The window is still 640 × 668 with nothing clipped. Screenshot the Audit group. Drop the database.
-- [ ] **Step 4: Commit** — `feat(✨): skip index rows marked SKIP or SKIPPED in the missing-files audit`.
+- [x] **Step 4: Commit** — `feat(✨): skip index rows marked SKIP or SKIPPED in the missing-files audit`.
 
 ### Task 2: Whole-number Files/second and a per-tab Stop
 

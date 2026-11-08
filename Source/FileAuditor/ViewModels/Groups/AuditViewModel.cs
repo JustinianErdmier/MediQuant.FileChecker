@@ -27,6 +27,10 @@ public sealed partial class AuditViewModel : AuditStatusBase
     [ ObservableProperty ]
     public partial string Remaining { get; set; } = "";
 
+    /// <summary>Gets or sets the number of skipped rows, formatted with thousands separators.</summary>
+    [ ObservableProperty ]
+    public partial string Skipped { get; set; } = "";
+
     /// <summary>Gets or sets the total number of files, formatted with thousands separators.</summary>
     [ ObservableProperty ]
     public partial string TotalFiles { get; set; } = "";
@@ -42,6 +46,7 @@ public sealed partial class AuditViewModel : AuditStatusBase
         Checked        = "";
         Missing        = "";
         Unverified     = "";
+        Skipped        = "";
         Elapsed        = "";
         Remaining      = "";
         FilesPerSecond = "";
@@ -57,8 +62,9 @@ public sealed partial class AuditViewModel : AuditStatusBase
     {
         long   total   = progress.TotalFiles;
         long   done    = progress.Checked;
+        long   handled = progress.Processed;
         double seconds = progress.CheckingElapsed.TotalSeconds;
-        double rate    = seconds > 0 ? done / seconds : 0;
+        double rate    = seconds > 0 ? handled / seconds : 0;
 
         // The displayed rate is over the whole run, the span the Elapsed box shows; Remaining keeps the checking-time rate, which excludes the counting phase.
         double wholeRunSeconds = elapsed.TotalSeconds;
@@ -67,11 +73,12 @@ public sealed partial class AuditViewModel : AuditStatusBase
         Checked        = done.ToString(format: "N0", CultureInfo.CurrentCulture);
         Missing        = progress.Missing.ToString(format: "N0", CultureInfo.CurrentCulture);
         Unverified     = progress.Unverified.ToString(format: "N0", CultureInfo.CurrentCulture);
+        Skipped        = progress.Skipped.ToString(format: "N0", CultureInfo.CurrentCulture);
         Elapsed        = FormatTime(elapsed);
-        Remaining      = FormatTime(rate > 0 && total > done ? TimeSpan.FromSeconds((total - done) / rate) : TimeSpan.Zero);
+        Remaining      = FormatTime(rate > 0 && total > handled ? TimeSpan.FromSeconds((total - handled) / rate) : TimeSpan.Zero);
         FilesPerSecond = wholeRunSeconds >= 1 ? (done / wholeRunSeconds).ToString(format: "0.00", CultureInfo.CurrentCulture) : "";
 
-        Percent       = total > 0 ? Math.Min(val1: 100, done * 100.0 / total) : isFinished && progress.HasTotal ? 100 : 0;
+        Percent       = total > 0 ? Math.Min(val1: 100, handled * 100.0 / total) : isFinished && progress.HasTotal ? 100 : 0;
         StatusPercent = progress.HasTotal ? $"{Percent:0}%" : "";
     }
 

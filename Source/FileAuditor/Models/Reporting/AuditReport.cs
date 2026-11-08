@@ -8,6 +8,7 @@ namespace FileAuditor.Models.Reporting;
 /// <param name="FailureMessage">The failure message; used only when <paramref name="Result" /> is <see cref="AuditResultKind.Failed" />.</param>
 /// <param name="TotalFiles">The table's row count.</param>
 /// <param name="FoundCount">How many files were found.</param>
+/// <param name="SkippedCount">How many index rows were skipped because their path value was a skip marker; they are neither checked nor listed.</param>
 /// <param name="Problems">
 ///     The Missing and Unverified results only, so a very large run need not keep every Found row in memory. Files checked = <paramref name="FoundCount" /> plus
 ///     the number of problems.
@@ -19,4 +20,5 @@ public sealed record AuditReport(AppSettings                Settings,
                                  string?                    FailureMessage,
                                  long                       TotalFiles,
                                  long                       FoundCount,
+                                 long                       SkippedCount,
                                  IReadOnlyList<CheckResult> Problems);

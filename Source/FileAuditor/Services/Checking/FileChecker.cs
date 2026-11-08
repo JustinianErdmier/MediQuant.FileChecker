@@ -54,6 +54,11 @@ public sealed class FileChecker(bool reportEmptyFiles)
     {
         string path = row.Path;
 
+        if (SkipMarker.IsSkipped(path))
+        {
+            return ToResult(row, new MappedOutcome(CheckOutcome.Skipped));
+        }
+
         if (string.IsNullOrWhiteSpace(path))
         {
             return ToResult(row, new MappedOutcome(CheckOutcome.UnverifiedPathEmpty));
