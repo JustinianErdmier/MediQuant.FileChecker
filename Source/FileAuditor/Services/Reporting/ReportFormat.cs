@@ -50,8 +50,8 @@ public static class ReportFormat
         }
 
         lines.Add(Labelled(label: "Project folder:", settings.ProjectFolder));
-        lines.Add(Labelled(label: "Project stage:", settings.ProjectStage.ToString()));
-        lines.Add(Labelled(label: "Audit stage:", settings.AuditStage.ToString()));
+        lines.Add(Labelled(label: "Project stage:", StageLabel(settings.ProjectStage)));
+        lines.Add(Labelled(label: "Audit stage:", StageLabel(settings.AuditStage)));
     }
 
     /// <summary>Adds the blank line and the Started, Finished, Elapsed and Result lines.</summary>
@@ -114,6 +114,25 @@ public static class ReportFormat
         {
             AuditResultKinds.Completed     => "Completed",
             AuditResultKinds.StoppedByUser => "Stopped by user",
-            var _                          => $"Failed — {Flatten(failureMessage ?? string.Empty)}".TrimEnd()
+            AuditResultKinds.Failed        => $"Failed — {Flatten(failureMessage ?? string.Empty)}".TrimEnd(),
+            var _                          => throw new UnreachableException()
+        };
+
+    /// <summary>The report label of a project stage.</summary>
+    private static string StageLabel(ProjectStages stage)
+        => stage switch
+        {
+            ProjectStages.Sample => "Sample",
+            ProjectStages.Final  => "Final",
+            var _                => throw new UnreachableException()
+        };
+
+    /// <summary>The report label of an audit stage.</summary>
+    private static string StageLabel(AuditStages stage)
+        => stage switch
+        {
+            AuditStages.Interim => "Interim",
+            AuditStages.Final   => "Final",
+            var _               => throw new UnreachableException()
         };
 }

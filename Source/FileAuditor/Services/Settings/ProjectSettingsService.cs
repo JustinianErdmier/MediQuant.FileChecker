@@ -164,8 +164,10 @@ public sealed class ProjectSettingsService
                     break;
 
                 case DialogueChoices.Tertiary:
-                default:
                     return SavePointResult.Cancel;
+
+                default:
+                    throw new UnreachableException();
             }
         }
         else
@@ -200,8 +202,10 @@ public sealed class ProjectSettingsService
                     return SavePointResult.Cancel;
 
                 case DialogueChoices.Primary:
-                default:
                     break;
+
+                default:
+                    throw new UnreachableException();
             }
         }
 
@@ -227,7 +231,12 @@ public sealed class ProjectSettingsService
                                                                primaryText: "_Skip Save",
                                                                secondaryText: "Cancel");
 
-        return choices is DialogueChoices.Primary ? done() : SavePointResult.Cancel;
+        return choices switch
+        {
+            DialogueChoices.Primary   => done(),
+            DialogueChoices.Secondary => SavePointResult.Cancel,
+            var _                     => throw new UnreachableException()
+        };
     }
 
     // Compares the full paths, so a relative segment or a mixed separator does not make the same folder look different.

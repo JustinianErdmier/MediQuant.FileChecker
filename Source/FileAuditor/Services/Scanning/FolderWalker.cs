@@ -97,22 +97,11 @@ public static class FolderWalker
                 continue;
             }
 
-            switch (Classify(new DirectoryInfo(inputRoot.Path), out string? failure))
+            LinkStates state = Classify(new DirectoryInfo(inputRoot.Path), out string? failure);
+
+            if (IsOrdinary(state, inputRoot.Path, failure, onUnverified))
             {
-                case LinkStates.Link:
-                    onUnverified(LinkNotFollowed(inputRoot.Path));
-
-                    break;
-
-                case LinkStates.Unknown:
-                    onUnverified(Unclassifiable(inputRoot.Path, failure));
-
-                    break;
-
-                default:
-                    pathRoots.Add(inputRoot);
-
-                    break;
+                pathRoots.Add(inputRoot);
             }
         }
 
@@ -266,6 +255,34 @@ public static class FolderWalker
     /// <param name="path">The path of the link that was not followed.</param>
     /// <returns>An <see cref="UnverifiedFolder" /> record with the <see cref="CheckOutcomes.UnverifiedLinkNotFollowed" /> reason.</returns>
     private static UnverifiedFolder LinkNotFollowed(string path) => new(path, CheckOutcomes.UnverifiedLinkNotFollowed, ReasonText: null, SystemMessage: null);
+
+    /// <summary>Reports a link, or an entry whose link status could not be read, as unverified; an ordinary entry is left for the caller to walk or report.</summary>
+    /// <param name="state">The entry's link status.</param>
+    /// <param name="path">The entry's path.</param>
+    /// <param name="failure">The system message when the link status could not be read.</param>
+    /// <param name="onUnverified">The callback that receives the unverified entry.</param>
+    /// <returns><see langword="true" /> only for an ordinary entry, which the caller then walks or reports.</returns>
+    private static bool IsOrdinary(LinkStates state, string path, string? failure, Action<UnverifiedFolder> onUnverified)
+    {
+        switch (state)
+        {
+            case LinkStates.Ordinary:
+                return true;
+
+            case LinkStates.Link:
+                onUnverified(LinkNotFollowed(path));
+
+                return false;
+
+            case LinkStates.Unknown:
+                onUnverified(Unclassifiable(path, failure));
+
+                return false;
+
+            default:
+                throw new UnreachableException();
+        }
+    }
 
     /// <summary>
     ///     Describes the outcome of classifying a file-system entry before traversal, distinguishing entries that can be processed normally, entries that are links and must not be
@@ -424,22 +441,11 @@ public static class FolderWalker
 
                 string? failure = null;
 
-                switch (entry.IsReparsePoint ? Classify(new FileInfo(file), out failure) : LinkStates.Ordinary)
+                LinkStates state = entry.IsReparsePoint ? Classify(new FileInfo(file), out failure) : LinkStates.Ordinary;
+
+                if (IsOrdinary(state, file, failure, _onUnverified))
                 {
-                    case LinkStates.Link:
-                        _onUnverified(LinkNotFollowed(file));
-
-                        break;
-
-                    case LinkStates.Unknown:
-                        _onUnverified(Unclassifiable(file, failure));
-
-                        break;
-
-                    default:
-                        _onFile(new ScannedFile(file, owner.Entered, type));
-
-                        break;
+                    _onFile(new ScannedFile(file, owner.Entered, type));
                 }
             }
         }
@@ -457,22 +463,11 @@ public static class FolderWalker
             // A folder's status is probed only for a reparse point, and before the folder is queued; one that cannot be classified is not walked.
             string? failure = null;
 
-            switch (sub.IsReparsePoint ? Classify(new DirectoryInfo(path), out failure) : LinkStates.Ordinary)
+            LinkStates state = sub.IsReparsePoint ? Classify(new DirectoryInfo(path), out failure) : LinkStates.Ordinary;
+
+            if (IsOrdinary(state, path, failure, _onUnverified))
             {
-                case LinkStates.Link:
-                    _onUnverified(LinkNotFollowed(path));
-
-                    break;
-
-                case LinkStates.Unknown:
-                    _onUnverified(Unclassifiable(path, failure));
-
-                    break;
-
-                default:
-                    Enqueue(path);
-
-                    break;
+                Enqueue(path);
             }
         }
 

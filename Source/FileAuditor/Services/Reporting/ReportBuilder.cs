@@ -178,7 +178,7 @@ public static class ReportBuilder
             CheckOutcomes.UnverifiedInvalidCharacters    => "Invalid characters in path",
             CheckOutcomes.UnverifiedPathEmpty            => "Path is empty in the index table",
             CheckOutcomes.UnverifiedOther                => "Other errors",
-            var _                                        => outcomes.ToString()
+            var _                                        => throw new UnreachableException()
         };
 
     private static string Labelled(string label, string value) => ReportFormat.Labelled(label, value);

@@ -333,7 +333,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             AuditDirections.Missing   => MissingFiles.Report,
             AuditDirections.Unindexed => UnindexedFiles.Report,
-            var _                     => throw new ArgumentOutOfRangeException(nameof(directions), directions, message: null)
+            var _                     => throw new UnreachableException()
         };
 
     private AuditStatusBase AuditFor(AuditDirections direction)
@@ -341,7 +341,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             AuditDirections.Missing   => MissingFiles.Audit,
             AuditDirections.Unindexed => UnindexedFiles.Audit,
-            var _                     => throw new ArgumentOutOfRangeException(nameof(direction), direction, message: null)
+            var _                     => throw new UnreachableException()
         };
 
     private bool CanStart() => CanStartFor(SelectedDirection);

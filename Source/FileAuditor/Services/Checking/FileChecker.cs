@@ -193,6 +193,20 @@ public sealed class FileChecker(bool reportEmptyFiles)
 
                     case CheckOutcomes.MissingDoesNotExist:
                         return ToResult(row, mapped);
+
+                    // Any other outcome says nothing about this ancestor; the next one down is probed.
+                    case CheckOutcomes.Found or
+                        CheckOutcomes.Skipped or
+                        CheckOutcomes.MissingEmpty or
+                        CheckOutcomes.UnverifiedDriveOrShareNotFound or
+                        CheckOutcomes.UnverifiedPathTooLong or
+                        CheckOutcomes.UnverifiedLinkNotFollowed or
+                        CheckOutcomes.UnverifiedInvalidCharacters or
+                        CheckOutcomes.UnverifiedPathEmpty:
+                        break;
+
+                    default:
+                        throw new UnreachableException();
                 }
             }
         }

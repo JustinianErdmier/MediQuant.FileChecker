@@ -66,6 +66,7 @@ public abstract class AuditRun(AuditStatusBase audit)
         {
             AuditResultKinds.Completed     => ("Completed", null),
             AuditResultKinds.StoppedByUser => ("Stopped", null),
-            var _                          => ("Failed", $"The audit failed part-way through:\n\n{failureMessage}\n\nThe report so far has been written.")
+            AuditResultKinds.Failed        => ("Failed", $"The audit failed part-way through:\n\n{failureMessage}\n\nThe report so far has been written."),
+            var _                          => throw new UnreachableException()
         };
 }

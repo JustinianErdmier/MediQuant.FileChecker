@@ -229,20 +229,32 @@ public static class UnindexedReportBuilder
 
     // The report has six groups; every other reason (invalid characters, anything unforeseen) is an Other error that carries its own reason text.
     private static CheckOutcomes GroupOf(UnverifiedFolder folder)
-        => folder.Reason is CheckOutcomes.UnverifiedDriveOrShareNotFound
-                            or CheckOutcomes.UnverifiedPermissionDenied
-                            or CheckOutcomes.UnverifiedNetworkUnreachable
-                            or CheckOutcomes.UnverifiedPathTooLong
-                            or CheckOutcomes.UnverifiedLinkNotFollowed
-               ? folder.Reason
-               : CheckOutcomes.UnverifiedOther;
+        => folder.Reason switch
+        {
+            CheckOutcomes.UnverifiedDriveOrShareNotFound or
+                CheckOutcomes.UnverifiedPermissionDenied or
+                CheckOutcomes.UnverifiedNetworkUnreachable or
+                CheckOutcomes.UnverifiedPathTooLong or
+                CheckOutcomes.UnverifiedLinkNotFollowed => folder.Reason,
+            CheckOutcomes.UnverifiedInvalidCharacters or
+                CheckOutcomes.UnverifiedPathEmpty or
+                CheckOutcomes.UnverifiedOther => CheckOutcomes.UnverifiedOther,
+            var _ => throw new UnreachableException()
+        };
 
     private static string ReasonOf(UnverifiedFolder folder)
         => folder.ReasonText
            ?? folder.Reason switch
            {
                CheckOutcomes.UnverifiedInvalidCharacters => "Invalid characters in path",
-               var _                                     => "I/O error"
+               CheckOutcomes.UnverifiedDriveOrShareNotFound or
+                   CheckOutcomes.UnverifiedPermissionDenied or
+                   CheckOutcomes.UnverifiedNetworkUnreachable or
+                   CheckOutcomes.UnverifiedPathTooLong or
+                   CheckOutcomes.UnverifiedLinkNotFollowed or
+                   CheckOutcomes.UnverifiedPathEmpty or
+                   CheckOutcomes.UnverifiedOther => "I/O error",
+               var _ => throw new UnreachableException()
            };
 
     private static string GroupTitle(CheckOutcomes group)
@@ -253,6 +265,7 @@ public static class UnindexedReportBuilder
             CheckOutcomes.UnverifiedNetworkUnreachable   => "Network location unreachable",
             CheckOutcomes.UnverifiedPathTooLong          => "Path too long",
             CheckOutcomes.UnverifiedLinkNotFollowed      => "Link not followed",
-            var _                                        => "Other errors"
+            CheckOutcomes.UnverifiedOther                => "Other errors",
+            var _                                        => throw new UnreachableException()
         };
 }

@@ -171,13 +171,13 @@ names are the report file names, as its remarks document.
   - `ViewModels/Main/AuditRun.cs` and `MainWindowViewModel.cs`;
   - any other switch over the app's enums found by searching for `switch`.
 
-- [ ] **Step 1: Fix the report switches.**
+- [x] **Step 1: Fix the report switches.**
   - **7.** `ReportBuilder.GroupTitle` gets `var _ => throw new UnreachableException()`. The arm is unreachable: the groups are built only from `MissingOrder` and
     `UnverifiedOrder`, and nothing in the Missing audit produces `UnverifiedLinkNotFollowed`. Do the same for `UnindexedReportBuilder.GroupTitle` and `GroupOf`.
   - `ReportFormat.ResultText` gets an explicit `Failed` arm.
   - `AddProjectLines` stops using `ToString()` for the *Project stage* and *Audit stage* lines. Add explicit label switches that give the same text (`Sample`, `Final`,
     `Interim`).
-- [ ] **Step 2: Fix the `FolderWalker` switches.** **14.** Option A is the correct one of the user's two. Option B would drop every ordinary entry, because its empty `Ordinary`
+- [x] **Step 2: Fix the `FolderWalker` switches.** **14.** Option A is the correct one of the user's two. Option B would drop every ordinary entry, because its empty `Ordinary`
   case breaks out without adding the folder. Do not use either at the three call sites. Instead, add one helper and call it from all three:
   ```csharp
   // Reports a link, or an entry whose link status could not be read; returns true only for an ordinary entry, which the caller then walks or reports.
@@ -185,18 +185,18 @@ names are the report file names, as its remarks document.
   ```
   The helper uses an exhaustive switch, with `default: throw new UnreachableException()`. Each call site becomes one `if (IsOrdinary(...))` statement around its single action:
   `pathRoots.Add`, `_onFile` or `Enqueue`.
-- [ ] **Step 3: Fix the `ProjectSettingsService` switches.**
+- [x] **Step 3: Fix the `ProjectSettingsService` switches.**
   - **20.** In the report-folder prompt, `Tertiary` returns `SavePointResult.Cancel` on its own arm, and `default` throws `UnreachableException`.
   - **21.** In the overwrite prompt, `Primary` gets its own arm (overwrite), and `default` throws.
   - Apply the same to the third prompt, the *cannot save* one, if it switches on the choice.
-- [ ] **Step 4: Sweep the remaining switches.**
+- [x] **Step 4: Sweep the remaining switches.**
   - `AuditProgress.Record` lists the eight `Unverified*` members explicitly, and `default` throws.
   - Bring `AuditRun.DescribeResult`, `MainWindowViewModel` (lines ~121, ~322, ~330) and any other enum switch to the convention.
   - Switches over BCL values, such as `Win32ErrorMapper`'s error codes or `PathText`, are not covered by the convention and stay as they are.
-- [ ] **Step 5: Build and run.** Build with 0 warnings. Then:
+- [x] **Step 5: Build and run.** Build with 0 warnings. Then:
   - run a Missing audit that has missing, unverified and skipped rows, and a stopped run, and compare their reports with ones made on `main` from the same data;
   - check that the reports match apart from the timestamps and the elapsed time.
-- [ ] **Step 6: Commit.** Use `refactor(♻️): name every enum member in switches and make the default arms unreachable`.
+- [x] **Step 6: Commit.** Use `refactor(♻️): name every enum member in switches and make the default arms unreachable`.
 
 ### Task 4: Type locations, global exception handling and `async void` handlers (items 5, 6, 32, 38; global handler requested 2026-11-08)
 
