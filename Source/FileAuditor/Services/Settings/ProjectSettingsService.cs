@@ -171,7 +171,7 @@ public sealed class ProjectSettingsService
 
         if (saved.IsError)
         {
-            return await CannotSaveAsync(target, saved.FirstError.Description, Done);
+            return await CannotSaveAsync(target, SettingsErrors.BareDetail(saved.FirstError), Done);
         }
 
         FilePath  = target;

@@ -155,7 +155,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         UpdateCommands();
     }
 
-    // Only a change of the resolved report path matters here; every other Report property change accompanies one.
+    // Two Report properties matter here: the save checkbox (the untick warning) and the resolved report path (Current), which every other change to the report location
+    // accompanies. Everything else is ignored.
     private void OnReportChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ReportViewModel.SaveProjectSettings))

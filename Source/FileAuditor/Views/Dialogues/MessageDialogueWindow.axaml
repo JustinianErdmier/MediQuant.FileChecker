@@ -46,7 +46,7 @@
                     MinHeight="23"
                     HorizontalContentAlignment="Center"
                     IsVisible="{Binding HasTertiary}"
-                    IsCancel="True"
+                    IsCancel="{Binding HasTertiary}"
                     Click="OnTertiaryClick" />
         </StackPanel>
         <Panel DockPanel.Dock="Left"

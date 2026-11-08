@@ -24,6 +24,11 @@ public sealed class SettingsStore
 
         try
         {
+            if (!LooksLikeProject(json))
+            {
+                return SettingsErrors.Unreadable(detail: "the file is not a File Auditor project.");
+            }
+
             AppSettings? settings = JsonSerializer.Deserialize(json, SettingsJsonContext.Default.AppSettings);
 
             if (settings is null)
@@ -56,8 +61,35 @@ public sealed class SettingsStore
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
         {
+            try
+            {
+                File.Delete(tempPath);
+            }
+            catch (Exception deleteEx) when (deleteEx is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+            {
+                // Best effort only; the original failure is the one to report.
+            }
+
             return SettingsErrors.Unwritable(ex.Message);
         }
+    }
+
+    // A project file is a JSON object holding at least one of AppSettings' properties. Anything else, such as another application's JSON or "{}", is refused rather than
+    // opened as a project of defaults. Throws JsonException for invalid JSON.
+    private static bool LooksLikeProject(string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        HashSet<string> known = SettingsJsonContext.Default.AppSettings.Properties.Select(property => property.Name)
+                                                   .ToHashSet(StringComparer.Ordinal);
+
+        return document.RootElement.EnumerateObject()
+                       .Any(property => known.Contains(property.Name));
     }
 
     // A hand-edited or damaged file can hold null strings or numeric enum values that name nothing; each such value falls back to its default so one bad property

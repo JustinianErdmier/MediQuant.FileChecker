@@ -30,6 +30,6 @@ public sealed record AppSettings(string       Server                  = "",
                                  string       CustomLocation          = "",
                                  string       CustomFileName          = "FileAuditorReport.txt")
 {
-    /// <summary>Gets the default settings, used when no settings file exists or it cannot be read.</summary>
+    /// <summary>Gets the default settings: the settings a new or closed project starts from.</summary>
     public static AppSettings Default { get; } = new();
 }
