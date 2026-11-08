@@ -7,6 +7,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private const int RefreshMilliseconds = 250;
 
+    private const int ProbeTimeoutMilliseconds = 2000;
+
     private readonly DialogueService _dialogues;
 
     private readonly PreflightChecker _preflight;
@@ -26,8 +28,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private bool _reportExists;
 
-    // Set while the checkbox is being put back to ticked, so the revert does not raise the untick warning again.
+    // Set while the checkbox is being changed by the code rather than the user (reverting an untick, ticking after a Yes, resetting a project), so those changes do not
+    // raise the untick warning.
     private bool _isRevertingTick;
+
+    // True while Start, Open project or Close project is executing, including while their prompts are open. Those commands and closing the window must not overlap, and the
+    // inputs must not be edited under them.
+    private bool _isBusy;
 
     /// <summary>Initialises a new instance with the default settings, for the XAML designer.</summary>
     public MainWindowViewModel()
@@ -58,6 +65,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         FileIndexTable.PropertyChanged += OnInputChanged;
         Report.PropertyChanged         += OnReportChanged;
 
+        StartCommand.PropertyChanged        += OnCommandChanged;
+        OpenProjectCommand.PropertyChanged  += OnCommandChanged;
+        CloseProjectCommand.PropertyChanged += OnCommandChanged;
+
         UpdateIdleStatus();
         RefreshReportState();
     }
@@ -71,8 +82,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>Gets the File Index Table group.</summary>
     public FileIndexTableViewModel FileIndexTable { get; }
 
-    /// <summary>Gets a value indicating whether the inputs are editable, that is, no audit is running.</summary>
-    public bool IsEditable => !IsRunning;
+    /// <summary>Gets a value indicating whether the inputs are editable, that is, no audit is running and no Start, Open project or Close project is in progress.</summary>
+    public bool IsEditable => !IsRunning && !_isBusy;
 
     /// <summary>Gets or sets a value indicating whether an audit is running; every input is disabled while it is.</summary>
     [ ObservableProperty ]
@@ -93,7 +104,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     /// <summary>
     ///     Called whenever the window is asked to close. With an audit running the user is asked first, and on Yes the run is stopped and its report written. The project's
-    ///     settings are then saved or offered for saving under the same rule as Start.
+    ///     settings are then saved or offered for saving under the same rule as Start. While Start, Open project or Close project is in progress (before any audit is running)
+    ///     the close is refused, so two save points never run at once; the user can close once that command's prompt has been answered.
     /// </summary>
     /// <returns><see langword="true" /> when the window may close.</returns>
     public async Task<bool> ConfirmCloseAsync()
@@ -110,6 +122,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
             await _auditTask;
         }
+        else if (_isBusy)
+        {
+            return false;
+        }
 
         SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), Report.Current, Report.SaveProjectSettings);
 
@@ -124,6 +140,20 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     private void OnInputChanged(object? sender, PropertyChangedEventArgs e) => UpdateCommands();
+
+    // Keeps the busy flag in step with the three commands that must not overlap.
+    private void OnCommandChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(IAsyncRelayCommand.IsRunning))
+        {
+            return;
+        }
+
+        _isBusy = StartCommand.IsRunning || OpenProjectCommand.IsRunning || CloseProjectCommand.IsRunning;
+
+        OnPropertyChanged(nameof(IsEditable));
+        UpdateCommands();
+    }
 
     // Only a change of the resolved report path matters here; every other Report property change accompanies one.
     private void OnReportChanged(object? sender, PropertyChangedEventArgs e)
@@ -219,7 +249,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     // While no run is active the status bar reads Ready only when Start is enabled; a run's own phases and final status are set by RunAuditAsync.
     private void UpdateIdleStatus()
     {
-        if (IsRunning)
+        if (IsRunning
+            || _isBusy)
         {
             return;
         }
@@ -229,6 +260,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private bool CanStart()
         => !IsRunning
+           && !_isBusy
            && !string.IsNullOrWhiteSpace(Database.Server)
            && !string.IsNullOrWhiteSpace(Database.Database)
            && !string.IsNullOrWhiteSpace(FileIndexTable.Table)
@@ -356,7 +388,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    private bool CanChangeProject() => !IsRunning;
+    private bool CanChangeProject() => !IsRunning && !_isBusy;
 
     [ RelayCommand(CanExecute = nameof(CanChangeProject)) ]
     private async Task CloseProjectAsync()
@@ -382,16 +414,26 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         string startFolder = await ResolvePickerStartFolderAsync();
-        string? path       = await _dialogues.PickProjectFileAsync(startFolder);
+        ProjectFilePick? pick = await _dialogues.PickProjectFileAsync(startFolder);
 
-        if (path is null)
+        if (pick is null)
         {
             AbandonOpen(savePoint);
 
             return;
         }
 
-        ErrorOr<AppSettings> loaded = _project.Store.Load(path);
+        if (pick.LocalPath is not { } path)
+        {
+            AbandonOpen(savePoint);
+
+            await _dialogues.ShowErrorAsync(
+                $"The project could not be opened:\n{PathText.Breakable(pick.Name)}\n\nOnly files on a local or network drive can be opened.");
+
+            return;
+        }
+
+        ErrorOr<AppSettings> loaded = await _project.LoadAsync(path);
 
         if (loaded.IsError)
         {
@@ -422,7 +464,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    // The folder probe runs off the UI thread, since the report folder may be on a slow or disconnected drive.
+    // The folder probe runs off the UI thread, since the report folder may be on a slow or disconnected drive, and is abandoned after two seconds.
     private async Task<string> ResolvePickerStartFolderAsync()
     {
         string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -436,9 +478,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         string directory = current.Directory;
 
-        bool exists = await Task.Run(() => Directory.Exists(directory));
+        Task<bool> probe = Task.Run(() => Directory.Exists(directory));
 
-        return exists ? directory : profile;
+        bool answered = await Task.WhenAny(probe, Task.Delay(ProbeTimeoutMilliseconds)) == probe;
+
+        return answered && probe.Result ? directory : profile;
     }
 
     // Every group goes back to its defaults, as if the application had just been launched.

@@ -29,4 +29,18 @@ public static class ReportPathResolver
 
         return new ReportPath(directory, $"FileAuditorReport_{auditStage}.txt", projectFolder.Length > 0, IsCustom: false);
     }
+
+    /// <summary>Determines whether a project folder is a single, valid folder name: not empty, not rooted, no separators, not <c>.</c> or <c>..</c>, no invalid characters.</summary>
+    /// <param name="folder">The trimmed project folder.</param>
+    /// <returns><see langword="true" /> when it can safely be combined into the built report path.</returns>
+    public static bool IsSingleFolderName(string folder)
+        => folder.Length > 0
+           && folder is not ("." or "..")
+           && !Path.IsPathRooted(folder)
+           && folder.IndexOfAny([
+               '\\',
+               '/'
+           ])
+           < 0
+           && folder.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
 }

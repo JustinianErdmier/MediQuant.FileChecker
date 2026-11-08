@@ -38,8 +38,11 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
 
     /// <summary>Shows the Open Project file picker.</summary>
     /// <param name="startFolder">The folder to start in; ignored when it does not exist.</param>
-    /// <returns>The chosen file's local path, or <see langword="null" /> when cancelled.</returns>
-    public async Task<string?> PickProjectFileAsync(string startFolder)
+    /// <returns>
+    ///     <see langword="null" /> when the picker was cancelled; otherwise the chosen file, whose <see cref="ProjectFilePick.LocalPath" /> is <see langword="null" /> when it is not
+    ///     a file on a local or network drive.
+    /// </returns>
+    public async Task<ProjectFilePick?> PickProjectFileAsync(string startFolder)
     {
         Window? owner = ownerProvider();
 
@@ -60,7 +63,7 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
             ]
         });
 
-        return files.Count == 0 ? null : files[0].TryGetLocalPath();
+        return files.Count == 0 ? null : new ProjectFilePick(files[0].Name, files[0].TryGetLocalPath());
     }
 
     private async Task<DialogueChoice> ShowAsync(MessageDialogueViewModel viewModel)

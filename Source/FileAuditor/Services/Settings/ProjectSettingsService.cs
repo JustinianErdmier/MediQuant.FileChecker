@@ -3,6 +3,8 @@ namespace FileAuditor.Services.Settings;
 /// <summary>Holds the open project's settings file and baseline, and runs the one save rule with its prompts.</summary>
 public sealed class ProjectSettingsService
 {
+    private readonly SettingsStore _store;
+
     private readonly DialogueService _dialogues;
 
     private AppSettings _baseline = AppSettings.Default;
@@ -15,12 +17,14 @@ public sealed class ProjectSettingsService
     /// <param name="dialogues">Shows the prompts.</param>
     public ProjectSettingsService(SettingsStore store, DialogueService dialogues)
     {
-        Store      = store;
+        _store     = store;
         _dialogues = dialogues;
     }
 
-    /// <summary>Gets the settings store.</summary>
-    public SettingsStore Store { get; }
+    /// <summary>Loads a project settings file off the UI thread.</summary>
+    /// <param name="filePath">The full path of the settings file.</param>
+    /// <returns>The settings, or <see cref="SettingsErrors.Unreadable" /> when the file cannot be read or is not a File Auditor project.</returns>
+    public Task<ErrorOr<AppSettings>> LoadAsync(string filePath) => Task.Run(() => _store.Load(filePath));
 
     /// <summary>Gets the full path of the project's settings file, or <see langword="null" /> until one is opened or first saved.</summary>
     public string? FilePath { get; private set; }
@@ -84,7 +88,11 @@ public sealed class ProjectSettingsService
 
         SavePointResult Done() => tick ? SavePointResult.GoAndTick : SavePointResult.Go;
 
-        bool   reportUsable = report.IsComplete && Path.IsPathFullyQualified(report.Directory);
+        // A built location is only usable when the project folder is a single valid folder name; Start checks this in the pre-flight, other save points here.
+        bool reportUsable = report.IsComplete
+                            && Path.IsPathFullyQualified(report.Directory)
+                            && (report.IsCustom || ReportPathResolver.IsSingleFolderName(current.ProjectFolder.Trim()));
+
         string target;
         bool   own;
 
@@ -159,7 +167,7 @@ public sealed class ProjectSettingsService
             }
         }
 
-        ErrorOr<Success> saved = await Task.Run(() => Store.Save(current, target));
+        ErrorOr<Success> saved = await Task.Run(() => _store.Save(current, target));
 
         if (saved.IsError)
         {
@@ -183,6 +191,19 @@ public sealed class ProjectSettingsService
         return choice == DialogueChoice.Primary ? done() : SavePointResult.Cancel;
     }
 
+    // Compares the full paths, so a relative segment or a mixed separator does not make the same folder look different.
     private static bool SameFolder(string a, string b)
-        => string.Equals(Path.TrimEndingDirectorySeparator(a), Path.TrimEndingDirectorySeparator(b), StringComparison.OrdinalIgnoreCase);
+    {
+        try
+        {
+            a = Path.GetFullPath(a);
+            b = Path.GetFullPath(b);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            // Compare the paths as given.
+        }
+
+        return string.Equals(Path.TrimEndingDirectorySeparator(a), Path.TrimEndingDirectorySeparator(b), StringComparison.OrdinalIgnoreCase);
+    }
 }

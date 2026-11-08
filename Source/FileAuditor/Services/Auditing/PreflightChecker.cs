@@ -19,7 +19,7 @@ public sealed class PreflightChecker(DialogueService dialogues)
         }
 
         if (!settings.UseCustomReportLocation
-            && !IsSingleFolderName(settings.ProjectFolder.Trim()))
+            && !ReportPathResolver.IsSingleFolderName(settings.ProjectFolder.Trim()))
         {
             await
                 dialogues.ShowErrorAsync($"The project folder must be a single folder name, not a path, and must not contain characters that are not allowed:\n{settings.ProjectFolder.Trim()}");
@@ -102,17 +102,6 @@ public sealed class PreflightChecker(DialogueService dialogues)
 
         return report;
     }
-
-    private static bool IsSingleFolderName(string folder)
-        => folder.Length > 0
-           && folder is not ("." or "..")
-           && !Path.IsPathRooted(folder)
-           && folder.IndexOfAny([
-               '\\',
-               '/'
-           ])
-           < 0
-           && folder.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
 
     // Creates and immediately removes the temporary file that ReportWriter uses, so the probe leaves nothing behind.
     private static ErrorOr<Success> ProbeWritable(ReportPath report)
