@@ -11,6 +11,7 @@
         <File Path="Docs/Plans/Epic-1-MVP/milestone-1-rewrite.md" />
         <File Path="Docs/Plans/Epic-1-MVP/milestone-2-project-settings.md" />
         <File Path="Docs/Plans/Epic-1-MVP/milestone-3-direction-tabs.md" />
+        <File Path="Docs/Plans/Epic-1-MVP/milestone-4-unindexed-audit.md" />
     </Folder>
     <Folder Name="/Docs/Specs/">
         <File Path="Docs/Specs/1-file-auditor-master-design.md" />

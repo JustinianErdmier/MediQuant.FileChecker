@@ -1,7 +1,7 @@
 # Milestone 4 — Unindexed Files Audit
 
 **Date:** 2026-11-08
-**Status:** Approved 2026-11-08
+**Status:** Approved 2026-11-08; §3.3 and §3.7 amended the same day with the user's whitelist, blacklist and wildcard decisions
 
 ## 1. Intent
 
@@ -44,9 +44,11 @@ Milestone 3's tab control gains a second tab, **Unindexed Files**. Top to bottom
 1. **Folders to Check** group:
    - a list of folders, one per row, each with an **Include subfolders** checkbox, **ticked by default** (the user's decision);
    - **Add...** opens a folder picker and appends the folder; **Remove** removes the selected row;
-   - **File types:** the extension whitelist (§3.3), with **Reset** restoring the built-in list.
+   - **File types:** the extension whitelist (§3.3), with **Reset** restoring the built-in list;
+   - **Exclude:** the extension blacklist (§3.3), empty by default, with no Reset of its own.
 2. The complete **Report** group, shared with the Missing Files tab exactly as milestone 3 describes; the file name here is the unindexed report's
-   (`FileAuditorUnindexedReport_<Audit Stage>.txt`, custom default `FileAuditorUnindexedReport.txt`).
+   (`FileAuditorUnindexedReport_<Audit Stage>.txt`, custom default `FileAuditorUnindexedReport.txt`). On this tab only, the group has one more option below the
+   file name: **Group file types by** — *Listed type* (default) or *Found extension* (§3.7; the user's decision).
 3. The **Audit** group (§3.6) with View Report / Start / Stop.
 
 The shared Database and File Index Table groups above the tabs are used as they are; the **ID column is not used** by this direction (an unindexed file has no
@@ -56,23 +58,66 @@ row, so no ID).
 
 - Each folder is walked; with *Include subfolders* ticked, every folder beneath it too.
 - **Always skipped:** files and folders with the **hidden** or **system** attribute (a skipped folder's contents are skipped with it), and anything whose
-  extension is not in the file-type list. "Configuration files" are covered by the list: an extension that is not listed is never checked (the user's decision).
+  name is not matched by the whitelist, or is matched by the blacklist (§3.3). "Configuration files" are covered by the lists: an extension that is not listed is
+  never checked (the user's decision).
 - A file reached through two input folders (one folder inside another) is checked and reported **once**, under the deepest input folder that contains it.
 - **Links are followed.** Junctions, symbolic links and DFS links to folders are walked like ordinary folders (DFS namespaces on file shares appear as links, and
   skipping them would silently drop content). Files are reported by the path they were reached through. To prevent loops, a folder whose target was already
   walked in this run is not walked again; its contents were already checked, so nothing is lost.
 
-### 3.3 File types
+### 3.3 File types: whitelist and blacklist
 
-An editable list of extensions, saved in the project file. Built-in defaults include common document and image formats — at least `.pdf`, `.tif`, `.tiff`,
-`.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.doc`, `.docx`, `.rtf`, `.odt`, `.xls`, `.xlsx`, `.ppt`, `.pptx`, `.msg`, `.eml`, `.xps` (the builder may add other
-common document and image formats). `.txt`, `.json` and other text or configuration formats are **not** defaults; the user may add them. Matching ignores case.
+Two editable lists of extension patterns, both saved in the project file (the user's decisions):
 
-- **With or without the dot.** An extension may be typed with or without its leading dot (`pdf` or `.pdf`); both mean the same, and the list is shown and saved
-  with the dot (the user's decision).
-- **Multi-dot extensions** are supported (the user's decision): `.nii.gz` or `tar.gz` matches `scan.nii.gz`. A file matches a listed extension when its name ends
-  with that extension (ignoring case) and has at least one character before it. When a file matches several listed extensions (`.gz` and `.nii.gz`), it is grouped
-  in the report under the **longest** one.
+- **File types** (the whitelist): a file is checked only if it matches an entry here. Built-in defaults: common document and image formats — at least `.pdf`,
+  `.tif`, `.tiff`, `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.doc`, `.docx`, `.rtf`, `.odt`, `.xls`, `.xlsx`, `.ppt`, `.pptx`, `.msg`, `.eml`, `.xps` (the builder
+  may add other common document and image formats). `.txt`, `.json` and other text or configuration formats are **not** defaults; the user may add them.
+- **Exclude** (the blacklist): a file that matches an entry here is never checked, even if the whitelist matches it — **the blacklist wins**. Empty by default.
+  Example: whitelist `.gz`, blacklist `.tar.gz` checks `x.gz` but not `x.tar.gz`.
+
+**Writing an entry.** An entry is one or more dot-separated **parts**, for example `pdf`, `tar.gz`, `zip.001`, `zip.*`.
+
+- A leading dot is optional: `pdf` and `.pdf` are the same. A leading `*.` is the same as a leading dot: `*.pdf` is `.pdf` (the user's decision, so the habit of
+  typing `*.pdf` works).
+- Entries are case-insensitive, shown and saved in lower case with a leading dot; duplicates are dropped.
+- **Wildcards** (the user's decision): `*` stands for any run of characters and `?` for exactly one character, the usual glob meanings. There are no character sets.
+  A wildcard **stays within one part**: it never matches a dot.
+
+**Matching a file name** (exact, counted from the end — the user's decision):
+
+1. Split the file name on dots. The first part is the **stem** and must not be empty, so a name with no dot, or one that starts with a dot (`.gitignore`), has no
+   extension and matches nothing.
+2. An entry with *k* parts matches when the name has at least *k* parts after the stem and its **last *k* parts** match the entry's parts one for one, each part
+   compared with its wildcards, ignoring case.
+
+| Entry      | `Backup.zip` | `Backup.zip.01` | `Backup.zip.001` | `Backup.zip.001.bak` | `scan.tar.gz` | `x.gz` |
+|------------|--------------|-----------------|------------------|----------------------|---------------|--------|
+| `.zip.001` | no           | no              | **yes**          | no                   | —             | —      |
+| `zip.*`    | no           | **yes**         | **yes**          | no                   | —             | —      |
+| `zip.0??`  | no           | no              | **yes**          | no                   | —             | —      |
+| `.gz`      | —            | —               | —                | —                    | **yes**       | **yes** |
+| `.tar.gz`  | —            | —               | —                | —                    | **yes**       | no     |
+| `.nii.gz`  | —            | —               | —                | —                    | no            | no     |
+| `*`        | **yes**      | **yes**         | **yes**          | **yes**              | **yes**       | **yes** |
+
+**Most specific entry.** When a file matches more than one whitelist entry (`zip.*` and `zip.001`; `.gz` and `.tar.gz`), it belongs to the **most specific**: the
+one with the most parts; among those, the fewest wildcard characters; among those, the first in alphabetical order (the user's decision on overlap; the tie-breaks
+are the builder's).
+
+**Checks at Start** (part of pre-flight, SDD §6.1; the user's decisions). An entry made only of wildcards (`*`, `*.*`, `?*`) is a **wildcard-only** entry.
+
+| Situation                                                                 | Result                                                                                       |
+|---------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
+| The blacklist has a wildcard-only entry                                   | **Error**: it would exclude everything, so the audit cannot run.                             |
+| The whitelist is empty                                                    | **Error** (no file would be checked).                                                        |
+| The whitelist has a wildcard-only entry **and other entries**             | **Warning** (Continue / Cancel): the wildcard makes the other entries redundant.             |
+| The whitelist has a wildcard-only entry **and** the blacklist is not empty | **Warning** (Continue / Cancel): every file will be checked *except* the blacklisted types. |
+| The same entry (after normalising) is in both lists                       | **Warning** (Continue / Cancel): the blacklist wins, so that type is not checked.            |
+| A wildcard-only whitelist entry alone, with an empty blacklist            | Accepted without a warning.                                                                  |
+
+Overlapping **patterns** (whitelist `zip.*`, blacklist `zip.000`) are ordinary use and raise nothing; only identical entries warn. Each warning, once answered
+*Continue*, is not asked again until *Close project* or a fresh launch, like the remembered answer to the save prompt (the user's decision). *Cancel* stops the
+Start.
 
 ### 3.4 Matching a file to the index
 
@@ -128,7 +173,9 @@ Table:           _DMS_Generic_Index
 Path column:     MQ_FullPath
 Folders:         U:\Projects\D12345\Images (with subfolders)
                  U:\Projects\D12345\Scans
-File types:      .doc .docx .jpg .pdf .png .tif .tiff
+File types:      .doc .docx .jpg .pdf .png .tif .tiff .zip.*
+Exclude:         .zip.000
+Grouped by:      Listed type
 Project folder:  D12345
 Project stage:   Final
 Audit stage:     Interim
@@ -176,6 +223,14 @@ U:\Projects\D12345\Images\2020\   I/O error   The semaphore timeout period has e
 - Unindexed files are grouped by **input folder** (in the order listed), then by **file type** (alphabetical), then sorted by path (ordinal, ignoring case).
   Every folder that has unindexed files gets its group, even when only one folder was chosen; groups with none are omitted. `No unindexed files.` when there are
   none.
+- **Which file-type groups** (the user's decision, an option in the tab's Report group, saved in the project file):
+  - **Listed type** (default): one group per whitelist entry as entered, after normalising — `[.zip.* (12)]`, `[.pdf (2)]`.
+  - **Found extension**: one group per real extension found — the file name's last *k* parts, lower case, where *k* is the matching entry's part count —
+    `[.zip.001 (5)]`, `[.zip.002 (7)]`.
+  - Either way, a file that matches several whitelist entries is grouped through the **most specific** one (§3.3): under *Found extension* that entry's part count
+    decides how many parts make up the extension.
+- The header lists `File types:` and `Exclude:` (each sorted, space-separated; `Exclude:` reads `(none)` when empty) and `Grouped by:` (`Listed type` or
+  `Found extension`).
 - **Unverified Folders** lists folders that could not be listed (path ending in `\`; their contents were not checked), grouped by the same reasons as SDD §6.3
   (*Drive or share not found*, *Permission denied*, *Network location unreachable*, *Path too long*, *Other errors* with reason and system message). Only the
   first folder that failed on each branch is listed. `No unverified folders.` when there are none.
@@ -184,14 +239,19 @@ U:\Projects\D12345\Images\2020\   I/O error   The semaphore timeout period has e
 
 ### 3.8 The project file
 
-Adds, for this direction: the folder list (each with its *Include subfolders* flag), the file-type list, and the unindexed report's custom file name. A project
-with no folders saved starts with an empty list; a missing file-type list starts with the built-in defaults.
+Adds, for this direction: the folder list (each with its *Include subfolders* flag), the whitelist, the blacklist, the *Group file types by* choice, and the
+unindexed report's custom file name. A project with no folders saved starts with an empty list; a missing whitelist starts with the built-in defaults; a missing
+blacklist starts empty; a missing grouping choice is *Listed type*. The remembered warning answers (§3.3) are not saved.
 
 ## 4. Builder's calls (decided by Claude, not the user)
 
-- File types are edited in a single text box (space-separated extensions) with a **Reset** button, rather than a separate dialogue; entries are normalised to
-  lower case with a leading dot, and duplicates are dropped.
-- With multi-dot extensions, a file belongs to the longest listed extension it ends with.
+- File types and Exclude are each edited in a single text box (entries separated by spaces or commas), with **Reset** on the whitelist only, rather than a
+  separate dialogue. Labels `File t_ypes:` and `E_xclude:` (Y and X are free on that tab).
+- *Group file types by* is a pair of radio buttons in the Unindexed tab's Report group (`Listed type`, `Found extension`); it is per direction, like the file
+  name, so it does not appear on the Missing Files tab.
+- Tie-breaks for "most specific" beyond the part count (fewest wildcard characters, then alphabetical) are the builder's.
+- An entry is invalid if it is empty after the leading `.` or `*.`, has an empty part (`a..b`), or contains a path separator or a character Windows forbids in file
+  names other than `*` and `?`; an invalid entry is a pre-flight error naming it.
 - The default list excludes `.txt` and `.json`, so the app's own reports and project files are never reported as unindexed unless the user adds them.
 - A file under two input folders is reported once, under the deepest folder.
 - Hidden and system **folders** are skipped along with their contents.
@@ -220,7 +280,13 @@ pre-flight additions, loading, walking, progress, stop), §7 (the unindexed repo
 - A file matches when its full path equals the index's path, ignoring case; no path translation.
 - An extension whitelist with built-in defaults for common document and image formats, editable per project; hidden, system and configuration files are always
   ignored; the app never guesses what to include.
-- Extensions may be listed with or without the leading dot, and multi-dot extensions are supported.
+- Extensions may be listed with or without the leading dot, and multi-dot extensions are supported; a leading `*.` means the same as a leading dot.
+- Matching is exact and counted from the end of the name, one dot-separated part at a time; `*` and `?` glob wildcards stay within one part.
+- A blacklist (**Exclude**) alongside the whitelist; the blacklist wins. Overlapping matches go to the most specific whitelist entry.
+- Start-time checks: a wildcard-only blacklist entry is an error; a wildcard-only whitelist entry with other entries, or with a non-empty blacklist, and an entry
+  in both lists are warnings (Continue / Cancel), each remembered for the session once answered; only identical entries count as "in both".
+- Names with no dot, or starting with a dot, have no extension and match nothing.
+- The report can group file types by listed type (default) or found extension, chosen in the Unindexed tab's Report group.
 - Its own plain-text report in the shared report location, named `FileAuditorUnindexedReport_<Audit Stage>.txt` (custom default
   `FileAuditorUnindexedReport.txt`), grouped by input folder, then file type, then path.
 - Built for millions of files and rows; loading the table's paths into memory is acceptable.
