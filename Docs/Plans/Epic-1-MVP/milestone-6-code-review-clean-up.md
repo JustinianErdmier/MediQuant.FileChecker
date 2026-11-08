@@ -269,12 +269,12 @@ names are the report file names, as its remarks document.
   - `Views/Tabs/MissingFilesTabView.axaml` and `UnindexedFilesTabView.axaml`.
 - Item 36 names `AuditView.axaml` again, but its contents (a `TextBlock` and two `Label`s) match `FileIndexTableView.axaml`. Check both files.
 
-- [ ] **Step 1: Add the missing `Grid.Row` setters.** **33, 35–37, 39 and 43.** Every child of a multi-row `Grid` in row 0 gets an explicit `Grid.Row="0"`.
-- [ ] **Step 2: Add fallback values to the parent bindings.** **34, 40, 41, 42 and 44.** Each `$parent[Window].((…)DataContext).X` binding gets a `FallbackValue`:
+- [x] **Step 1: Add the missing `Grid.Row` setters.** **33, 35–37, 39 and 43.** Every child of a multi-row `Grid` in row 0 gets an explicit `Grid.Row="0"`.
+- [x] **Step 2: Add fallback values to the parent bindings.** **34, 40, 41, 42 and 44.** Each `$parent[Window].((…)DataContext).X` binding gets a `FallbackValue`:
   - `IsEditable` bindings get `FallbackValue=True`. A detached control cannot be clicked anyway, and the XAML designer keeps showing the groups enabled.
   - `Command` bindings get `FallbackValue={x:Null}`.
-- [ ] **Step 3: Build and run.** Build with 0 warnings. Run the app and screenshot both tabs while idle and while running, to confirm the layout is unchanged.
-- [ ] **Step 4: Commit.** Use `style(🎨): set every grid row explicitly and give the parent bindings fallback values`.
+- [x] **Step 3: Build and run.** Build with 0 warnings. Run the app and screenshot both tabs while idle and while running, to confirm the layout is unchanged.
+- [x] **Step 4: Commit.** Use `style(🎨): set every grid row explicitly and give the parent bindings fallback values`.
 
 ### Task 6: Naming pass (items 12, 15)
 

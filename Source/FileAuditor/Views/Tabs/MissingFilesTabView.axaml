@@ -17,13 +17,13 @@
     <StackPanel Spacing="2">
         <ct:GroupBox Header="Options"
                      Margin="4,2"
-                     IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable}">
+                     IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable, FallbackValue=True}">
             <CheckBox Margin="4"
                       Content="Report empt_y (zero-byte) files as missing"
                       IsChecked="{Binding ReportEmptyFiles}" />
         </ct:GroupBox>
         <groups:ReportView DataContext="{Binding Report}"
-                           IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable}" />
+                           IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable, FallbackValue=True}" />
         <groups:AuditView DataContext="{Binding Audit}" />
     </StackPanel>
 </UserControl>
