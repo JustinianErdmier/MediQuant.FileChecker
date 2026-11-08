@@ -317,7 +317,8 @@ The Unindexed Files tab has its own group (headed *Audit*, `UnindexedAuditView`)
 
 - Read-only statistics in two columns: **Total files**, **Indexed**, **Unindexed** and **Unverified** on the left; **Elapsed** and **Files/second** on the right. There is **no
   Remaining**, neither label nor value, because the walk has no up-front count and so the total is not known until it ends. *Total files* is the files found so far, each of which
-  is checked the moment it is found, so Total files = Indexed + Unindexed; *Unverified* counts folders that could not be listed (§6.5.3) and is never part of Total files. Counts,
+  is checked the moment it is found, so Total files = Indexed + Unindexed; *Unverified* counts folders that could not be listed and links not followed (or that could not be
+  classified) (§6.5.3) and is never part of Total files. Counts,
   times and the rate are formatted as in §5.4; Files/second is Total files over Elapsed and stays blank until a full second has elapsed. All are blank before the first run.
 - A progress bar. While a run is under way it shows a **moving block** a fifth of the track wide that crosses a sunken track from left to right and starts again, moved by the 250
   ms refresh timer, instead of a fill that would read as a percentage of an unknown total. When the run ends the bar is full (and the status bar's percentage pane reads `100%`);
@@ -418,6 +419,7 @@ requirement). Each file lands in exactly one outcome:
 | Unverified — Permission denied                | Access to the file or its location is denied                                     |
 | Unverified — Network location unreachable     | The server or share in a UNC path cannot be reached                              |
 | Unverified — Path too long                    | The path exceeds what the system can handle                                      |
+| Unverified — Link not followed                | Unindexed audit only: a link (junction or symlink) was skipped, not checked      |
 | Unverified — Invalid characters in path       | The path is malformed or contains illegal characters                             |
 | Unverified — Path is empty in the index table | The path value is `NULL`, empty or whitespace                                    |
 | Unverified — Other errors                     | Any other I/O failure; the reason and system message are recorded per file       |
@@ -530,10 +532,13 @@ Status `Checking files...`.
   folder. With inputs `A` (with subfolders) and `A\B` (without), `A\B\x.pdf` is reported under `A\B` and `A\B\C\y.pdf` under `A`.
 - **Links are not followed** (the user's decision, after three rounds of review found edge cases in following them). Every junction or symbolic link met is skipped, reported and
   never checked: an **input folder** that is a link (it is not walked, and the run goes on with the other inputs; if every input is a link the run completes with no files), a
-  **folder** met during the walk (its target's files are not counted unless the target is walked directly as an input), and a **file** that is a symbolic link and matches the file types (it
-  is in neither *Total files*, *Indexed* nor *Unindexed*). Each is reported once under *Unverified* in the group *Link not followed* (§7.1) and counts towards *Unverified*. Only an
-  entry that **has a link target** is a link; any other reparse point (a DFS namespace folder, a OneDrive placeholder, a deduplicated file) is an ordinary folder or file. With no
-  link followed, every folder is reached by one route, so no loop and no duplicate is possible; an input nested inside another is queued once, as an input.
+  **folder** met during the walk (its target's files are not counted unless the target is walked directly as an input), and a **file** that is a symbolic link and matches the file
+  types (it is in neither *Total files*, *Indexed* nor *Unindexed*). Each is reported once under *Unverified* in the group *Link not followed* (§7.1) and counts towards
+  *Unverified*. Only an entry that **has a link target** is a link; any other reparse point (a DFS namespace folder, a OneDrive placeholder, a deduplicated file) is an ordinary
+  folder or file. An entry whose link target cannot be read is not guessed at: it is reported under *Other errors* (reason `Could not tell whether this is a link`) and neither
+  walked nor checked. A hidden or system junction (for example the profile's `Application Data`) is skipped by the hidden and system rule and is not reported. An input whose own
+  path passes through a junction, or that lies under an input that is a refused link, is still walked, because it is the user's explicit choice. With no link followed, every
+  folder is reached by one route, so no loop and no duplicate is possible; an input nested inside another is queued once, as an input.
 - **Unverified folders.** A folder that cannot be listed (permission denied, share unreachable, path too long, any other I/O failure; a folder deleted mid-run is *Other errors*)
   is reported once as **unverified** and nothing beneath it is walked. Its contents are not checked, so it is counted separately (*Unverified*), never in *Total files*. A listing
   that fails part-way reports none of that folder's files, so a folder is either wholly checked or wholly unverified.
@@ -698,7 +703,8 @@ U:\Projects\D12345\Images\2020\   I/O error   The semaphore timeout period has e
   *Drive or share not found*, *Permission denied*, *Network location unreachable*, *Path too long*, *Link not followed*, *Other errors*. A folder path ends in `\`; a file link is
   a plain path. *Link not followed* lists every junction or symbolic link that was skipped (§6.5.3): an input folder, a folder met in the walk, or a matching file. *Other errors*
   shows the reason and the system message in aligned columns and also holds a folder whose path is malformed or any failure not listed above (reason text, no system message).
-  An item is listed once, and nothing beneath a folder is. `No unverified folders or links.` when there are none.
+  An item is listed once, and nothing beneath a folder is. `No unverified folders or links.` when there are none. An entry whose link status cannot be read is reported under
+  *Other errors* with the reason `Could not tell whether this is a link`, and is neither walked nor checked.
 
 ## 8. Settings
 

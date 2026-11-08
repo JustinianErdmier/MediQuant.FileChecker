@@ -76,12 +76,15 @@ row, so no ID).
   name is not matched by the whitelist, or is matched by the blacklist (§3.3). "Configuration files" are covered by the lists: an extension that is not listed is
   never checked (the user's decision).
 - A file reached through two input folders (one folder inside another) is checked and reported **once**, under the deepest input folder that contains it.
-- **Links are not followed** (the user's decision, amended 2026-11-08 after three review rounds kept finding edge cases in following them; it replaces the earlier
-  final-path, canonical-path and second-query design, and then tightened to refuse links outright). A junction or symbolic link is **skipped, reported and never checked**: an
-  **input folder** that is a link is not walked (the run goes on with the other inputs; if all are links it completes with no files); a **folder** met in the walk is not
-  entered; a **file** that is a symbolic link and matches the file types is not checked, so it is in neither *Total files*, *Indexed* nor *Unindexed*. Each is reported once under
+- **Links are not followed** (the user's decision, amended 2026-11-08 after three review rounds kept finding edge cases in following them). It replaces the earlier final-path,
+  canonical-path and second-query design, which followed links, and it refuses links outright: a junction or symbolic link is **skipped, reported and never checked**. An
+  **input folder** that is a link is not walked (the run goes on with the other inputs; if all are links it completes with no files); a **folder** met in the walk is not entered;
+  a **file** that is a symbolic link and matches the file types is not checked, so it is in neither *Total files*, *Indexed* nor *Unindexed*. Each is reported once under
   *Unverified*, in the group *Link not followed*, and counts towards *Unverified*. Only an entry with a **link target** is a link: any other reparse point (a DFS namespace
-  folder, a OneDrive placeholder, a deduplicated file) is ordinary. With no link followed there is no loop or duplicate to guard against; an input nested in another is queued once.
+  folder, a OneDrive placeholder, a deduplicated file) is ordinary. An entry whose link target cannot be read is reported under *Other errors* (`Could not tell whether this is a
+  link`) and neither walked nor checked. A hidden or system junction (for example the profile's `Application Data`) is skipped by the hidden and system rule, not reported. An input
+  whose own path passes through a junction, or that lies under an input that is a refused link, is still walked, because it is the user's explicit choice. With no link followed
+  there is no loop or duplicate to guard against; an input nested in another is queued once.
 
 ### 3.3 File types: whitelist and blacklist
 
@@ -170,7 +173,7 @@ either **indexed** or **unindexed**: *Total files* = *Indexed* + *Unindexed*. Th
 **listing a folder**. Such a folder is **Unverified**: its contents are not checked, and it is counted separately (*Unverified*), never inside *Total files*. A link that
 is not followed (§3.2) is counted as Unverified too.
 
-Statistics on the Unindexed Files tab: **Total files** (found so far), **Indexed**, **Unindexed**, **Unverified** (folders), **Elapsed**, **Files/second**. **Remaining is
+Statistics on the Unindexed Files tab: **Total files** (found so far), **Indexed**, **Unindexed**, **Unverified** (folders and links), **Elapsed**, **Files/second**. **Remaining is
 hidden** on this tab — label and value — because the total is not known until the walk ends (the user's decision). While the run is under way the progress bar shows a **moving
 block** of fixed width that crosses a sunken track and starts again, driven by the 250 ms refresh timer, and the bar is full when it ends. Classic.Avalonia's own indeterminate
 marquee was tried and set aside: it is blank for about 2.4 seconds of every 5-second cycle and cannot be restyled, and a growing fill would have read as a percentage of an
