@@ -14,6 +14,17 @@
         <ApplicationIcon>Assets\FileAuditor.ico</ApplicationIcon>
     </PropertyGroup>
 
+    <!-- `dotnet publish` produces one self-contained executable for 64-bit Windows, native libraries included; builds are unaffected. -->
+    <PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <SelfContained>true</SelfContained>
+        <PublishSingleFile>true</PublishSingleFile>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <DebugType>embedded</DebugType>
+        <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.22" />
         <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />

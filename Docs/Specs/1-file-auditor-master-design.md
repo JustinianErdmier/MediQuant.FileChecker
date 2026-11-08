@@ -858,6 +858,10 @@ plain `Microsoft.Data.SqlClient`, with no ORM.
 **Storage.** The app writes only the project settings file (§8) and the report (§7), both in the report's folder — never anything beside its executable, which runs from a
 shared file server, and nothing under `%APPDATA%`.
 
+**Publishing.** `dotnet publish` produces a single self-contained executable for 64-bit Windows (`win-x64`, native libraries and debug symbols embedded,
+compressed), so the shared file server holds one file and the target machines need no .NET runtime. The settings sit in a `PropertyGroup` conditioned on publishing,
+so ordinary builds and `dotnet run` are unchanged.
+
 ## 10. Builder's calls (decided by Claude, not the user)
 
 - Read-only preview of the built report path, with `<placeholders>`; Start disabled until the path is complete. *(shown in mock-up, accepted)*
