@@ -444,6 +444,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             audit.IsStopEnabled = false;
             IsRunning           = false;
         }
+
         if (error is not null)
         {
             await _dialogues.ShowErrorAsync(error);
