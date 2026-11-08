@@ -10,6 +10,10 @@ public static class UnexpectedErrorHandler
 
     private const uint MessageBoxOkWithErrorIcon = 0x10;
 
+    private const uint MessageBoxSetForeground = 0x10000;
+
+    private const uint MessageBoxTopmost = 0x40000;
+
     private static IClassicDesktopStyleApplicationLifetime? _desktop;
 
     // Touched only on the UI thread, so it needs no lock.
@@ -17,10 +21,19 @@ public static class UnexpectedErrorHandler
 
     private static int _fatalReportStarted;
 
+    private static bool _isInstalled;
+
     /// <summary>Starts watching for unexpected exceptions on the UI thread, in unobserved tasks and anywhere else in the process.</summary>
     /// <param name="desktop">The desktop lifetime, whose main window owns the notices.</param>
     public static void Install(IClassicDesktopStyleApplicationLifetime desktop)
     {
+        if (_isInstalled)
+        {
+            return;
+        }
+
+        _isInstalled = true;
+
         _desktop = desktop;
 
         Dispatcher.UIThread.UnhandledException += OnDispatcherUnhandledException;
@@ -56,7 +69,17 @@ public static class UnexpectedErrorHandler
 
         if (_desktop?.MainWindow is not { } owner)
         {
-            ShowMessageBox(message, ownerHandle: IntPtr.Zero);
+            // The box pumps messages, so timer ticks and posted callbacks keep running inside it; holding the flag stops a second error opening a second box.
+            _noticeIsOpen = true;
+
+            try
+            {
+                ShowMessageBox(message, ownerHandle: IntPtr.Zero);
+            }
+            finally
+            {
+                _noticeIsOpen = false;
+            }
 
             return;
         }
@@ -118,7 +141,14 @@ public static class UnexpectedErrorHandler
         catch (Exception)
         {
             // The dialogue could not be shown, so the plain message box takes over.
-            ShowMessageBox(message, ownerHandle: IntPtr.Zero);
+            try
+            {
+                ShowMessageBox(message, ownerHandle: IntPtr.Zero);
+            }
+            catch (Exception)
+            {
+                // A failure here would fault the discarded task and come back as an unobserved-task report, looping.
+            }
         }
         finally
         {
@@ -138,6 +168,12 @@ public static class UnexpectedErrorHandler
 
     private static IntPtr FindOwnerHandle()
     {
+        // A window handle from another thread can deadlock against a UI thread that is itself waiting in a second fatal report.
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            return IntPtr.Zero;
+        }
+
         try
         {
             return _desktop?.MainWindow?.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
@@ -149,8 +185,14 @@ public static class UnexpectedErrorHandler
         }
     }
 
+    // With no owner the box could sit behind other windows, so it asks to be topmost and in the foreground.
     private static void ShowMessageBox(string message, IntPtr ownerHandle)
-        => MessageBoxW(ownerHandle, message, Title, MessageBoxOkWithErrorIcon);
+        => MessageBoxW(ownerHandle,
+                       message,
+                       Title,
+                       ownerHandle == IntPtr.Zero
+                           ? MessageBoxOkWithErrorIcon | MessageBoxSetForeground | MessageBoxTopmost
+                           : MessageBoxOkWithErrorIcon);
 
     [ DllImport("user32.dll", CharSet = CharSet.Unicode) ]
     private static extern int MessageBoxW(IntPtr windowHandle, string text, string caption, uint type);
