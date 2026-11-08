@@ -117,9 +117,9 @@ the tabs; the Report group is shown on every tab and its values are shared (§5.
 Layout, top to bottom. The approved mock-ups are [`direction-tabs-layout.html`](../UserInterfaceDesign/Mockups/direction-tabs-layout.html), which shows the target layout
 with the tab control (including milestone 4's *Unindexed Files* tab), [`main-window-layout.html`](../UserInterfaceDesign/Mockups/main-window-layout.html) and
 [`report-section-states.html`](../UserInterfaceDesign/Mockups/report-section-states.html). They are a design reference only: the latter's state 1 predates the Interim
-default for Audit Stage, and the last two predate the tab control, the *Options* group, the final Report-file rows, the access keys, the *Audit* group (named *Progress*
-there), and the project settings (the *Save project settings with the report* checkbox and the *Open project...* and *Close project* menu items, milestone 2). The XAML and
-this section are the contract.
+default for Audit Stage, and the last two predate the tab control, the per-direction report names, the *Options* group, the final Report-file rows, the access keys, the *Audit*
+group (named *Progress* there), and the project settings (the *Save project settings with the report* checkbox and the *Open project...* and *Close project* menu
+items, milestone 2). The XAML and this section are the contract.
 
 ```text
 ┌ File Auditor ───────────────────────────────────────────────── _ × ┐
@@ -141,7 +141,9 @@ this section are the contract.
 │ │ ┌ Report ────────────────────────────────────────────────────┐ │ │
 │ │ │ [ ] Use a custom report location and file name             │ │ │
 │ │ │ Project folder: [D12345  ]                                 │ │ │
-│ │ │ ( ) Sample  (•) Final      (•) Interim  ( ) Final          │ │ │
+│ │ │ ┌ Project Stage ─────────┐ ┌ Audit Stage ──────────┐       │ │ │
+│ │ │ │ ( ) Sample  (•) Final  │ │ (•) Interim ( ) Final │       │ │ │
+│ │ │ └────────────────────────┘ └───────────────────────┘       │ │ │
 │ │ │ Location:    [U:\Projects\D12345\DE\Final\]  Browse...     │ │ │
 │ │ │ File name:   [FileAuditorMissingReport_Interim.txt]        │ │ │
 │ │ │ [x] Save project settings with the report                  │ │ │
@@ -211,6 +213,9 @@ The Audit group sits at the bottom of its tab, below the Report group; each dire
 
 - Read-only statistics in two columns: **Total files**, **Checked**, **Missing**, **Unverified**; **Elapsed**, **Remaining**, **Files/second**. Counts use thousands
   separators (`N0`); times are `hh:mm:ss`; rate has two decimals. Blank before the first run.
+  **Files/second** is the files checked divided by the whole run's **Elapsed** (the span the window shows, counting included) and stays blank until at least one full
+  second has elapsed. **Remaining** is estimated from the checking rate alone (files checked divided by the time spent checking, which excludes the counting), so the two
+  figures are computed over different spans.
 - A progress bar (percentage of rows checked).
 - A row of command buttons: **View Report** left-justified; **Start** then **Stop** right-justified. There is no Close button.
 
@@ -327,7 +332,7 @@ long*, *Invalid characters in path*, *Path is empty in the index table*) never s
 
 ### 6.4 Progress, stop and failure
 
-- The UI refreshes stats a few times per second. Remaining time is estimated from the rate so far.
+- The UI refreshes stats a few times per second. Remaining time is estimated from the checking rate so far; Files/second is over the whole run (§5.4).
 - **Stop**: stops reading rows and checking files, then writes the report with `Result: Stopped by user`. Counts reflect only what was checked.
   If Stop is pressed while the rows are still being counted (before the count query returns), no report is written and the status bar reads `Stopped`: nothing
   has been checked, so there is nothing to report.
@@ -419,8 +424,8 @@ written; it is left on disk untouched and is not migrated.
 
 The file holds every input of every direction: server, database, table, path column, ID column, empty-files option, project folder, project stage, audit stage (default
 Interim), custom-location flag, custom location, and the custom file name of the missing-files report (`MissingCustomFileName`, default
-`FileAuditorMissingReport.txt`). Milestone 4 adds the unindexed direction's folders, file types and custom file name. Files saved by builds before milestone 3 are not
-loaded (nothing had been released). No credentials. The *Save project settings with the report* checkbox is not stored in it. The file is written
+`FileAuditorMissingReport.txt`). Milestone 4 adds the unindexed direction's folders, file types and custom file name. Older files load, but their custom file name
+falls back to the default; no migration is attempted. No credentials. The *Save project settings with the report* checkbox is not stored in it. The file is written
 with a temp file + `File.Move(overwrite: true)`; a save never creates a folder. A null string value or an undefined enum value in the file falls back, field by field, to its
 default; other values are kept. Window size and position are not saved — the window is fixed-size. The milestone 2 spec
 (`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`) has the full prompt texts.

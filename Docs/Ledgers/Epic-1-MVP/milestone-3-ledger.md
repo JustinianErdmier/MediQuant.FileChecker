@@ -19,8 +19,9 @@ Decisions taken without the user, each with what it costs if wrong.
 | R1 | Pre-flight | Implementers drove the app with Windows UI Automation from PowerShell rather than computer use, as in milestones 1 and 2.                                       | Computer use cannot be granted to a locally built app that is not installed.                                                | Visual-only defects are caught only where a screenshot was captured.                                                  |
 | R2 | Pre-flight | The live ledger lived outside the repository during the run and was cleaned into this document by Task 4.                                                       | Writing the docs ledger between tasks would add commits outside the task reviews.                                           | None.                                                                                                                 |
 | R3 | 1          | With a custom location, the Unindexed report uses the built-in name `FileAuditorUnindexedReport.txt` until milestone 4 adds its custom-name setting.            | There is no Unindexed tab or setting yet, so nothing can reach that name.                                                   | None today; milestone 4 must replace the constant with a setting.                                                     |
-| R4 | 2          | The project file's location is decided by the shared report location alone: save points judge "location complete" from the shared state, not from a tab's name. | The folder is shared between tabs; a tab's file name must not change where the project file goes. Fix queued for the final wave. | None today (one tab); with two tabs a blank file name on one tab could wrongly block a save until the fix lands.      |
+| R4 | 2          | The project file's location is decided by the shared report location alone: save points judge "location complete" from the shared state, not from a tab's name. | The folder is shared between tabs; a tab's file name must not change where the project file goes. Fixed in `8608408`.            | None; fixed before a second tab exists.                                                                               |
 | R5 | Final wave | Files/second is computed over the Elapsed the window shows (the whole run) and left blank until a full second has elapsed (user-reported, see below).           | The old figure divided by checking time alone, which is milliseconds on a tiny table and meaningless.                      | The rate reads lower than the pure checking speed on runs where the count and query take a large share of the time.   |
+| R6 | Final wave | Remaining keeps its checking-time rate; only the displayed Files/second moves to the whole-run Elapsed (controller's ruling).                                 | Remaining should reflect how fast files are checked, which excludes the counting phase.                                      | The two figures are computed over different spans, so Files/second and Remaining do not agree exactly.                |
 
 ## User decisions
 
@@ -46,18 +47,24 @@ to it.
 
 ### Final review wave (this milestone)
 
-- **Task 2 ruling (R4):** save points must judge "location complete" from the shared report location, not from the selected tab's file name.
-- **Task 2 minor:** `ReportViewModel`'s custom file name is only half generalised (one field; the branch on direction is only in `ApplyTo` and `Load`); the discard-only
-  `SelectedDirection` switch needs a comment; the `IsTabbed` comment should list the `Report.PropertyChanged` subscription.
-- **User-reported (R5):** Files/second is computed over the whole-run Elapsed and left blank until a full second has elapsed. The SDD §5.4 will be amended with the fix.
-- **Task 1 minor:** the `ReportViewModel` field is still named `_customFileName` (Task 2 restructured it; check the name); the report file name is tied to the
-  `AuditDirection` member names, which should be noted in the enum's XML doc.
-- **Task 3 minor:** the shell-open try/catch is duplicated in `ViewReportAsync` and `HelpTopicsAsync` (extract it if a third caller appears).
+Fixed in the final-review fix wave; the shell-open item stays for later.
+
+- **Task 2 ruling (R4), fixed in `8608408`:** the project file's folder is now resolved from the shared report location alone (`ReportLocationState.ResolveFolder`), used by
+  Close project, Open project, window close and the picker's start folder. Start keeps the pre-flight's resolved path. `PreflightChecker.RunAsync` now takes the direction.
+- **Task 2 minor, fixed in `8608408`:** `ReportViewModel` has one custom-file-name field for its own direction, mapped to the settings only in `ApplyTo` and `Load`;
+  the `SelectedDirection` and `IsTabbed` comments now carry the milestone 4 checklist.
+- **User-reported (R5), fixed in `f49c16c`:** Files/second is the files checked over the whole-run Elapsed, blank until a full second has elapsed. SDD §5.4 is amended.
+- **Task 1 minor, closed:** the `_customFileName` field name is now correct (the restructure made it generic); the `AuditDirection` XML doc now notes that its member
+  names form the report file names (`8608408`).
+- **Task 3 minor, open:** see *Later*.
 
 ### Later / nice to have
 
 - Milestone 4: the Unindexed Files tab, its inputs, its custom-name setting and report (replaces ruling R3's constant); generalising `ReportViewModel`'s direction-specific
-  custom file name; adding the direction to `SelectedDirection`, `ReportFor`, `AuditFor` and `IsTabbed`.
+  custom file name; adding the direction to `SelectedDirection`, `ReportFor`, `AuditFor` and `IsTabbed` (the full checklist is the comment on `IsTabbed`).
+- Milestone 4: the status bar is typed to the missing-files `AuditViewModel`, so the Unindexed tab's different statistics will need a shared status surface
+  (`StatusMessage` and `StatusPercent`) that both tabs feed.
+- The shell-open try/catch is duplicated in `ViewReportAsync` and `HelpTopicsAsync`; extract it if a third caller appears.
 - The `HelpLinks.UserGuideUrl` constant is empty; the user fills it in once the wiki article exists, which enables Help Topics.
 - Milestone 2's and 1's deferred minors that remain open are listed in the [milestone 2 ledger](milestone-2-ledger.md) and the [milestone 1 ledger](milestone-1-ledger.md).
 
