@@ -45,6 +45,7 @@ global using FileAuditor.Services.Auditing;
 global using FileAuditor.Services.Checking;
 global using FileAuditor.Services.Dialogues;
 global using FileAuditor.Services.Reporting;
+global using FileAuditor.Services.Scanning;
 global using FileAuditor.Services.Settings;
 global using FileAuditor.Services.Sql;
 global using FileAuditor.ViewModels.About;

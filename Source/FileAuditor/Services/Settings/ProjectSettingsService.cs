@@ -52,8 +52,12 @@ public sealed class ProjectSettingsService
 
     /// <summary>Determines whether the current settings differ from the baseline.</summary>
     /// <param name="current">The current settings.</param>
-    /// <returns><see langword="true" /> when they differ.</returns>
-    public bool IsChanged(AppSettings current) => current != _baseline;
+    /// <returns>
+    ///     <see langword="true" /> when they differ. They are compared by value through their serialised form, because record equality would compare the list arrays by
+    ///     reference.
+    /// </returns>
+    public bool IsChanged(AppSettings current)
+        => JsonSerializer.Serialize(current, SettingsJsonContext.Default.AppSettings) != JsonSerializer.Serialize(_baseline, SettingsJsonContext.Default.AppSettings);
 
     /// <summary>Runs the save rule: saves the settings when they have changed and the rules allow it, asking whether and where to as needed.</summary>
     /// <param name="current">The current settings.</param>

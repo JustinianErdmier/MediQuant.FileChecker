@@ -97,20 +97,20 @@ place milestone 4 must touch (above `IsTabbed`).
     exclude pattern matches or no include pattern does; otherwise the **most specific** matching include pattern (most parts, then fewest wildcards, then
     alphabetical). Patterns are compiled once; `Match` is safe to call concurrently.
 
-- [ ] **Step 1:** Add `ScanFolder` and the `AppSettings` properties; `SettingsStore` normalises them (null list → empty / defaults; null folder paths dropped; file
+- [x] **Step 1:** Add `ScanFolder` and the `AppSettings` properties; `SettingsStore` normalises them (null list → empty / defaults; null folder paths dropped; file
   types re-parsed through `FileTypeList.Parse`, invalid entries dropped).
-- [ ] **Step 2: Change detection by value.** Arrays break record equality, so `ProjectSettingsService.IsChanged` compares the two settings serialised with
+- [x] **Step 2: Change detection by value.** Arrays break record equality, so `ProjectSettingsService.IsChanged` compares the two settings serialised with
   `SettingsJsonContext` instead of `!=`. Keep every other use of the baseline unchanged.
-- [ ] **Step 3:** `ReportPathResolver.Resolve` uses `UnindexedCustomFileName` for the Unindexed direction with a custom location; `ReportViewModel` maps it in
+- [x] **Step 3:** `ReportPathResolver.Resolve` uses `UnindexedCustomFileName` for the Unindexed direction with a custom location; `ReportViewModel` maps it in
   `ApplyTo`/`Load` (remove milestone 3's "no setting yet" fallback and its doc remark).
-- [ ] **Step 4: Verify.** Clean build. A scratch harness asserting every row of spec §3.3's table, plus:
+- [x] **Step 4: Verify.** Clean build. A scratch harness asserting every row of spec §3.3's table, plus:
   - `Parse("pdf .PDF *.pdf tar.gz  .nii.gz, ZIP.*")` → `.nii.gz .pdf .tar.gz .zip.*`; `Parse("a/b")`, `Parse("a..b")`, `Parse(".")` → errors.
   - `*.pdf` matches `Report.pdf`; `zip.0??` matches `Backup.zip.001` but not `Backup.zip.01`; `.gitignore`, `README` and `x.` match nothing.
   - Filter include `[.gz, .tar.gz]` → `scan.tar.gz` matches `.tar.gz`; include `[.gz]` exclude `[.tar.gz]` → `scan.tar.gz` is `null`, `x.gz` is `.gz`;
     include `[zip.*, zip.001]` → `B.zip.001` matches `.zip.001`; `FoundExtension("B.ZIP.002")` for `zip.*` → `.zip.002`.
   - A project file round-trips folders, both lists and the grouping choice through `SettingsStore`; two equal settings with separate arrays compare unchanged.
   - Run the app: an untouched window still closes with no save prompt.
-- [ ] **Step 5: Commit** — `feat(✨): add scan folders and file types to project settings`.
+- [x] **Step 5: Commit** — `feat(✨): add scan folders and file types to project settings`.
 
 ### Task 2: Loading the index as path hashes
 

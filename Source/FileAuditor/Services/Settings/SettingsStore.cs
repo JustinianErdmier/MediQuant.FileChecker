@@ -109,7 +109,40 @@ public sealed class SettingsStore
             ProjectStage = Enum.IsDefined(settings.ProjectStage) ? settings.ProjectStage : defaults.ProjectStage,
             AuditStage = Enum.IsDefined(settings.AuditStage) ? settings.AuditStage : defaults.AuditStage,
             CustomLocation = settings.CustomLocation ?? defaults.CustomLocation,
-            MissingCustomFileName = settings.MissingCustomFileName ?? defaults.MissingCustomFileName
+            MissingCustomFileName = settings.MissingCustomFileName ?? defaults.MissingCustomFileName,
+            ScanFolders = NormaliseFolders(settings.ScanFolders),
+            FileTypes = NormaliseTypes(settings.FileTypes, defaults.FileTypes!),
+            ExcludeTypes = NormaliseTypes(settings.ExcludeTypes, fallback: []),
+            UnindexedCustomFileName = settings.UnindexedCustomFileName ?? defaults.UnindexedCustomFileName
         };
+    }
+
+    // A null list is empty; a null element or one without a path is dropped.
+    private static ScanFolder[] NormaliseFolders(ScanFolder[]? folders)
+        => folders?.Where(folder => folder?.Path is not null)
+                  .ToArray()
+           ?? [];
+
+    // A null list takes the fallback. Entries are re-parsed so they are always normalised; the invalid ones are dropped, one at a time, so one bad entry keeps the rest.
+    private static string[] NormaliseTypes(string[]? types, string[] fallback)
+    {
+        if (types is null)
+        {
+            return fallback;
+        }
+
+        SortedSet<string> kept = new(StringComparer.Ordinal);
+
+        foreach (string? type in types)
+        {
+            ErrorOr<string[]> parsed = FileTypeList.Parse(type ?? string.Empty);
+
+            if (!parsed.IsError)
+            {
+                kept.UnionWith(parsed.Value);
+            }
+        }
+
+        return kept.ToArray();
     }
 }
