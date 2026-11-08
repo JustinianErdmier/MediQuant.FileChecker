@@ -84,12 +84,12 @@ The user's request, verbatim in substance:
 
 **Files:** Modify `Views/Tabs/UnindexedFilesTabView.axaml` (and its code-behind only if a tool tip needs it)
 
-- [ ] **Step 1:** Column order: folder path (star width) then *Include subfolders* (auto width) on the right, header row to match.
-- [ ] **Step 2:** The path cell truncates with an ellipsis (`TextTrimming="CharacterEllipsis"`) and shows the full path as a tool tip; the list's horizontal
+- [x] **Step 1:** Column order: folder path (star width) then *Include subfolders* (auto width) on the right, header row to match.
+- [x] **Step 2:** The path cell truncates with an ellipsis (`TextTrimming="CharacterEllipsis"`) and shows the full path as a tool tip; the list's horizontal
   scroll bar is disabled so it can never overflow sideways.
-- [ ] **Step 3: Verify.** Clean build. Add a folder whose path is far wider than the list (a deeply nested scratch path): the checkbox stays visible and toggles;
+- [x] **Step 3: Verify.** Clean build. Add a folder whose path is far wider than the list (a deeply nested scratch path): the checkbox stays visible and toggles;
   no horizontal scroll bar; the tool tip shows the full path. Screenshot.
-- [ ] **Step 4: Commit** — `fix(🐛): keep the Include subfolders column visible for long folder paths`.
+- [x] **Step 4: Commit** — `fix(🐛): keep the Include subfolders column visible for long folder paths`.
 
 ### Task 3: Clear in the editors, and the fitted window height
 

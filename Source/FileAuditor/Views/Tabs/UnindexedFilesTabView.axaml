@@ -24,28 +24,33 @@
                   RowSpacing="4"
                   Margin="4">
                 <StackPanel Grid.ColumnSpan="3">
-                    <Grid ColumnDefinitions="110,*"
+                    <Grid ColumnDefinitions="*,110"
                           Margin="4,0,0,0">
-                        <TextBlock Text="Include subfolders" />
+                        <TextBlock Text="Folder" />
                         <TextBlock Grid.Column="1"
-                                   Text="Folder" />
+                                   Text="Include subfolders" />
                     </Grid>
                     <ListBox x:Name="FoldersList"
                              Height="72"
                              ItemsSource="{Binding Folders}"
                              SelectedItem="{Binding SelectedFolder}"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            </Style>
+                        </ListBox.Styles>
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="groupsVm:ScanFolderItem">
-                                <Grid ColumnDefinitions="110,*">
-                                    <CheckBox HorizontalAlignment="Center"
-                                              AutomationProperties.Name="Include subfolders"
-                                              IsChecked="{Binding IncludeSubfolders}" />
-                                    <TextBlock Grid.Column="1"
-                                               Text="{Binding Path}"
+                                <Grid ColumnDefinitions="*,110">
+                                    <TextBlock Text="{Binding Path}"
                                                TextTrimming="CharacterEllipsis"
                                                VerticalAlignment="Center"
                                                ToolTip.Tip="{Binding Path}" />
+                                    <CheckBox Grid.Column="1"
+                                              HorizontalAlignment="Center"
+                                              AutomationProperties.Name="Include subfolders"
+                                              IsChecked="{Binding IncludeSubfolders}" />
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
