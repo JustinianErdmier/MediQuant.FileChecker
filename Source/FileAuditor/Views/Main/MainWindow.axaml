@@ -8,13 +8,13 @@
                xmlns:tabs="clr-namespace:FileAuditor.Views.Tabs"
                mc:Ignorable="d"
                d:DesignWidth="640"
-               d:DesignHeight="640"
+               d:DesignHeight="668"
                x:Class="FileAuditor.Views.Main.MainWindow"
                x:DataType="vm:MainWindowViewModel"
                Title="File Auditor"
                Icon="avares://FileAuditor/Assets/FileAuditor.png"
                Width="640"
-               SizeToContent="Height"
+               Height="668"
                CanResize="False"
                WindowStartupLocation="CenterScreen">
     <Design.DataContext>
@@ -66,8 +66,9 @@
                               Width="60" />
             <cc:StatusBarItem Content="{Binding StatusAudit.StatusMessage}" />
         </cc:StatusBar>
-        <StackPanel Margin="4"
-                    Spacing="2">
+        <Grid Margin="4"
+              RowDefinitions="Auto,Auto,*"
+              RowSpacing="2">
             <Grid ColumnDefinitions="*,*">
                 <groups:DatabaseView DataContext="{Binding Database}"
                                      IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
@@ -75,8 +76,11 @@
                                            DataContext="{Binding FileIndexTable}"
                                            IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
             </Grid>
-            <TabControl SelectedIndex="{Binding SelectedTabIndex}"
-                        Height="575"
+            <groups:ProjectSettingsView Grid.Row="1"
+                                        DataContext="{Binding ProjectSettings}"
+                                        IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
+            <TabControl Grid.Row="2"
+                        SelectedIndex="{Binding SelectedTabIndex}"
                         Margin="4,2">
                 <TabItem Header="Missing Files">
                     <tabs:MissingFilesTabView DataContext="{Binding MissingFiles}" />
@@ -85,6 +89,6 @@
                     <tabs:UnindexedFilesTabView DataContext="{Binding UnindexedFiles}" />
                 </TabItem>
             </TabControl>
-        </StackPanel>
+        </Grid>
     </DockPanel>
 </ClassicWindow>
