@@ -22,6 +22,11 @@
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
+                <MenuItem Header="O_pen project..."
+                          Command="{Binding OpenProjectCommand}" />
+                <MenuItem Header="_Close project"
+                          Command="{Binding CloseProjectCommand}" />
+                <Separator />
                 <MenuItem Header="St_art"
                           Command="{Binding StartCommand}"
                           HotKey="F5"

@@ -59,6 +59,13 @@ public sealed partial class ReportViewModel : ObservableObject
     [ ObservableProperty ]
     public partial string ProjectFolder { get; set; } = "";
 
+    /// <summary>
+    ///     Gets or sets a value indicating whether the project's settings are saved automatically with the report. It is a per-session choice and is deliberately not part of
+    ///     <see cref="ApplyTo" /> or <see cref="Load" />.
+    /// </summary>
+    [ ObservableProperty ]
+    public partial bool SaveProjectSettings { get; set; } = true;
+
     /// <summary>Gets or sets a value indicating whether the report goes to a custom location and file name.</summary>
     [ ObservableProperty ]
     public partial bool UseCustomLocation { get; set; }

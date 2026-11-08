@@ -1,44 +1,34 @@
 namespace FileAuditor.Services.Settings;
 
-/// <summary>Loads and saves <see cref="AppSettings" /> as JSON in <c>%APPDATA%\MediQuant\FileAuditor\settings.json</c>, per Windows user.</summary>
+/// <summary>Loads and saves <see cref="AppSettings" /> as a project settings JSON file at a path the caller chooses.</summary>
 public sealed class SettingsStore
 {
-    /// <summary>Initialises a new instance that uses the default per-user settings path.</summary>
-    public SettingsStore()
-        : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), path2: "MediQuant", path3: "FileAuditor", path4: "settings.json"))
-    { }
+    /// <summary>The name of a project settings file.</summary>
+    public const string FileName = "FileAuditorSettings.json";
 
-    /// <summary>Initialises a new instance that uses the given settings file path.</summary>
+    /// <summary>Loads the settings from a file. Properties absent from the file take their defaults.</summary>
     /// <param name="filePath">The full path of the settings file.</param>
-    public SettingsStore(string filePath) => FilePath = filePath;
-
-    /// <summary>Gets the full path of the settings file.</summary>
-    public string FilePath { get; }
-
-    /// <summary>Loads the settings. A missing file yields <see cref="AppSettings.Default" />; properties absent from the file take their defaults.</summary>
-    /// <returns>
-    ///     The settings, or <see cref="SettingsErrors.Unreadable" /> when the file cannot be read or is not valid JSON. Callers should treat that error as "use
-    ///     <see cref="AppSettings.Default" />".
-    /// </returns>
-    public ErrorOr<AppSettings> Load()
+    /// <returns>The settings, or <see cref="SettingsErrors.Unreadable" /> when the file is missing, cannot be read or is not valid JSON.</returns>
+    public ErrorOr<AppSettings> Load(string filePath)
     {
         string json;
 
         try
         {
-            json = File.ReadAllText(FilePath);
+            json = File.ReadAllText(filePath);
         }
-        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
-        {
-            return AppSettings.Default;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
         {
             return SettingsErrors.Unreadable(ex.Message);
         }
 
         try
         {
+            if (!LooksLikeProject(json))
+            {
+                return SettingsErrors.Unreadable(detail: "the file is not a File Auditor project.");
+            }
+
             AppSettings? settings = JsonSerializer.Deserialize(json, SettingsJsonContext.Default.AppSettings);
 
             if (settings is null)
@@ -54,35 +44,56 @@ public sealed class SettingsStore
         }
     }
 
-    /// <summary>Saves the settings, writing to a temporary file first and then moving it over the real one.</summary>
+    /// <summary>Saves the settings to a file, writing to a temporary file first and then moving it over the real one. The folder is never created.</summary>
     /// <param name="settings">The settings to save.</param>
-    /// <returns><see cref="Result.Success" />, or <see cref="SettingsErrors.Unwritable" /> when the write fails.</returns>
-    public ErrorOr<Success> Save(AppSettings settings)
+    /// <param name="filePath">The full path of the settings file.</param>
+    /// <returns><see cref="Result.Success" />, or <see cref="SettingsErrors.Unwritable" /> when the write fails, including when the folder does not exist.</returns>
+    public ErrorOr<Success> Save(AppSettings settings, string filePath)
     {
-        string tempPath = FilePath + ".tmp";
+        string tempPath = filePath + ".tmp";
 
         try
         {
-            string? directory = Path.GetDirectoryName(FilePath);
-
-            if (!string.IsNullOrEmpty(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
             File.WriteAllText(tempPath, JsonSerializer.Serialize(settings, SettingsJsonContext.Default.AppSettings));
-            File.Move(tempPath, FilePath, overwrite: true);
+            File.Move(tempPath, filePath, overwrite: true);
 
             return Result.Success;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
         {
+            try
+            {
+                File.Delete(tempPath);
+            }
+            catch (Exception deleteEx) when (deleteEx is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+            {
+                // Best effort only; the original failure is the one to report.
+            }
+
             return SettingsErrors.Unwritable(ex.Message);
         }
     }
 
+    // A project file is a JSON object holding at least one of AppSettings' properties. Anything else, such as another application's JSON or "{}", is refused rather than
+    // opened as a project of defaults. Throws JsonException for invalid JSON.
+    private static bool LooksLikeProject(string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        HashSet<string> known = SettingsJsonContext.Default.AppSettings.Properties.Select(property => property.Name)
+                                                   .ToHashSet(StringComparer.Ordinal);
+
+        return document.RootElement.EnumerateObject()
+                       .Any(property => known.Contains(property.Name));
+    }
+
     // A hand-edited or damaged file can hold null strings or numeric enum values that name nothing; each such value falls back to its default so one bad property
-    // never takes down the others (or the start-up).
+    // never takes down the others.
     private static AppSettings Normalise(AppSettings settings)
     {
         AppSettings defaults = AppSettings.Default;

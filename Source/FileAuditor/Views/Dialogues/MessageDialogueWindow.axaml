@@ -32,15 +32,22 @@
                     MinHeight="23"
                     HorizontalContentAlignment="Center"
                     IsDefault="True"
-                    IsCancel="{Binding !HasSecondary}"
+                    IsCancel="{Binding PrimaryIsCancel}"
                     Click="OnPrimaryClick" />
             <Button Content="{Binding SecondaryText}"
                     MinWidth="75"
                     MinHeight="23"
                     HorizontalContentAlignment="Center"
                     IsVisible="{Binding HasSecondary}"
-                    IsCancel="True"
+                    IsCancel="{Binding SecondaryIsCancel}"
                     Click="OnSecondaryClick" />
+            <Button Content="{Binding TertiaryText}"
+                    MinWidth="75"
+                    MinHeight="23"
+                    HorizontalContentAlignment="Center"
+                    IsVisible="{Binding HasTertiary}"
+                    IsCancel="{Binding HasTertiary}"
+                    Click="OnTertiaryClick" />
         </StackPanel>
         <Panel DockPanel.Dock="Left"
                Width="32"
