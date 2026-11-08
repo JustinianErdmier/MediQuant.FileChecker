@@ -508,7 +508,8 @@ SELECT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filter>;   -- 
   list goes to the filter and to the walk, so the filter loads exactly the rows whose prefixes the walk reports under, whatever form the folder was typed in (`U:/A/./B`, other
   letter case, a trailing separator). So the filter never changes the result, with one exception that the run handles itself: a file reached through a link that leads outside
   every input (§6.5.3) may be indexed under its target path, which no input's prefix covers. Such files are held back during the walk, and once it ends a second query, filtered
-  by the folders that cover their canonical paths, loads the rows needed to decide them.
+  by the folders that cover their canonical paths, loads the rows needed to decide them. That query fills a **second index set**, with the same cost per row (about 48 MB per
+  million rows) but only for the rows under those folders, held until the run ends; with no outside link there is no second set.
 - **Hashes.** Each path is trimmed, upper-cased (invariant culture) and hashed to **128 bits** (MD5 of its UTF-16 bytes: an in-box algorithm chosen for speed and even spread, not
   security); only the hashes are kept, in a set. `NULL` values are skipped. A 128-bit hash makes a false match, which would hide an unindexed file (anti-goal), practically
   impossible. Memory is about **48 MB per million rows**, measured (one million rows loaded in 1.6 seconds on a local SQL Server), so three million rows take roughly 150 MB.
@@ -529,14 +530,17 @@ Status `Checking files...`.
   only when a File types entry matches it and no Exclude entry does.
 - **Nested inputs.** A file reached through two input folders (one inside another) is checked and reported **once**, under the deepest input folder whose scope covers its
   folder. With inputs `A` (with subfolders) and `A\B` (without), `A\B\x.pdf` is reported under `A\B` and `A\B\C\y.pdf` under `A`.
-- **Links.** A junction or symbolic link to a folder is resolved to its target. When the target lies **inside the scope of an input folder** (the input itself, plus the folders
-  beneath it when it includes subfolders), the link is **not walked**: that input's own visit lists those files, so the direct visit always wins and attribution does not depend
-  on timing. When the target lies **outside every input's scope**, the link is walked (DFS namespaces on file shares appear as links, and skipping them would silently drop
-  content), the files found through it are reported by the path they were reached through, and each also carries its **canonical path**, the link's prefix replaced by the
-  resolved target. A file counts as indexed when the index holds either path. Folders beneath a walked link are keyed by their canonical path for the loop guard, so a physical
-  folder is listed once however many links reach it, and a link loop ends at its first repeat. A link whose target cannot be resolved (a DFS link, for one) is an ordinary
-  folder. If a folder was first listed without descending and a later visit needs its subfolders, the later visit lists those. Which link path a file reached through two
-  outside links is reported under is whichever is listed first.
+- **Links.** Comparisons are made in **final-path space**: each input's own final path is resolved once (a `subst` drive becomes its underlying folder, a mapped drive its UNC
+  path, a junction its target) and a link's target is resolved the same way, so an input given as `S:\...` still matches a junction whose target Windows reports as the underlying
+  folder. A link whose target lies in a folder that **an input with subfolders covers** is **not walked**: that input's own visit lists it, so the direct visit wins and
+  attribution does not depend on timing. A link to an input that does **not** include subfolders is walked, but only for that input's subfolders; its files are listed by the
+  input's own visit and not again. A link whose target lies **outside every input**, including a link to an **ancestor of an input**, is walked (DFS namespaces on file shares
+  appear as links, and skipping them would silently drop content); the files found through it are reported by the path they were reached through, and each also carries its
+  **canonical path**, the link's prefix replaced by the resolved target, written in an input's entered form when the target lies under that input's final path and otherwise
+  as the final path. A file counts as indexed when the index holds either path. Where a walked link reaches an input, that input's own scope still wins: its folders are not
+  listed twice. Folders are keyed by their final path for the loop guard, so a folder's files and its subfolders are each listed once however many links reach it, and a link loop
+  ends at its first repeat. A link whose target cannot be resolved (a DFS link, for one) is an ordinary folder. Which link path a file reached through two outside links is
+  reported under is whichever is listed first.
 - **Unverified folders.** A folder that cannot be listed (permission denied, share unreachable, path too long, any other I/O failure; a folder deleted mid-run is *Other errors*)
   is reported once as **unverified** and nothing beneath it is walked. Its contents are not checked, so it is counted separately (*Unverified*, in folders), never in *Total
   files*. A listing that fails part-way reports none of that folder's files, so a folder is either wholly checked or wholly unverified.
@@ -549,7 +553,10 @@ Status `Checking files...`.
   ones in progress (their files are not reported) and writes the report with `Result: Stopped by user`; the counts are what was found and checked, and there is no *Not checked*
   line, since the total is unknown. Files held back for the second index query (§6.5.2) are not checked if Stop arrives before it ends, so they are in neither count. A Stop that
   arrives after the walk has finished but before the run reads its stop request produces a *Stopped by user* report for a complete walk; this is cosmetic.
-- **SQL failure** while loading (connection, bad table or column): an error dialogue, and no report, since nothing has been walked. **Report write failure:** an error dialogue.
+- **SQL failure** while loading the index at the start (connection, bad table or column): an error dialogue, and no report, since nothing has been walked. A failure in the
+  **second query** (§6.5.2), after the walk, writes the report with `Result: Failed — <message>` and everything already decided; the files held back for it are in neither
+  total, and the Summary adds `Not checked:` with their count and the words `(reached through links; the index could not be read for them)`. The same line appears when a Stop
+  lands before that query ends. **Report write failure:** an error dialogue.
 - **Closing the window mid-run** asks the question of §6.4; *Yes* stops the run as above (no report if the index was still loading) and exits.
 
 ## 7. The report
@@ -694,7 +701,8 @@ U:\Projects\D12345\Images\2020\   I/O error   The semaphore timeout period has e
   and space-separated, and `Exclude:` reads `(none)` when empty. `Grouped by:` reads `Listed type` or `Found extension`. The Project folder and stage lines are omitted when a
   custom location is used. There is no ID column line.
 - **Summary.** `Total files:` is the files found and checked, so Total files = Indexed + Unindexed. `Unverified:` counts folders, not files. A *Stopped by user* report has
-  `Result: Stopped by user` and no `Not checked:` line, since the total is unknown. A run that fails while loading the index writes no report (§6.5.4).
+  `Result: Stopped by user` and no `Not checked:` line, since the total is unknown, except the one line of files reached through links that were held back (§6.5.4), printed only
+  when there are some. A run that fails while loading the index at the start writes no report (§6.5.4).
 - **Unverified Folders** lists the folders that could not be listed (the path ends in `\`; their contents were not checked) in groups ordered as in §6.3: *Drive or share not
   found*, *Permission denied*, *Network location unreachable*, *Path too long*, *Other errors*. *Other errors* shows the reason and the system message in aligned columns and also
   holds a folder whose path is malformed or any failure not listed above (reason text, no system message). A folder is listed once, and nothing beneath it is. `No unverified

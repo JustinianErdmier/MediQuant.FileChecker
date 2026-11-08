@@ -75,12 +75,13 @@ row, so no ID).
   name is not matched by the whitelist, or is matched by the blacklist (§3.3). "Configuration files" are covered by the lists: an extension that is not listed is
   never checked (the user's decision).
 - A file reached through two input folders (one folder inside another) is checked and reported **once**, under the deepest input folder that contains it.
-- **Links.** A junction or symbolic link to a folder is resolved to its target. A link whose target lies **inside the scope of an input folder** (the input itself, plus
-  the folders beneath it when it includes subfolders) is **not walked**: that input's own visit lists the files, so the direct visit always wins. A link whose target
-  lies **outside every input's scope** is walked (DFS namespaces on file shares appear as links, and skipping them would silently drop content); files are reported by the
-  path they were reached through, and are indexed when the index holds that path **or** the canonical path (the link's prefix replaced by its target). To prevent loops,
-  a folder is walked once per run, keyed by its canonical path; its contents were already checked, so nothing is lost. A link whose target cannot be resolved (DFS) is
-  an ordinary folder.
+- **Links.** A junction or symbolic link to a folder is resolved to its target, and every comparison is made in final-path space (each input's own final path is resolved
+  once, so an input on a `subst` or mapped drive still matches a link's target). A link whose target lies in a folder that **an input with subfolders covers** is **not
+  walked**: that input's own visit lists the files, so the direct visit always wins. A link to an input **without** subfolders is walked for that input's subfolders only. A link
+  whose target lies **outside every input** (including a link to an ancestor of an input) is walked (DFS namespaces on file shares appear as links, and skipping them would
+  silently drop content); files are reported by the path they were reached through, and are indexed when the index holds that path **or** the canonical path (the link's prefix
+  replaced by its target, in an input's entered form when the target lies under that input). To prevent loops, a folder's files and subfolders are each listed once per run,
+  keyed by its final path; its contents were already checked, so nothing is lost. A link whose target cannot be resolved (DFS) is an ordinary folder.
 
 ### 3.3 File types: whitelist and blacklist
 
@@ -152,7 +153,10 @@ whitespace in the column's values is trimmed.
    loads every row that **starts with a whitespace character**, which no folder prefix could match (a further `OR` clause); with more than 20 folders, or an empty folder
    path, it is dropped and every row is loaded. Each folder is made canonical (a full path with one trailing separator) once, and the same list feeds the filter and the walk,
    so the filter never changes the result; files reached through a link that leads outside every input may be indexed under their target path, which the filter did not load,
-   so the run holds them back and decides them with a second, filtered query once the walk ends. Each path is trimmed, **upper-cased and hashed to 128 bits**, and only the
+   so the run holds them back and decides them with a second, filtered query once the walk ends, into a second set of hashes (the same cost per row, only for the rows under
+   the link targets). If that query fails, the report is written as `Failed` with everything already decided, and the held-back files are in neither total; the Summary adds
+   a `Not checked:` line with their count (`<n> (reached through links; the index could not be read for them)`), printed only when there are some, and also after a Stop that
+   lands before that query ends. Each path is trimmed, **upper-cased and hashed to 128 bits**, and only the
    hashes are kept in memory: measured at about **48 MB per million rows** (the hashes plus the set that holds them; the first estimate of 16 bytes a row was too low), so
    three million rows take roughly 150 MB. A 128-bit hash makes a false match (anti-goal 1) practically impossible.
 3. **Walk the folders.** Folder listings run **concurrently**, up to a fixed limit (for example 16), because each listing over a network share is a round trip.
@@ -184,7 +188,7 @@ hides a run (see milestone 3 §3.3–§3.4, which this extends).
 
 **Stop** during *Loading the index...* writes no report (as Stop during today's count). After that, **Stop** stops the walk and writes the report as
 `Stopped by user`; the counts reflect what was found and checked (there is no *Not checked* line, since the
-total is unknown). Closing the window mid-run behaves as today (SDD §6.4).
+total is unknown, except the one line for files held back for the second query, above). Closing the window mid-run behaves as today (SDD §6.4).
 
 ### 3.7 The report
 

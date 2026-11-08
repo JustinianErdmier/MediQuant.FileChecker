@@ -37,6 +37,8 @@ Decisions taken without the user, each with what it costs if wrong.
 | R19 | 5          | While a run is under way the progress bar is a timer-driven fixed-width block on a sunken track, not `IsIndeterminate`.                                                        | The theme's marquee is blank for about 2.4 s of each 5 s cycle and its transform cannot be restyled.                      | A custom visual instead of the theme's. SDD §5.4a and spec §3.6 are reworded.                  |
 | R20 | final review | A hand-edited project file's invalid File types or Exclude entries are kept as written (trimmed), shown in the tab's summary and named by the pre-flight at Start, instead of being dropped when the file loads. | Spec §4 says an invalid entry is a pre-flight error naming it; dropping it on load made that unreachable (the controller's ruling, `4efa941`). | The tab can show an entry the editor would refuse; the user must fix it before Start.          |
 | R21 | final review | The HTML mock-ups are frozen as historical references and are not refreshed for milestone 4's layout; the SDD §5 and the XAML are the contract.                    | The controller's ruling; the layout changed repeatedly during the build and the mock-ups no longer match it.              | The mock-ups mislead anyone who reads them as the target; the SDD says they do not.            |
+| R22 | fix wave 2 | Every link and scope comparison is made in final-path space: each input's own final path is resolved once (GetFinalPathNameByHandle), a link's target the same way, and a target under an input's final path is written back in that input's entered form for `CanonicalPath`. Loop-guard keys are final paths (not the entered form), so inputs given on a `subst` drive, a link and a nested input of another form all share one key. A link into an input without subfolders is walked for its subfolders only. | The controller's ruling (`1774980`); `ResolveLinkTarget` returns final paths, so `U:\` inputs never matched.              | A mapped drive was reasoned about, not exercised (no network mapping made): its UNC final path is handled like the `subst` case, but a DFS link still stays an ordinary folder. Two roots with the same final path are attributed to whichever lists first. |
+| R23 | fix wave 2 | A SQL failure in the second, outside-link index query writes the report as `Failed` with everything already decided, instead of discarding the walk; held-back files are in neither total and the Summary gains a `Not checked:` line (also after a Stop before that query ends). | The controller's ruling (`1774980`): throwing away a long walk for a late failure was worse than a partial report.        | The report is partial, but says so (`Result: Failed`, the `Not checked:` line).                |
 
 ## User decisions
 
@@ -96,6 +98,12 @@ Implementation defects, all fixed in a review round before the task was accepted
   leading outside every input could not be matched against an index that held the target path (fixed in `4efa941`, R8); input folders were not canonicalised, so a folder typed
   as `U:/A/./B` loaded the wrong rows and escaped the duplicate check (fixed in `4efa941`: one canonical list feeds the filter, the walk and the duplicate check); invalid
   hand-edited file-type entries were dropped on load, so they were never shown or named (fixed in `4efa941`, R20).
+
+- **Fix wave 2, Important (three), found by the re-review of wave 1 and fixed in `1774980`:** a link was skipped whenever any input covered its target, which dropped the
+  subfolders of an input without subfolders reached through a link (N1); `ResolveLinkTarget` returns final paths, so inputs on a `subst` or mapped drive never matched a link
+  target and canonical paths came out in a form the index does not use (N2, R22); and a SQL failure in the second index query discarded the whole walk (N3, R23). The minors:
+  two double blank lines (N4) and the documentation of the second index set and of links to an ancestor of an input. An invalid hand-edited element holding a space or comma (N5)
+  was traced from load through the summary round-trip to the snapshot, and opening and closing such a file gives no save prompt; no code change was needed.
 
 ## Outstanding items
 
