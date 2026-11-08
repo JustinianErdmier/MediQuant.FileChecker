@@ -96,11 +96,26 @@
                      Grid.ColumnSpan="2"
                      Text="{Binding FileName}"
                      IsReadOnly="{Binding Shared.IsBuilt}" />
-            <CheckBox x:Name="SaveProjectSettingsBox"
-                      Grid.Row="5"
-                      Grid.ColumnSpan="3"
-                      Content="Save project settings _with the report"
-                      IsChecked="{Binding Shared.SaveProjectSettings}" />
+            <StackPanel Grid.Row="5"
+                        Grid.ColumnSpan="3"
+                        Spacing="6">
+                <StackPanel x:Name="GroupByPanel"
+                            Orientation="Horizontal"
+                            Spacing="14"
+                            IsVisible="{Binding IsUnindexed}">
+                    <TextBlock Text="Group file types by:"
+                               VerticalAlignment="Center" />
+                    <RadioButton GroupName="GroupFileTypesBy"
+                                 Content="Listed type"
+                                 IsChecked="{Binding GroupByListedType}" />
+                    <RadioButton GroupName="GroupFileTypesBy"
+                                 Content="Found extension"
+                                 IsChecked="{Binding GroupByFoundExtension}" />
+                </StackPanel>
+                <CheckBox x:Name="SaveProjectSettingsBox"
+                          Content="Save project settings _with the report"
+                          IsChecked="{Binding Shared.SaveProjectSettings}" />
+            </StackPanel>
         </Grid>
     </ct:GroupBox>
 </UserControl>

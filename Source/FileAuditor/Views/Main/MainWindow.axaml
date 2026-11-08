@@ -77,6 +77,9 @@
                 <TabItem Header="Missing Files">
                     <tabs:MissingFilesTabView DataContext="{Binding MissingFiles}" />
                 </TabItem>
+                <TabItem Header="Unindexed Files">
+                    <tabs:UnindexedFilesTabView DataContext="{Binding UnindexedFiles}" />
+                </TabItem>
             </TabControl>
         </StackPanel>
     </DockPanel>

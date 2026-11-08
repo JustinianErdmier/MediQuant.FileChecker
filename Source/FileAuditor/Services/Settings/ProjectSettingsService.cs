@@ -32,13 +32,26 @@ public sealed class ProjectSettingsService
     /// <summary>Gets or sets a value indicating whether the untick warning was confirmed this session.</summary>
     public bool UntickConfirmed { get; set; }
 
-    /// <summary>Forgets the file, the baseline (back to <see cref="AppSettings.Default" />) and both remembered answers.</summary>
+    /// <summary>Gets or sets a value indicating whether the "wildcard makes the other file types redundant" warning was answered Continue this session.</summary>
+    public bool RedundantTypesConfirmed { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the "every file except the excluded types" warning was answered Continue this session.</summary>
+    public bool ExcludedTypesConfirmed { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the "types in both File types and Exclude" warning was answered Continue this session.</summary>
+    public bool OverlapConfirmed { get; set; }
+
+    /// <summary>Forgets the file, the baseline (back to <see cref="AppSettings.Default" />) and every remembered answer.</summary>
     public void Reset()
     {
         FilePath        = null;
         _baseline       = AppSettings.Default;
         _saveDeclined   = false;
         UntickConfirmed = false;
+
+        RedundantTypesConfirmed = false;
+        ExcludedTypesConfirmed  = false;
+        OverlapConfirmed        = false;
     }
 
     /// <summary>Records a successfully opened project.</summary>

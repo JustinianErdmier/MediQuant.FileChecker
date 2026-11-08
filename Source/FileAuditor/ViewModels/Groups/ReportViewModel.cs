@@ -37,6 +37,22 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <summary>Gets the audit direction whose report this group describes.</summary>
     public AuditDirection Direction { get; }
 
+    /// <summary>Gets or sets a value indicating whether the unindexed report groups files by the extension found, not the listed type. Used by the Unindexed direction only.</summary>
+    [ ObservableProperty ]
+    [ NotifyPropertyChangedFor(nameof(GroupByListedType)) ]
+    public partial bool GroupByFoundExtension { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the unindexed report groups files by the listed type; the opposite of <see cref="GroupByFoundExtension" />.</summary>
+    public bool GroupByListedType
+    {
+        get => !GroupByFoundExtension;
+
+        set => GroupByFoundExtension = !value;
+    }
+
+    /// <summary>Gets a value indicating whether this is the Unindexed direction's group, which has the Group file types by option.</summary>
+    public bool IsUnindexed => Direction == AuditDirection.Unindexed;
+
     /// <summary>Gets or sets the text of the File name box: a read-only preview when built, the typed name when custom.</summary>
     [ ObservableProperty ]
     public partial string FileName { get; set; } = "";
@@ -49,14 +65,14 @@ public sealed partial class ReportViewModel : ObservableObject
     public ReportLocationState Shared { get; }
 
     /// <summary>
-    ///     Copies this direction's own inputs (its custom file name) into the given settings.
+    ///     Copies this direction's own inputs (its custom file name, and for Unindexed the grouping choice) into the given settings.
     /// </summary>
     /// <param name="settings">The settings to start from.</param>
     /// <returns>A copy of <paramref name="settings" /> carrying this direction's inputs.</returns>
     public AppSettings ApplyTo(AppSettings settings)
         => Direction == AuditDirection.Missing
             ? settings with { MissingCustomFileName = _customFileName }
-            : settings with { UnindexedCustomFileName = _customFileName };
+            : settings with { UnindexedCustomFileName = _customFileName, GroupByFoundExtension = GroupByFoundExtension };
 
     /// <summary>
     ///     Sets this direction's own inputs from the given settings, then refreshes from the shared state.
@@ -65,6 +81,8 @@ public sealed partial class ReportViewModel : ObservableObject
     public void Load(AppSettings settings)
     {
         _customFileName = Direction == AuditDirection.Missing ? settings.MissingCustomFileName : settings.UnindexedCustomFileName;
+
+        GroupByFoundExtension = IsUnindexed && settings.GroupByFoundExtension;
 
         Refresh();
     }

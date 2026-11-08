@@ -2,13 +2,18 @@ namespace FileAuditor.Services.Auditing;
 
 /// <summary>The checks that run when Start is pressed, before the database is touched (SDD §6.1). Each failure or declined confirmation is explained in a dialogue.</summary>
 /// <param name="dialogues">Shows the errors and confirmations.</param>
-public sealed class PreflightChecker(DialogueService dialogues)
+/// <param name="project">Remembers which warnings were answered Continue this session.</param>
+public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsService project)
 {
-    /// <summary>Runs the checks in order: identifiers, custom file name, custom location form, report folder, existing report.</summary>
+    /// <summary>
+    ///     Runs the checks in order: identifiers, the two reports' custom names, the Unindexed direction's folders and file types, custom file name, custom location form,
+    ///     report folder, existing report.
+    /// </summary>
     /// <param name="settings">The settings to audit with.</param>
     /// <param name="direction">The audit direction, which decides the report file name.</param>
+    /// <param name="typeText">The File types and Exclude boxes as typed; read only for the Unindexed direction.</param>
     /// <returns>The resolved report path when the run may start; <see langword="null" /> when a check failed or the user declined (the user has been told).</returns>
-    public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirection direction)
+    public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirection direction, FileTypeText? typeText = null)
     {
         ErrorOr<AuditQuery> query = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn);
 
@@ -25,6 +30,25 @@ public sealed class PreflightChecker(DialogueService dialogues)
             await
                 dialogues.ShowErrorAsync($"The project folder must be a single folder name, not a path, and must not contain characters that are not allowed:\n{settings.ProjectFolder.Trim()}");
 
+            return null;
+        }
+
+        // Both tabs write into the one custom location, so equal names would have the reports overwrite each other.
+        if (settings.UseCustomReportLocation
+            && string.Equals(settings.MissingCustomFileName.Trim(), settings.UnindexedCustomFileName.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            string name = ReportPathResolver.Resolve(settings, direction).FileName;
+
+            await dialogues.ShowErrorAsync($"Both reports would have the same file name:\n{PathText.Breakable(name)}\n\nGive each tab's report its own name.");
+
+            return null;
+        }
+
+        FileTypeText types = typeText ?? new FileTypeText(FileTypeList.Format(settings.FileTypes ?? []), FileTypeList.Format(settings.ExcludeTypes ?? []));
+
+        if (direction == AuditDirection.Unindexed
+            && !await CheckUnindexedInputsAsync(settings, types))
+        {
             return null;
         }
 
@@ -102,6 +126,138 @@ public sealed class PreflightChecker(DialogueService dialogues)
         }
 
         return report;
+    }
+
+    // The Unindexed direction's own inputs: folders first, then the two type lists, then the three warnings in the order of milestone 4 spec §3.3.
+    private async Task<bool> CheckUnindexedInputsAsync(AppSettings settings, FileTypeText text)
+    {
+        IReadOnlyList<ScanFolder> folders = settings.ScanFolders ?? [];
+
+        if (folders.Count == 0)
+        {
+            await dialogues.ShowErrorAsync("Add at least one folder to check.");
+
+            return false;
+        }
+
+        // The folders may be on slow or disconnected shares, so they are probed off the UI thread.
+        string? folderProblem = await Task.Run(() => FindFolderProblem(folders));
+
+        if (folderProblem is not null)
+        {
+            await dialogues.ShowErrorAsync(folderProblem);
+
+            return false;
+        }
+
+        ErrorOr<string[]> include = FileTypeList.Parse(text.FileTypes);
+        ErrorOr<string[]> exclude = FileTypeList.Parse(text.Exclude);
+
+        if (include.IsError || exclude.IsError)
+        {
+            await dialogues.ShowErrorAsync((include.IsError ? include : exclude).FirstError.Description);
+
+            return false;
+        }
+
+        if (include.Value.Length == 0)
+        {
+            await dialogues.ShowErrorAsync("Add at least one file type.");
+
+            return false;
+        }
+
+        string? excludeEverything = exclude.Value.FirstOrDefault(entry => new FileTypePattern(entry).MatchesEverything);
+
+        if (excludeEverything is not null)
+        {
+            await dialogues.ShowErrorAsync(
+                $"The Exclude list contains {excludeEverything}, which matches every file, so nothing would be checked. Remove it to run the audit.");
+
+            return false;
+        }
+
+        return await ConfirmTypeWarningsAsync(include.Value, exclude.Value);
+    }
+
+    // The first problem with the folder list, as the message to show, or null when every folder is a full path that exists and none is listed twice.
+    private static string? FindFolderProblem(IReadOnlyList<ScanFolder> folders)
+    {
+        foreach (ScanFolder folder in folders)
+        {
+            if (!Path.IsPathFullyQualified(folder.Path))
+            {
+                return $"This folder is not a full path:\n{PathText.Breakable(folder.Path)}";
+            }
+
+            if (!Directory.Exists(folder.Path))
+            {
+                return $"This folder does not exist:\n{PathText.Breakable(folder.Path)}";
+            }
+        }
+
+        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (ScanFolder folder in folders)
+        {
+            if (!seen.Add(Path.TrimEndingDirectorySeparator(folder.Path)))
+            {
+                return $"This folder is listed twice:\n{PathText.Breakable(folder.Path)}";
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<bool> ConfirmTypeWarningsAsync(string[] include, string[] exclude)
+    {
+        string? everything = include.FirstOrDefault(entry => new FileTypePattern(entry).MatchesEverything);
+
+        if (everything is not null
+            && include.Length > 1
+            && !project.RedundantTypesConfirmed)
+        {
+            if (!await dialogues.ConfirmAsync($"File types contains {everything}, which matches every file, so the other file types are redundant.\n\nDo you want to continue?",
+                                              confirmText: "_Continue"))
+            {
+                return false;
+            }
+
+            project.RedundantTypesConfirmed = true;
+        }
+
+        if (everything is not null
+            && exclude.Length > 0
+            && !project.ExcludedTypesConfirmed)
+        {
+            if (!await dialogues.ConfirmAsync(
+                    $"File types contains {everything}, which matches every file, so every file will be checked except the excluded types.\n\nDo you want to continue?",
+                    confirmText: "_Continue"))
+            {
+                return false;
+            }
+
+            project.ExcludedTypesConfirmed = true;
+        }
+
+        string[] both = include.Intersect(exclude, StringComparer.Ordinal)
+                               .ToArray();
+
+        if (both.Length > 0
+            && !project.OverlapConfirmed)
+        {
+            string entries = string.Join(separator: ' ', both);
+
+            if (!await dialogues.ConfirmAsync($"These types are in both File types and Exclude, so they will not be checked:\n{entries}\n\nDo you want to continue?",
+                                              confirmText: "_Continue"))
+            {
+                return false;
+            }
+
+            project.OverlapConfirmed = true;
+        }
+
+        return true;
     }
 
     // Creates and immediately removes the temporary file that ReportWriter uses, so the probe leaves nothing behind.

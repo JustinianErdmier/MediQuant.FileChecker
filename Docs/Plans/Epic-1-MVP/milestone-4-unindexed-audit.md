@@ -230,29 +230,29 @@ place milestone 4 must touch (above `IsTabbed`).
   `Audit : UnindexedAuditViewModel`, `ApplyTo`/`Load`; `MainWindowViewModel.UnindexedFiles`. The grouping radio buttons sit in the Unindexed tab's
   `ReportView` only (for example a slot in `ReportView` shown when its direction is Unindexed, bound to the tab's `GroupByFoundExtension`).
 
-- [ ] **Step 1: The tab** (mock-up right panel): *Folders to Check* group with a list of folders (each row: the path and an `Include subfolders` checkbox, ticked by
+- [x] **Step 1: The tab** (mock-up right panel): *Folders to Check* group with a list of folders (each row: the path and an `Include subfolders` checkbox, ticked by
   default), `Add...` (folder picker, appends; a folder already listed is not added twice) and `Remove` (enabled with a selection); `File t_ypes:` text box with
   `Reset`; `E_xclude:` text box; then `ReportView` (with the *Group file types by* radios) and `UnindexedAuditView`. Both type boxes accept free text, parsed on
   Start and when saved.
-- [ ] **Step 2: The Audit group** — the six statistics in Global Constraints (no Remaining); `Files/second` follows milestone 3's rule (files found ÷ the whole-run
+- [x] **Step 2: The Audit group** — the six statistics in Global Constraints (no Remaining); `Files/second` follows milestone 3's rule (files found ÷ the whole-run
   elapsed, blank under one second); `ProgressBar.IsIndeterminate` while running, full at the end; the same View Report / Start / Stop buttons.
-- [ ] **Step 3: Wiring** — every item in the `IsTabbed` checklist comment in `MainWindowViewModel`, then remove the comment's "Milestone 4" wording. Start runs
+- [x] **Step 3: Wiring** — every item in the `IsTabbed` checklist comment in `MainWindowViewModel`, then remove the comment's "Milestone 4" wording. Start runs
   `UnindexedAuditRunner` for the Unindexed direction; one run at a time; tabs stay switchable during a run; Stop and the status bar follow the running audit.
   If `MainWindowViewModel` would pass about 750 lines, move the per-direction run code into a helper class rather than growing it further, and say so.
-- [ ] **Step 4: Pre-flight** — the Global Constraints errors for the Unindexed direction (folders fully qualified and existing — probed off the UI thread; no
+- [x] **Step 4: Pre-flight** — the Global Constraints errors for the Unindexed direction (folders fully qualified and existing — probed off the UI thread; no
   duplicates; valid entries in both lists; at least one file type; no wildcard-only Exclude entry), then the three warnings in spec §3.3's order, each skipped if
   already answered *Continue* this session (remembered in `ProjectSettingsService` beside the save-prompt answer and cleared by its `Reset`); and, for both
   directions, the custom-name collision when the custom location is used.
-- [ ] **Step 5: Access keys** — `File t_ypes:` uses Y and `E_xclude:` uses X (both free on this tab); the grouping radios carry none if no free letter fits.
+- [x] **Step 5: Access keys** — `File t_ypes:` uses Y and `E_xclude:` uses X (both free on this tab); the grouping radios carry none if no free letter fits.
   Every other letter of `Add...`, `Remove` and `Reset` is taken by controls visible with
   this tab, so those three carry no access key, like OK/Cancel in message dialogues; record the ruling.
-- [ ] **Step 6: Verify.** Clean build. In the app (UI Automation, LocalDB): build the tab's inputs, Add two folders (untick one), edit file types (`pdf tar.gz`),
+- [x] **Step 6: Verify.** Clean build. In the app (UI Automation, LocalDB): build the tab's inputs, Add two folders (untick one), edit file types (`pdf tar.gz`),
   Reset restores the defaults; save, close, reopen — all restored; switching tabs during a run keeps the status bar on the run and Stop works; Start with no
   folders, a relative folder, a missing folder, a duplicate, an empty type list, an invalid type, `*` in Exclude, and colliding custom names → each error;
   `* .pdf` → the redundancy warning, then *Continue* is not asked again until *Close project*; `*` with Exclude `.tmp` → the "every file except" warning; `.pdf`
   in both lists → the overlap warning; a real run over a small
   tree writes `FileAuditorUnindexedReport_Interim.txt`, View Report opens it; the Missing Files tab still runs as before. Screenshot both tabs. Clean up.
-- [ ] **Step 7: Commit** — `feat(✨): add the Unindexed Files tab`.
+- [x] **Step 7: Commit** — `feat(✨): add the Unindexed Files tab`.
 
 ### Task 6: Documentation sync and ledger
 

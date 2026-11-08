@@ -1,7 +1,7 @@
 namespace FileAuditor.ViewModels.Groups;
 
 /// <summary>The Audit group and status bar: read-only run statistics as display strings, blank before the first run.</summary>
-public sealed partial class AuditViewModel : ObservableObject
+public sealed partial class AuditViewModel : AuditStatusBase
 {
     /// <summary>Gets or sets the number of files checked so far, formatted with thousands separators.</summary>
     [ ObservableProperty ]
@@ -27,14 +27,6 @@ public sealed partial class AuditViewModel : ObservableObject
     [ ObservableProperty ]
     public partial string Remaining { get; set; } = "";
 
-    /// <summary>Gets or sets the status-bar message.</summary>
-    [ ObservableProperty ]
-    public partial string StatusMessage { get; set; } = "";
-
-    /// <summary>Gets or sets the status-bar percentage text, blank when no run is under way.</summary>
-    [ ObservableProperty ]
-    public partial string StatusPercent { get; set; } = "";
-
     /// <summary>Gets or sets the total number of files, formatted with thousands separators.</summary>
     [ ObservableProperty ]
     public partial string TotalFiles { get; set; } = "";
@@ -43,8 +35,8 @@ public sealed partial class AuditViewModel : ObservableObject
     [ ObservableProperty ]
     public partial string Unverified { get; set; } = "";
 
-    /// <summary>Blanks every statistic and the progress bar, ready for a new run.</summary>
-    public void Reset()
+    /// <inheritdoc />
+    public override void Reset()
     {
         TotalFiles     = "";
         Checked        = "";

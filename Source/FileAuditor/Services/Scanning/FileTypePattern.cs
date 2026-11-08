@@ -14,6 +14,10 @@ public sealed class FileTypePattern
 
         WildcardCount  = entry.Count(c => c is '*' or '?');
         IsWildcardOnly = _parts.All(part => part.All(c => c is '*' or '?'));
+
+        // One part of wildcards with a '*' and at most one '?': every extension has at least one character, so only then does it accept every extension. '?' alone accepts
+        // only one-character extensions, '?*?' only longer ones, and '.*.*' only names with two extensions.
+        MatchesEverything = _parts.Length == 1 && IsWildcardOnly && entry.Contains(value: '*') && entry.Count(c => c == '?') <= 1;
     }
 
     /// <summary>Gets the normalised entry.</summary>
@@ -27,6 +31,9 @@ public sealed class FileTypePattern
 
     /// <summary>Gets a value indicating whether every part is only <c>*</c> and <c>?</c>.</summary>
     public bool IsWildcardOnly { get; }
+
+    /// <summary>Gets a value indicating whether the entry accepts every extension: a single part made only of wildcards, with a <c>*</c> and at most one <c>?</c>.</summary>
+    public bool MatchesEverything { get; }
 
     /// <summary>Determines whether a file name matches: the entry's parts equal the name's last parts, after a non-empty stem, ignoring case.</summary>
     /// <param name="fileName">The file name, without a folder.</param>
