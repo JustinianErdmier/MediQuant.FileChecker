@@ -27,7 +27,7 @@ public sealed class PreflightChecker(DialogueService dialogues)
             return null;
         }
 
-        ReportPath report = ReportPathResolver.Resolve(settings);
+        ReportPath report = ReportPathResolver.Resolve(settings, AuditDirection.Missing);
 
         if (report.IsCustom)
         {

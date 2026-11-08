@@ -3,7 +3,7 @@ namespace FileAuditor.ViewModels.Groups;
 /// <summary>The Report group: the project folder, the two stage choices and the report location, either built from them or typed in (SDD §5.3).</summary>
 public sealed partial class ReportViewModel : ObservableObject
 {
-    private string _customFileName = "FileAuditorReport.txt";
+    private string _customFileName = "FileAuditorMissingReport.txt";
 
     private string _customLocation = "";
 
@@ -18,7 +18,7 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <param name="settings">The settings to load.</param>
     public ReportViewModel(AppSettings settings)
     {
-        Current = ReportPathResolver.Resolve(settings);
+        Current = ReportPathResolver.Resolve(settings, AuditDirection.Missing);
         Load(settings);
     }
 
@@ -81,7 +81,7 @@ public sealed partial class ReportViewModel : ObservableObject
             AuditStage = IsFinalAudit ? AuditStage.Final : AuditStage.Interim,
             UseCustomReportLocation = UseCustomLocation,
             CustomLocation = _customLocation,
-            CustomFileName = _customFileName
+            MissingCustomFileName = _customFileName
         };
 
     /// <summary>Sets this group's inputs from the given settings.</summary>
@@ -89,7 +89,7 @@ public sealed partial class ReportViewModel : ObservableObject
     public void Load(AppSettings settings)
     {
         _customLocation = settings.CustomLocation;
-        _customFileName = settings.CustomFileName;
+        _customFileName = settings.MissingCustomFileName;
 
         ProjectFolder     = settings.ProjectFolder;
         IsSampleProject   = settings.ProjectStage == ProjectStage.Sample;
@@ -153,7 +153,7 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <summary>Rewrites the Location and File name boxes for the current mode and recomputes <see cref="Current" />.</summary>
     private void Refresh()
     {
-        ReportPath path = ReportPathResolver.Resolve(ApplyTo(AppSettings.Default));
+        ReportPath path = ReportPathResolver.Resolve(ApplyTo(AppSettings.Default), AuditDirection.Missing);
 
         _isRefreshing = true;
         Location      = UseCustomLocation ? _customLocation : path.DisplayDirectory;
@@ -165,7 +165,7 @@ public sealed partial class ReportViewModel : ObservableObject
 
     private void UpdateCurrent()
     {
-        Current = ReportPathResolver.Resolve(ApplyTo(AppSettings.Default));
+        Current = ReportPathResolver.Resolve(ApplyTo(AppSettings.Default), AuditDirection.Missing);
         OnPropertyChanged(nameof(Current));
     }
 }

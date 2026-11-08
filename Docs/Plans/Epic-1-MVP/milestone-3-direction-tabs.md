@@ -64,12 +64,12 @@ this plan must leave room for its second tab but builds none of it. The master S
   `FileAuditorMissingReport_` / `FileAuditorUnindexedReport_`; custom name from `MissingCustomFileName` for Missing — the Unindexed custom name arrives in
   milestone 4, so for now Unindexed uses the built-in default `FileAuditorUnindexedReport.txt`); `AppSettings.MissingCustomFileName`.
 
-- [ ] **Step 1:** Add `AuditDirection`, the per-direction `Resolve`, and rename the setting (including `SettingsStore`'s normalisation and the known-property check).
+- [x] **Step 1:** Add `AuditDirection`, the per-direction `Resolve`, and rename the setting (including `SettingsStore`'s normalisation and the known-property check).
   Every existing caller passes `AuditDirection.Missing`.
-- [ ] **Step 2:** Change the report title lines to the Global Constraints text. Nothing else in the report body changes.
-- [ ] **Step 3: Verify.** Clean build. Run the app: with Project folder `D12345` the File name preview reads `FileAuditorMissingReport_Interim.txt`; with the custom
+- [x] **Step 2:** Change the report title lines to the Global Constraints text. Nothing else in the report body changes.
+- [x] **Step 3: Verify.** Clean build. Run the app: with Project folder `D12345` the File name preview reads `FileAuditorMissingReport_Interim.txt`; with the custom
   location ticked it defaults to `FileAuditorMissingReport.txt`. Save a project and confirm the JSON has `MissingCustomFileName` and no `CustomFileName`.
-- [ ] **Step 4: Commit** — `feat(✨): name reports per audit direction`.
+- [x] **Step 4: Commit** — `feat(✨): name reports per audit direction`.
 
 ### Task 2: The tab control, the Missing Files tab and the shared Report location
 

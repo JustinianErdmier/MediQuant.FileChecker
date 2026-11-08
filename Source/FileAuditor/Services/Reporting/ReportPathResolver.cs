@@ -7,18 +7,26 @@ public static class ReportPathResolver
 
     private const string ProjectFolderPlaceholder = "<Project Folder>";
 
+    private const string UnindexedDefaultFileName = "FileAuditorUnindexedReport.txt";
+
     /// <summary>
-    ///     Resolves the report path. Built: <c>U:\Projects\&lt;Project Folder&gt;\DE\&lt;Project Stage&gt;\FileAuditorReport_&lt;Audit Stage&gt;.txt</c>, complete once the project
-    ///     folder is filled in. Custom: the typed location and file name, complete once both are filled in.
+    ///     Resolves the report path for an audit direction. Built:
+    ///     <c>U:\Projects\&lt;Project Folder&gt;\DE\&lt;Project Stage&gt;\FileAuditor&lt;Missing|Unindexed&gt;Report_&lt;Audit Stage&gt;.txt</c>, complete once the project folder is filled in.
+    ///     Custom: the typed location and file name, complete once both are filled in.
     /// </summary>
+    /// <remarks>
+    ///     For <see cref="AuditDirection.Unindexed" /> with a custom location the file name is the built-in default <c>FileAuditorUnindexedReport.txt</c> for now;
+    ///     the setting that lets the user change it arrives with the unindexed-files audit.
+    /// </remarks>
     /// <param name="settings">The current settings.</param>
+    /// <param name="direction">The audit direction the report belongs to.</param>
     /// <returns>The resolved report path.</returns>
-    public static ReportPath Resolve(AppSettings settings)
+    public static ReportPath Resolve(AppSettings settings, AuditDirection direction)
     {
         if (settings.UseCustomReportLocation)
         {
             string location = settings.CustomLocation.Trim();
-            string fileName = settings.CustomFileName.Trim();
+            string fileName = direction == AuditDirection.Missing ? settings.MissingCustomFileName.Trim() : UnindexedDefaultFileName;
 
             return new ReportPath(location, fileName, location.Length > 0 && fileName.Length > 0, IsCustom: true);
         }
@@ -27,7 +35,7 @@ public static class ReportPathResolver
         AuditStage auditStage    = settings.ProjectStage == ProjectStage.Sample ? AuditStage.Interim : settings.AuditStage;
         string     directory     = Path.Combine(BuiltRoot, projectFolder.Length > 0 ? projectFolder : ProjectFolderPlaceholder, path3: "DE", settings.ProjectStage.ToString());
 
-        return new ReportPath(directory, $"FileAuditorReport_{auditStage}.txt", projectFolder.Length > 0, IsCustom: false);
+        return new ReportPath(directory, $"FileAuditor{direction}Report_{auditStage}.txt", projectFolder.Length > 0, IsCustom: false);
     }
 
     /// <summary>Determines whether a project folder is a single, valid folder name: not empty, not rooted, no separators, not <c>.</c> or <c>..</c>, no invalid characters.</summary>
