@@ -9,8 +9,9 @@
 convention, types where they belong, descriptive names, a doc comment on every type and member, and an SDD that matches the code.
 
 **Architecture:** No behaviour changes, with three exceptions. Project files saved before commit `2cdf814` keep their stages again. A `null` bool in a project file now falls
-back to its default instead of making the file unreadable. An unexpected exception in the two `async void` click handlers is shown in an error dialogue instead of crashing the
-app. Settings are read through a new JSON-shaped `ProjectFile` model, mapped into an `AppSettings` that has no nullable members. Stateless services become static classes.
+back to its default instead of making the file unreadable. A new global exception handler catches any unexpected exception. One the app can survive is shown in an error dialogue,
+and the app carries on; one it cannot survive is explained in a message before the app closes. Settings are read through a new JSON-shaped `ProjectFile` model, mapped into
+an `AppSettings` that has no nullable members. Stateless services become static classes.
 
 **Tech Stack:** unchanged (.NET 10, Avalonia 11.3.22, Classic.Avalonia 11.3.0.3, CommunityToolkit.Mvvm, Microsoft.Data.SqlClient). No new packages.
 
@@ -29,7 +30,7 @@ Decisions taken in chat on 2026-11-08:
 - **The settings JSON keeps the shape it had before commit `2cdf814`.** Its keys are `Server`, `Database`, `Table`, `PathColumn`, `IdColumn`, `ReportEmptyFiles`,
   `ProjectFolder`, `ProjectStage`, `AuditStage`, `UseCustomReportLocation`, `CustomLocation`, `MissingCustomFileName`, `ScanFolders` (each `Path` and `IncludeSubfolders`),
   `FileTypes`, `ExcludeTypes`, `GroupByFoundExtension` and `UnindexedCustomFileName`. Enums are written as strings and the output is indented.
-- **No user-visible text changes:** report text, report file names, dialogue copy and window copy stay the same. The one exception is the new error dialogue of Task 4.
+- **No user-visible text changes:** report text, report file names, dialogue copy and window copy stay the same. The exceptions are the two new messages of Task 4.
 - **Enum type names stay plural** (`CheckOutcomes`, `DialogueChoices`, …): that is the user's convention. Variables, parameters and properties that hold *one* value of such a type
   have singular names (`CheckOutcomes outcome`, `DialogueChoices choice`).
 - **ReSharper suppressions** use the user's form: `// ReSharper disable once <Inspection>` on the line above, or a `disable` / `restore` pair around a statement. A suppression
@@ -45,6 +46,7 @@ Decisions taken in chat on 2026-11-08:
   designer constructors.
 - **A wrong exhaustive switch.** An enum switch rewritten to the new convention must keep the old arm's behaviour for every member that can occur. Option B of item 14 (an
   empty `Ordinary` case) would silently drop ordinary folders; it must not appear.
+- **A burst of errors.** An exception repeated on every 250 ms refresh tick must not stack up dialogues: while one notice is open, more errors are not shown.
 
 ---
 
@@ -196,7 +198,7 @@ names are the report file names, as its remarks document.
   - check that the reports match apart from the timestamps and the elapsed time.
 - [ ] **Step 6: Commit.** Use `refactor(♻️): name every enum member in switches and make the default arms unreachable`.
 
-### Task 4: Type locations and `async void` handlers (items 5, 6, 32, 38)
+### Task 4: Type locations, global exception handling and `async void` handlers (items 5, 6, 32, 38; global handler requested 2026-11-08)
 
 **Rulings:**
 
@@ -213,18 +215,50 @@ names are the report file names, as its remarks document.
     - `FileTypeEntryItem`: an `ObservableObject` row of the editor, the same kind as `ScanFolderItem`, so it stays in `ViewModels/Dialogues/`.
 - **Item 6.** `EditFileTypesAsync` keeps returning `string[]?`, because `null` (cancelled) and `[]` (accepted with every entry removed) mean different things. The *Exclude*
   list may legitimately be emptied. The return's doc comment says so in one sentence.
+- **Global exception handler (the user's request).** Nothing handles unexpected exceptions today. The user's rule: as far as possible nothing crashes the app. An error the app
+  can survive is shown to the user, and the app carries on. One it cannot survive is explained to the user before the app closes.
+  - **Recoverable.** Any exception reaching `Dispatcher.UIThread.UnhandledException`: async `void` continuations, `[ RelayCommand ]` async commands, bindings and timer ticks.
+    It is marked handled and shown in the main window's error dialogue as `Something unexpected went wrong:\n<message>\n\nFile Auditor will carry on.` Any exception
+    reaching `TaskScheduler.UnobservedTaskException` is marked observed and shown the same way, posted to the UI thread.
+  - **Fatal.** Three cases:
+    - an exception reaching `AppDomain.CurrentDomain.UnhandledException` (the runtime ends the process regardless);
+    - one that escapes `StartWithClassicDesktopLifetime`;
+    - an `OutOfMemoryException` on any route.
+
+    These show `File Auditor ran into a problem it cannot recover from and has to close.\n\n<message>` and then the process exits.
+  - The fatal message uses a Win32 `MessageBoxW` through P/Invoke (`user32.dll`, error icon, title `File Auditor`), because it can arrive on any thread, after the
+    dispatcher has died. It is not a package.
+  - **One notice at a time.** While a recoverable notice is open, further errors are dropped, not queued. If showing a notice throws, or there is no main window yet, the
+    Win32 message box is used instead.
+  - **Nothing is written to disk.** The SDD's storage rule forbids writing anything beside the executable or under `%APPDATA%`, so the handler keeps no crash log.
+  - **Where it lives.** One static class, `Startup/UnexpectedErrorHandler.cs`, with:
+    - `Install(IClassicDesktopStyleApplicationLifetime desktop)`, called from `App.OnFrameworkInitializationCompleted`;
+    - `ReportRecoverable(Exception exception)`;
+    - `ReportFatalAndExit(Exception exception)`, which `Program.Main` calls from a `try`/`catch` around the lifetime.
 
 **Files:**
+- Create: `Startup/UnexpectedErrorHandler.cs`.
 - Move: the five records above, changing their namespaces, and update `Common/GlobalUsings.cs` if a namespace is new.
-- Modify: `Views/Dialogues/FileTypesDialogueWindow.axaml.cs`, `Views/Groups/ReportView.axaml.cs` and `Services/Dialogues/DialogueService.cs` (the doc line only).
+- Modify:
+  - `Startup/Program.cs` and `Startup/App.axaml.cs`;
+  - `Views/Dialogues/FileTypesDialogueWindow.axaml.cs`, `Views/Groups/ReportView.axaml.cs` and `Views/Tabs/UnindexedFilesTabView.axaml.cs`;
+  - `Services/Dialogues/DialogueService.cs` (the doc line only).
 
 - [ ] **Step 1: Move the records.** Use `git mv`, so each move is a pure rename. Then update each record's namespace.
-- [ ] **Step 2: Wrap the click handlers.** **32 and 38.** Each `async void` handler's body goes inside `try`/`catch (Exception exception)`. The `catch` shows the exception's
-  message in an error `MessageDialogueWindow` owned by the handler's window: for `ReportView`, `TopLevel.GetTopLevel(this) as Window`. If showing that dialogue throws too, the
-  `catch` swallows it, so an `async void` method never lets an exception escape. The dialogue text is `Something went wrong:\n<message>`.
-- [ ] **Step 3: Build and run.** Build with 0 warnings. Open the File Types editor, then accept it, cancel it, and accept it with an invalid entry. Open the report folder Browse
-  dialogue and cancel it, without reading its tree.
-- [ ] **Step 4: Commit.** Use `refactor(♻️): move the plain records to Models and guard the async click handlers`.
+- [ ] **Step 2: Write `UnexpectedErrorHandler`.** Install it from `App` and `Program` as ruled above.
+- [ ] **Step 3: Wrap the click handlers.** **32 and 38.** All three `async void` handlers get a `try`/`catch (Exception exception)` around their body:
+  `FileTypesDialogueWindow.OnOkClick`, `ReportView.OnBrowseClick` and `UnindexedFilesTabView.OnAddClick`. The `catch` calls
+  `UnexpectedErrorHandler.ReportRecoverable(exception)`, so no `async void` method lets an exception escape.
+- [ ] **Step 4: Build and run.** Build with 0 warnings. Then:
+  - Open the File Types editor, and accept it, cancel it, and accept it with an invalid entry.
+  - Open the report folder Browse dialogue and the Add folder dialogue, and cancel each without reading its tree.
+- [ ] **Step 5: Exercise the handler.** Make each check below with a temporary source edit, then revert the edit. Screenshot each message, and confirm with `git diff` that nothing
+  is left behind.
+  - (a) A throw inside the Stop command while idle, through its menu item. The recoverable notice appears, and after OK the app still works.
+  - (b) A throw in the audit refresh tick. One notice appears, not a stack of them, and the app carries on.
+  - (c) A throw on a plain background `Thread`. The fatal message appears, and the process then exits.
+  - (d) A throw in `App.OnFrameworkInitializationCompleted`. The fatal message appears.
+- [ ] **Step 6: Commit.** Use `feat(✨): add a global exception handler, move the plain records to Models and guard the async click handlers`.
 
 ### Task 5: XAML inspections (items 33–44)
 
@@ -291,7 +325,9 @@ names are the report file names, as its remarks document.
   - The enums now live in `Common/Constants/<Area>/` with plural names, and the folder list must say so; today it still places them in `Models/` and `ViewModels/Dialogues/`.
   - Record the moved records, `ProjectFile`/`ProjectFileFolder` and the static services.
   - Rename the singular type names it quotes: `AuditDirection` → `AuditDirections`, `DialogueChoice` → `DialogueChoices`, and so on.
-- [ ] **Step 2: Update §8.** A `null` value of any kind falls back to its default, field by field.
+- [ ] **Step 2: Update §8 and §9.**
+  - In §8, a `null` value of any kind falls back to its default, field by field.
+  - In §9 *Errors*, describe the global exception handler: which exceptions are recoverable and which are fatal, both message texts, one notice at a time, and no crash log.
 - [ ] **Step 3: Update §12.** Record the conventions:
   - doc comments on **every** type and member;
   - no pointers to design documents in code;
