@@ -94,19 +94,19 @@ this plan must leave room for its second tab but builds none of it. The master S
   - `MainWindowViewModel`: `ReportLocation : ReportLocationState`, `MissingFiles : MissingFilesTabViewModel`, `SelectedTabIndex : int`, `StatusAudit :
     AuditViewModel` (the running tab's Audit while one runs, else the selected tab's). Existing commands keep their names.
 
-- [ ] **Step 1: Move the checkbox.** *Report empty files as missing* leaves `FileIndexTableViewModel` / `FileIndexTableView` for the Missing Files tab's **Options**
+- [x] **Step 1: Move the checkbox.** *Report empty files as missing* leaves `FileIndexTableViewModel` / `FileIndexTableView` for the Missing Files tab's **Options**
   group. The File Index Table group keeps Table, Path column, ID column.
-- [ ] **Step 2: Split the Report group.** Shared values in `ReportLocationState` (one instance, owned by `MainWindowViewModel`); `ReportViewModel` per direction,
+- [x] **Step 2: Split the Report group.** Shared values in `ReportLocationState` (one instance, owned by `MainWindowViewModel`); `ReportViewModel` per direction,
   holding only its file name and computing `Location`, `FileName` and `Current` from the shared state plus its direction. `ReportView.axaml` keeps its look and
   binds through `Shared` for the shared controls. The untick warning (milestone 2) keeps watching `SaveProjectSettings`, now on the shared state.
-- [ ] **Step 3: The tab.** `MissingFilesTabView` stacks the Options group, `ReportView` and `AuditView`. `MainWindow.axaml` replaces the old Report and Audit groups
+- [x] **Step 3: The tab.** `MissingFilesTabView` stacks the Options group, `ReportView` and `AuditView`. `MainWindow.axaml` replaces the old Report and Audit groups
   with a `TabControl` (bound to `SelectedTabIndex`) holding one `TabItem` `Missing Files`. The Database and File Index Table groups stay above it.
-- [ ] **Step 4: Routing.** `Snapshot()` / `Load` go through `ReportLocation`, `FileIndexTable`, `Database` and `MissingFiles`. Start and View Report use the
+- [x] **Step 4: Routing.** `Snapshot()` / `Load` go through `ReportLocation`, `FileIndexTable`, `Database` and `MissingFiles`. Start and View Report use the
   selected tab's report and Audit; Stop and the status bar (`StatusAudit`) use the running audit while one runs, otherwise the selected tab's; each tab keeps its
   own last-run status for the idle text (spec §3.3–§3.4). With one tab every route resolves to Missing Files, but write it per direction so milestone 4 only adds
   a tab.
-- [ ] **Step 5:** Keep `IsEditable`, the busy gate and save-on-close behaviour unchanged; `AuditView`'s `$parent[Window]` command bindings still resolve.
-- [ ] **Step 6: Verify.** Clean build. In the running app (UI Automation):
+- [x] **Step 5:** Keep `IsEditable`, the busy gate and save-on-close behaviour unchanged; `AuditView`'s `$parent[Window]` command bindings still resolve.
+- [x] **Step 6: Verify.** Clean build. In the running app (UI Automation):
   - The window shows Database, File Index Table, then the tab control with *Missing Files* (Options, Report, Audit), then the status bar; screenshot it.
   - Change project folder, stage, custom flag, custom location: Location/File name update as before; File name stays the missing report's.
   - Save a project (Start or close with the box ticked), *Close project*, *Open project...* it again: every value returns, including *Report empty files*.
@@ -114,7 +114,7 @@ this plan must leave room for its second tab but builds none of it. The master S
   - F5 starts, Ctrl+R views the report, Esc stops; access keys are unique (list every `_` key on the window).
   - Real run on LocalDB: create a scratch database with a small index table (a few existing and missing files under the scratch folder), run, and check the report
     title and name, and that the body matches milestone 2's layout. Stop mid-run and close mid-run still behave as before. Drop the scratch database.
-- [ ] **Step 7: Commit** — `feat(✨): put the missing-files audit in a tab with a shared report location`.
+- [x] **Step 7: Commit** — `feat(✨): put the missing-files audit in a tab with a shared report location`.
 
 ### Task 3: Help Topics
 

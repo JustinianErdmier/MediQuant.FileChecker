@@ -15,7 +15,7 @@
     <ct:GroupBox Header="File Index Table"
                  Margin="4,2">
         <Grid ColumnDefinitions="92,*,Auto"
-              RowDefinitions="Auto,Auto,Auto,Auto"
+              RowDefinitions="Auto,Auto,Auto"
               RowSpacing="6"
               Margin="4">
             <Label Content="_Table:"
@@ -48,10 +48,6 @@
                        Margin="6,0,0,0"
                        VerticalAlignment="Center"
                        Foreground="#404040" />
-            <CheckBox Grid.Row="3"
-                      Grid.ColumnSpan="3"
-                      Content="Report empt_y (zero-byte) files as missing"
-                      IsChecked="{Binding ReportEmptyFiles}" />
         </Grid>
     </ct:GroupBox>
 </UserControl>

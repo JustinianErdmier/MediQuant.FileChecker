@@ -5,6 +5,7 @@
                xmlns:cc="clr-namespace:Classic.CommonControls;assembly=Classic.CommonControls.Avalonia"
                xmlns:vm="clr-namespace:FileAuditor.ViewModels.Main"
                xmlns:groups="clr-namespace:FileAuditor.Views.Groups"
+               xmlns:tabs="clr-namespace:FileAuditor.Views.Tabs"
                mc:Ignorable="d"
                d:DesignWidth="480"
                d:DesignHeight="640"
@@ -56,9 +57,9 @@
                 </ItemsPanelTemplate>
             </cc:StatusBar.ItemsPanel>
             <cc:StatusBarItem DockPanel.Dock="Right"
-                              Content="{Binding Audit.StatusPercent}"
+                              Content="{Binding StatusAudit.StatusPercent}"
                               Width="60" />
-            <cc:StatusBarItem Content="{Binding Audit.StatusMessage}" />
+            <cc:StatusBarItem Content="{Binding StatusAudit.StatusMessage}" />
         </cc:StatusBar>
         <StackPanel Margin="4"
                     Spacing="2">
@@ -66,9 +67,12 @@
                                  IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
             <groups:FileIndexTableView DataContext="{Binding FileIndexTable}"
                                        IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
-            <groups:ReportView DataContext="{Binding Report}"
-                               IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsEditable}" />
-            <groups:AuditView DataContext="{Binding Audit}" />
+            <TabControl SelectedIndex="{Binding SelectedTabIndex}"
+                        Margin="4,2">
+                <TabItem Header="Missing Files">
+                    <tabs:MissingFilesTabView DataContext="{Binding MissingFiles}" />
+                </TabItem>
+            </TabControl>
         </StackPanel>
     </DockPanel>
 </ClassicWindow>

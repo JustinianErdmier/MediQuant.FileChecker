@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ct="clr-namespace:Classic.Avalonia.Theme.Controls;assembly=Classic.Avalonia.Theme"
+             xmlns:vm="clr-namespace:FileAuditor.ViewModels.Tabs"
+             xmlns:mainVm="clr-namespace:FileAuditor.ViewModels.Main"
+             xmlns:groups="clr-namespace:FileAuditor.Views.Groups"
+             mc:Ignorable="d"
+             d:DesignWidth="480"
+             d:DesignHeight="470"
+             x:Class="FileAuditor.Views.Tabs.MissingFilesTabView"
+             x:DataType="vm:MissingFilesTabViewModel">
+    <Design.DataContext>
+        <vm:MissingFilesTabViewModel />
+    </Design.DataContext>
+    <StackPanel Spacing="2">
+        <ct:GroupBox Header="Options"
+                     Margin="4,2"
+                     IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable}">
+            <CheckBox Margin="4"
+                      Content="Report empt_y (zero-byte) files as missing"
+                      IsChecked="{Binding ReportEmptyFiles}" />
+        </ct:GroupBox>
+        <groups:ReportView DataContext="{Binding Report}"
+                           IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable}" />
+        <groups:AuditView DataContext="{Binding Audit}" />
+    </StackPanel>
+</UserControl>

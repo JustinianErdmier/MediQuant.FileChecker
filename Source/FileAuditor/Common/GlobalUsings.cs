@@ -50,6 +50,8 @@ global using FileAuditor.ViewModels.About;
 global using FileAuditor.ViewModels.Dialogues;
 global using FileAuditor.ViewModels.Groups;
 global using FileAuditor.ViewModels.Main;
+global using FileAuditor.ViewModels.Tabs;
 global using FileAuditor.Views.About;
 global using FileAuditor.Views.Dialogues;
 global using FileAuditor.Views.Main;
+global using FileAuditor.Views.Tabs;

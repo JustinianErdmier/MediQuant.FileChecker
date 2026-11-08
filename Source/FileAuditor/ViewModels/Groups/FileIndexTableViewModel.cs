@@ -23,10 +23,6 @@ public sealed partial class FileIndexTableViewModel : ObservableObject
     [ ObservableProperty ]
     public partial string PathColumn { get; set; } = "";
 
-    /// <summary>Gets or sets a value indicating whether zero-byte files are reported as missing.</summary>
-    [ ObservableProperty ]
-    public partial bool ReportEmptyFiles { get; set; } = true;
-
     /// <summary>Gets or sets the table name, optionally schema-qualified.</summary>
     [ ObservableProperty ]
     public partial string Table { get; set; } = "";
@@ -39,17 +35,15 @@ public sealed partial class FileIndexTableViewModel : ObservableObject
         {
             Table = Table,
             PathColumn = PathColumn,
-            IdColumn = IdColumn,
-            ReportEmptyFiles = ReportEmptyFiles
+            IdColumn = IdColumn
         };
 
     /// <summary>Sets this group's inputs from the given settings.</summary>
     /// <param name="settings">The settings to load.</param>
     public void Load(AppSettings settings)
     {
-        Table            = settings.Table;
-        PathColumn       = settings.PathColumn;
-        IdColumn         = settings.IdColumn;
-        ReportEmptyFiles = settings.ReportEmptyFiles;
+        Table      = settings.Table;
+        PathColumn = settings.PathColumn;
+        IdColumn   = settings.IdColumn;
     }
 }
