@@ -414,22 +414,36 @@ public sealed partial class MainWindowViewModel : ObservableObject
         timer.Tick += (_, _) => Refresh(run, clock, isFinished: false);
         timer.Start();
 
-        (string status, string? error) = await run.ExecuteAsync(cts.Token);
+        string? status = null;
+        string? error  = null;
 
-        timer.Stop();
-        clock.Stop();
-        Refresh(run, clock, isFinished: true);
+        try
+        {
+            (status, error) = await run.ExecuteAsync(cts.Token);
 
-        _auditCts = null;
-        cts.Dispose();
+            timer.Stop();
+            clock.Stop();
+            Refresh(run, clock, isFinished: true);
+        }
+        finally
+        {
+            // The resets always happen, even if the final refresh throws, so the window is never left looking busy. The final status is shown before any error dialogue,
+            // so the window behind it already reads correctly.
+            timer.Stop();
 
-        // The final status is shown before any error dialogue, so the window behind it already reads correctly.
-        _lastRunStatus[direction] = status;
-        audit.StatusMessage       = status;
-        _runningDirection         = null;
-        audit.IsStopEnabled       = false;
-        IsRunning                 = false;
+            _auditCts = null;
+            cts.Dispose();
 
+            if (status is not null)
+            {
+                _lastRunStatus[direction] = status;
+                audit.StatusMessage       = status;
+            }
+
+            _runningDirection   = null;
+            audit.IsStopEnabled = false;
+            IsRunning           = false;
+        }
         if (error is not null)
         {
             await _dialogues.ShowErrorAsync(error);

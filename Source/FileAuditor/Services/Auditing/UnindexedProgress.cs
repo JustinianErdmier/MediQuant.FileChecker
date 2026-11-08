@@ -42,6 +42,9 @@ public sealed class UnindexedProgress
     /// <summary>Starts the scan clock. The runner calls it just before the folder walk begins, after the index is loaded.</summary>
     public void StartScan() => _scanClock = Stopwatch.StartNew();
 
+    /// <summary>Stops the scan clock. The runner calls it as soon as the folder walk ends, so writing the report is not counted as scan time; <see cref="ScanElapsed" /> stays readable.</summary>
+    public void StopScan() => _scanClock?.Stop();
+
     /// <summary>Records one file that was checked against the index.</summary>
     /// <param name="indexed">Whether the file is in the index.</param>
     public void Record(bool indexed)

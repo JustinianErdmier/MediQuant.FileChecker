@@ -17,8 +17,8 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     public partial string Elapsed { get; set; } = "";
 
     /// <summary>
-    ///     Gets or sets the files found per second over the whole run, to a whole number, followed while the run is under way and the warm-up has passed by the recent
-    ///     rate in parentheses; blank until a full second has elapsed.
+    ///     Gets or sets the files found per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up
+    ///     has passed by the recent figure in parentheses; blank until a full second has elapsed. The recent figure is timed from the start of the scan.
     /// </summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = "";

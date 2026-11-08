@@ -106,10 +106,10 @@ the GitHub repository is the user's call, outside this design).
 
 ## 5. The main window
 
-A single, **fixed-size** window: 640 × 651 pixels (outer), not resizable, no maximise button; minimise and close only. Classic.Avalonia supplies the Win9x chrome. The height is
-the minimum the Missing Files tab needs with nothing clipped and no dead space, measured at the current display scale (milestone 4.1); it must be re-measured whenever a group on
-that tab changes. The tab control fills the window's star row (§5.2a), so the size is the same on both tabs and switching tabs never moves the window's edges. Tab order runs
-top to bottom, left to right.
+A single, **fixed-size** window: 640 × 651 pixels (outer), not resizable, no maximise button; minimise and close only. Classic.Avalonia supplies the Win9x chrome. The height is the
+minimum the Missing Files tab needs with nothing clipped and no dead space, measured at the current display scale (milestone 4.1, re-measured in milestone 5); it must be
+re-measured whenever a group on that tab changes. The tab control fills the window's star row (§5.2a), so the size is the same on both tabs and switching tabs never moves the
+window's edges. Tab order runs top to bottom, left to right.
 
 The window holds one audit **direction** per tab (a standard Win9x tab control): **Missing Files**, where every file the index table points to is on disk, and **Unindexed
 Files**, where every file on disk is in the index table. The inputs both directions use (the Database and File Index Table groups, side by side, and the Project Settings group,
@@ -124,7 +124,8 @@ Files**, where every file on disk is in the index table. The inputs both directi
   then *Cancel*).
 - **Ellipsis (`...`)** only on a command that needs more input before it completes (e.g. *Browse...*). A command that acts immediately — including opening a file in
   another program, like *View Report* — has none.
-- **Menus:** *File* ends with *Exit*; *Help* ends with *About File Auditor*. Menu items mirror the buttons and enable and disable with them.
+- **Menus:** *File* ends with *Exit*; *Help* ends with *About File Auditor*. Menu items mirror the buttons and enable and disable with them (except *Stop*, which stays enabled on
+  either tab while an audit runs, §5.8).
 - **Dialogues** are modal, fixed-size, with an icon (error, warning or question) and buttons along the bottom right. A path in dialogue text sits on its own line and
   wraps only after a `\` or `/` separator, never at a space or hyphen inside a folder name (`PathText.Breakable`).
 - **No modern affordances** that Win9x lacked: no rounded corners, no flyouts, no toast notifications, no accent colours, no hamburger menus.
@@ -166,8 +167,8 @@ milestone 4.1's (the Project Settings group, disabled rather than hidden custom-
 │ │ └────────────────────────────────────────────────────────────┘ │ │
 │ │ ┌ Audit ─────────────────────────────────────────────────────┐ │ │
 │ │ │ Total files: 2,450  Missing:    12  Elapsed:      00:02:14 │ │ │
-│ │ │ Checked:     1,230  Unverified: 3   Remaining:    00:02:18 │ │ │
-│ │ │                     Skipped:    41  Files/second: 54 (60)  │ │ │
+│ │ │ Checked:     1,159  Unverified: 3   Remaining:    00:02:18 │ │ │
+│ │ │                     Skipped:    41  Files/second: 9 (9)    │ │ │
 │ │ │ [██████████████████                            ]           │ │ │
 │ │ │ [View Report]                      [Start]  [Stop]         │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
@@ -332,18 +333,18 @@ The Audit group sits at the bottom of its tab, below the Report group; each dire
   **Elapsed**, **Remaining** and **Files/second** on the right. Counts use thousands separators (`N0`); times are `hh:mm:ss`. Blank before the first run.
   - **Checked** is Found + Missing + Unverified and never includes skipped rows (§6.3); **Skipped** is the rows the skip rule passed over. On screen *Total files* is
     `max(count, processed)`, where *processed* is Checked + Skipped, so a table that grew after it was counted never shows Checked + Skipped above Total.
-  - **Files/second** is a whole number (`N0`, culture-aware thousands separators, rounded) and counts checked files only. Its first figure is the whole run's average: files
-    checked divided by **Elapsed** (the span the window shows, counting included); it stays blank until at least one full second has elapsed. Once the 5-second warm-up of
-    checking has passed, and only while the run is under way, the **recent rate** follows in parentheses, as in `54,112 (60,001)`. The recent rate is the rate behind
-    **Remaining**: rows *processed* (skipped rows included) per second of *checking* time, which excludes the counting. The two figures therefore have different bases, on
-    purpose: the first answers "how fast has this run been", the second "how fast is it going now". After the run, the whole-run figure stands alone again. Parentheses
-    rather than a middot: a Win9x dialogue puts a secondary figure in parentheses, and a middot was no Win9x convention.
-  - **Remaining** is `Calculating...` for the first 5 seconds of checking, then the time left at the **recent rate**, an exponentially weighted rate over roughly the last 30
-    seconds (a 30-second time constant) of checking time, counting processed rows. The rate is seeded from the second half of the warm-up (from 2.5 s), so the slow start-up
-    ramp does not drag it down. Between refreshes the display counts down one second per second and eases toward each new estimate with a 3-second time constant, so it
-    neither holds still nor jumps. When the processed count has been unchanged for about 1 second the display holds where it is (no countdown, no easing) instead of running
-    on to zero, while the rate keeps decaying, so a long stall lets Remaining rise when work resumes. The shown value is clamped to 36,000,000 seconds (10,000 hours) so no
-    stall can overflow the format. A table that grew past its count reads `00:00:00`, as does the display when the run ends.
+  - **Files/second** is a whole number (`N0`, culture-aware thousands separators, rounded). Its first figure counts checked files only: the whole run's average, files checked
+    divided by **Elapsed** (the span the window shows, counting included); it stays blank until at least one full second has elapsed. Once the 5-second warm-up of checking has
+    passed, and only while the run is under way, the **recent rate** follows in parentheses, as in `54,112 (60,001)`. The recent rate is the rate behind **Remaining**: rows
+    *processed* (skipped rows included) per second of *checking* time, which excludes the counting. The two figures therefore have different bases, on purpose: the first answers
+    "how fast has this run been", the second "how fast is it going now". After the run, the whole-run figure stands alone again. Parentheses rather than a middot: a Win9x dialogue
+    puts a secondary figure in parentheses, and a middot was no Win9x convention.
+  - **Remaining** is `Calculating...` while the rows are counted and for the first 5 seconds of checking, then the time left at the **recent rate**, an exponentially weighted rate
+    over roughly the last 30 seconds (a 30-second time constant) of checking time, counting processed rows. The rate is seeded from the second half of the warm-up (from 2.5 s), so
+    the slow start-up ramp does not drag it down. Between refreshes the display counts down one second per second and eases toward each new estimate with a 3-second time constant,
+    so it neither holds still nor jumps. When the processed count has been unchanged for about 1 second the display holds where it is (no countdown, no easing) instead of running
+    on to zero, while the rate keeps decaying, so a long stall lets Remaining rise when work resumes. The shown value is clamped to 36,000,000 seconds (10,000 hours) so no stall
+    can overflow the format. A table that grew past its count reads `00:00:00`, as does the display when the run ends.
 - A progress bar (percentage of rows processed: checked and skipped).
 - A row of command buttons: **View Report** left-justified; **Start** then **Stop** right-justified. There is no Close button.
 
@@ -374,10 +375,11 @@ its next run starts. Each tab keeps its own last result.
 
 ### 5.6 Menu bar
 
-- **File**: **Open project...** (access key P), **Close project** (access key C), separator, **Start** (F5), **Stop** (Esc), **View Report** (Ctrl+R), separator,
-  **Exit** (Alt+F4). Start, Stop and View Report enable and disable with their buttons. *Open project...* and *Close project* have no button; they are disabled while an
-  audit is running and while Start, *Open project...* or *Close project* is in progress (§5.8). **Start** and **View Report** (and F5, Ctrl+R) act on the **selected
-  tab's** audit and follow that tab's buttons. **Stop** (and Esc) acts on the **running** audit, whichever tab is selected.
+- **File**: **Open project...** (access key P), **Close project** (access key C), separator, **Start** (F5), **Stop** (Esc), **View Report** (Ctrl+R), separator, **Exit** (Alt+F4).
+  Start and View Report enable and disable with the selected tab's buttons; Stop is enabled whenever an audit runs, even on a tab whose own Stop button is disabled (§5.8). *Open
+  project...* and *Close project* have no button; they are disabled while an audit is running and while Start, *Open project...* or *Close project* is in progress (§5.8). **Start**
+  and **View Report** (and F5, Ctrl+R) act on the **selected tab's** audit and follow that tab's buttons. **Stop** (and Esc) acts on the **running** audit, whichever tab is
+  selected.
 - **Help**: **Help Topics** (access key H, shortcut F1), separator, **About File Auditor**. *Help Topics* opens the File Auditor user guide, a wiki article, in the default
   browser by shell execute. The article's address is one hard-coded constant, `HelpLinks.UserGuideUrl`, which is an empty string until the article exists; while it is
   empty, the item and F1 are disabled.
@@ -955,11 +957,11 @@ Settled by the build (milestone 1), with no change in behaviour (milestone 4's a
   modal, fixed-size, centred on its owner, buttons along the bottom right.
 - **Number and time formatting in the report:** counts are formatted `N0` with the invariant culture, so reports diff identically on any machine; elapsed time is shown in
   total hours (at least two digits), not rolled over into days.
-- **Window size and access keys (milestone 4, size revised in 4.1):** the window is 640 × 651 pixels (outer), measured at the current display scale (668 until milestone 5, which
-  cut the Audit group from four rows to three; revised in 4.1 and 5); the tab control fills the remaining row. On the Unindexed tab, *File t_ypes:* is `Y` and *E_xclude:* is `X`;
-  *Add...*, *Remove*, both *Edit...* buttons and the *Group file types by* radios carry none, because every letter is taken. In the File Types dialogue *New*, *Edit*, *Delete* and
-  *Clear* (milestone 4.1) and *Reset* are `N`, `E`, `D`, `L` and `R`, and *OK* and *Cancel* carry none. In the Project Settings group the checkbox's access key is `G`; its label no
-  longer says *with the report*, which the status message covers.
+- **Window size and access keys (milestone 4, size revised in 4.1 and 5):** the window is 640 × 651 pixels (outer), measured at the current display scale (668 until milestone 5,
+  which cut the Audit group from four rows to three); the tab control fills the remaining row. On the Unindexed tab, *File t_ypes:* is `Y` and *E_xclude:* is `X`; *Add...*,
+  *Remove*, both *Edit...* buttons and the *Group file types by* radios carry none, because every letter is taken. In the File Types dialogue *New*, *Edit*, *Delete* and *Clear*
+  (milestone 4.1) and *Reset* are `N`, `E`, `D`, `L` and `R`, and *OK* and *Cancel* carry none. In the Project Settings group the checkbox's access key is `G`; its label no longer
+  says *with the report*, which the status message covers.
 - **Concurrency and memory (milestone 4):** up to 16 folder listings at once; index paths held as 128-bit MD5 hashes (§6.5.2); the statistics refresh every 250 ms.
 - **Progress bar (milestone 4):** the Unindexed audit's moving block (§5.4a) is drawn by the view from a timer-driven column split, because the theme's marquee has a blank gap.
 - **Full-path validation:** a path is accepted as absolute only if `Path.IsPathFullyQualified` says so, so `C:x` and `\x` (which would resolve against the application's
@@ -984,10 +986,11 @@ Settled by the build (milestone 1), with no change in behaviour (milestone 4's a
   XAML file declares `x:DataType`.
 - **Designer constructors:** view models expose a parameterless constructor for the XAML designer only, built from `AppSettings.Default` and parameterless concrete
   services. No interfaces are introduced just for the designer.
-- **View composition pair rule:** every public `*ViewModel` has a sibling `*View.axaml` under the parallel `Views/…` folder, and vice versa. Windows are the exception
-  to the `*View` suffix: `MainWindow`, `AboutWindow`, `MessageDialogueWindow` and `FileTypesDialogueWindow` pair with `MainWindowViewModel`, `AboutWindowViewModel`,
+- **View composition pair rule:** every public `*ViewModel` has a sibling `*View.axaml` under the parallel `Views/…` folder, and vice versa. Windows are the exception to the
+  `*View` suffix: `MainWindow`, `AboutWindow`, `MessageDialogueWindow` and `FileTypesDialogueWindow` pair with `MainWindowViewModel`, `AboutWindowViewModel`,
   `MessageDialogueViewModel` and `FileTypesDialogueViewModel`. State a view model needs but that has no view of its own is not named `*ViewModel` (`ReportLocationState`,
-  `AuditStatusBase`, `ScanFolderItem`, `FileTypeEntryItem`). The Project Settings group follows the rule: `ProjectSettingsViewModel` ↔ `ProjectSettingsView`.
+  `RecentRate`, `RemainingEstimator`, `TimeText`, `AuditStatusBase`, `ScanFolderItem`, `FileTypeEntryItem`). The Project Settings group follows the rule: `ProjectSettingsViewModel`
+  ↔ `ProjectSettingsView`.
 - **User-data writes** (settings, the report) use a temp file + `File.Move(overwrite: true)`, never an in-place write.
 - **Never `File.Exists` / `Directory.Exists` inside the audit check** (§6.3): they turn "couldn't check" into "missing". Pre-flight checks of the report folder may
   use them.

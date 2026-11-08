@@ -28,7 +28,7 @@ The five requests that drive the milestone (2026-11-08):
 Also decided by the user, after the first incident (below): the **file-safety rule**. Never touch operating-system or program locations, not even to read; every folder or
 file the app is given is under the scratch folder, except that a test needing many real files may scan the user's OneDrive or Google Drive read-only, reading only the
 statistics and deleting the report unread; file and folder dialogues are driven only through UI Automation patterns, never by keystrokes, never by reading their folder view.
-It is in `common-rules.md` as a binding rule.
+It is in the run's common rules (kept outside the repository) as a binding rule.
 
 The user also asked whether a hung server times out (answered: it does; the crash they had seen needed about ten minutes of no progress, for instance a server that accepts the
 connection and then stops answering, or SQL blocking the read).
@@ -86,12 +86,8 @@ Decisions taken without the user, each with what it costs if wrong.
 
 ## Outstanding items
 
-For the final fix wave (before the pull request):
+Left as it is (design-time only):
 
-- The `FilesPerSecond` XML docs on the Missing view model say "to/as a whole number" with no mention of separators; make them consistent.
-- The `FilesPerSecond` XML doc on the Unindexed view model should say the recent rate is timed from the scan start.
-- `RunAuditAsync`'s resets are not in a `try/finally` (an existing exposure, not made worse here).
-- The scan clock is never stopped after the walk (cosmetic: the bracket is hidden once the run has finished).
 - The `d:DesignHeight` values of the two audit views (153 and 106) were computed, not measured.
 
 For the user:
@@ -117,7 +113,7 @@ Revisit when something changes:
     and no settings file was saved.
   - The controller closed the app (started by the implementer) and dropped the scratch database. Uncommitted Task 4 edits remained in six files and were kept.
   - Cause: the common rules forbade filesystem-wide searches but not pointing the app at system or personal folders. Rules added since: the file-safety rules (above) in
-    `common-rules.md`; the Task 4 implementer was re-dispatched fresh under them.
+    the run's common rules (kept outside the repository); the Task 4 implementer was re-dispatched fresh under them.
 - **Incident 2 (Task 4 re-dispatch).** The new implementer looked up dialogue controls by AutomationId `1` and `2`, which matched two folder-view items, and again saw the
   **same two folder names in a private folder**. It stopped driving the dialogue and recorded nothing else. It had also enumerated the dialogue's column-header and toolbar
   button names.
@@ -153,9 +149,10 @@ Revisit when something changes:
 
 ## Commits
 
-`git log --oneline fa043a4..HEAD`, newest first (the plan itself is `fa043a4`; the Task 5 documentation commit follows these):
+`git log --oneline fa043a4..HEAD`, newest first (the plan itself is `fa043a4`; the fix-wave commit after `eee5904` follows these):
 
 ```
+eee5904 docs(📝): sync the SDD with skipped rows and the run statistics and close the milestone 5 ledger
 f5cfa4f fix(🐛): time the Unindexed recent rate from the start of the scan
 bd60580 refactor(♻️): share the time formatter and soften the Remaining hold
 ae55f30 feat(✨): show the statistics in three columns with the recent rate beside Files/second
@@ -171,4 +168,7 @@ fe7d470 feat(✨): skip index rows marked SKIP or SKIPPED in the missing-files a
 
 ## Final review
 
-Pending.
+The final whole-branch review found no Critical findings. It found one Important finding, the stale SDD text that said the menu items enable and disable with their buttons (*Stop*
+is the exception, §5.8), and 8 minors. All were fixed in the fix-wave commit after `eee5904`, together with the minors parked above: the `FilesPerSecond` XML docs now agree, the
+Unindexed one says its recent figure is timed from the start of the scan, the scan clock stops when the walk ends, `RunAuditAsync` resets in a `finally`, and the Audit group reads
+`Checked` and `Skipped` once per refresh so Checked + Skipped never exceeds Total on screen.
