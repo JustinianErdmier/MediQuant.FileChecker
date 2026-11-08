@@ -111,9 +111,9 @@ The user's request, verbatim in substance:
 **Files:** Modify `Docs/Specs/1-file-auditor-master-design.md`, this plan (tick boxes), `MediQuant.FileAuditor.slnx`; Create
 `Docs/Ledgers/Epic-1-MVP/milestone-4.1-ledger.md`
 
-- [ ] **Step 1:** Amend the SDD: §5 window diagram and size, the Project Settings group and its messages, §5.3 (options disabled, not hidden, under Custom — and
+- [x] **Step 1:** Amend the SDD: §5 window diagram and size, the Project Settings group and its messages, §5.3 (options disabled, not hidden, under Custom — and
   remove milestone 4's "hidden" wording everywhere), the folders list, the editors' Clear button, the scrolling Unindexed tab, §9 (new view pair), §12 (pair list).
-- [ ] **Step 2:** Write the ledger (rulings, user decisions, plan defects, outstanding items, incidents, not exercised, commits, final review "Pending.").
-- [ ] **Step 3: Verify** — clean build; Markdown prose ≤ 180 characters; every file under `Docs/` is in the `.slnx` (this plan and the ledger after milestone 4's,
+- [x] **Step 2:** Write the ledger (rulings, user decisions, plan defects, outstanding items, incidents, not exercised, commits, final review "Pending.").
+- [x] **Step 3: Verify** — clean build; Markdown prose ≤ 180 characters; every file under `Docs/` is in the `.slnx` (this plan and the ledger after milestone 4's,
   in milestone order).
-- [ ] **Step 4: Commit** — `docs(📝): sync the SDD with the layout follow-up and close the milestone 4.1 ledger`.
+- [x] **Step 4: Commit** — `docs(📝): sync the SDD with the layout follow-up and close the milestone 4.1 ledger`.

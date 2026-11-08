@@ -106,12 +106,14 @@ the GitHub repository is the user's call, outside this design).
 
 ## 5. The main window
 
-A single, **fixed-size** window: 640 × 761 pixels, not resizable, no maximise button; minimise and close only. Classic.Avalonia supplies the Win9x chrome. The size is the
-same on both tabs (the tab control has a fixed height, §5.2a), so switching tabs never moves the window's edges. Tab order runs top to bottom, left to right.
+A single, **fixed-size** window: 640 × 672 pixels (outer), not resizable, no maximise button; minimise and close only. Classic.Avalonia supplies the Win9x chrome. The height is
+the minimum the Missing Files tab needs with nothing clipped and no dead space, measured at the current display scale (milestone 4.1); it must be re-measured whenever a group on
+that tab changes. The tab control fills the window's star row (§5.2a), so the size is the same on both tabs and switching tabs never moves the window's edges. Tab order runs
+top to bottom, left to right.
 
 The window holds one audit **direction** per tab (a standard Win9x tab control): **Missing Files**, where every file the index table points to is on disk, and **Unindexed
-Files**, where every file on disk is in the index table. The inputs both directions use (the Database and File Index Table groups, side by side) stay above the tabs; the
-Report group is shown on every tab and its values are shared (§5.3).
+Files**, where every file on disk is in the index table. The inputs both directions use (the Database and File Index Table groups, side by side, and the Project Settings group,
+§5.3a) stay above the tabs; the Report group is shown on every tab and its values are shared (§5.3).
 
 **Win9x conventions.** Every window looks and behaves like a native Windows 95/98 utility:
 
@@ -133,7 +135,8 @@ with the tab control (including milestone 4's *Unindexed Files* tab), [`main-win
 default for Audit Stage, and the last two predate the tab control, the per-direction report names, the *Options* group, the final Report-file rows, the access keys, the *Audit*
 group (named *Progress* there), and the project settings (the *Save project settings with the report* checkbox and the *Open project...* and *Close project* menu items,
 milestone 2). All of them predate milestone 4's final layout (the Database and File Index Table groups side by side, the fixed tab height, the compact Unindexed tab and the File
-Types dialogue), and they are kept as historical references, not refreshed. The XAML and this section are the contract.
+Types dialogue) and milestone 4.1's (the Project Settings group, disabled rather than hidden custom-location options, the right-hand *Include subfolders* column and the fixed
+672-pixel height), and they are kept as historical references, not refreshed. The XAML and this section are the contract.
 
 ```text
 ┌ File Auditor ───────────────────────────────────────────────── _ × ┐
@@ -143,6 +146,10 @@ Types dialogue), and they are kept as historical references, not refreshed. The 
 │ │ Database: [                ] │ │ Path column: [               ]│ │
 │ │                              │ │ ID column:   [        ] (Opt.)│ │
 │ └──────────────────────────────┘ └───────────────────────────────┘ │
+│ ┌ Project Settings ──────────────────────────────────────────────┐ │
+│ │ [x] Save project settings with the report                      │ │
+│ │ Saved as FileAuditorSettings.json in the same folder as the .. │ │
+│ └────────────────────────────────────────────────────────────────┘ │
 │  ┌─────────────┐ Unindexed Files                                   │
 │ ┌┘Missing Files└─────────────────────────────────────────────────┐ │
 │ │ ┌ Options ───────────────────────────────────────────────────┐ │ │
@@ -156,7 +163,6 @@ Types dialogue), and they are kept as historical references, not refreshed. The 
 │ │ │ └──────────────────────────┘ └──────────────────────────┘  │ │ │
 │ │ │ Location:    [U:\Projects\D12345\DE\Final\]  Browse...     │ │ │
 │ │ │ File name:   [FileAuditorMissingReport_Interim.txt]        │ │ │
-│ │ │ [x] Save project settings with the report                  │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
 │ │ ┌ Audit ─────────────────────────────────────────────────────┐ │ │
 │ │ │ Total files: 124,500    Elapsed:      00:02:14             │ │ │
@@ -182,13 +188,17 @@ The diagram shows the Missing Files tab with the Report group in its built state
 │ │ Database: [                ] │ │ Path column: [               ]│ │
 │ │                              │ │ ID column:   [        ] (Opt.)│ │
 │ └──────────────────────────────┘ └───────────────────────────────┘ │
+│ ┌ Project Settings ──────────────────────────────────────────────┐ │
+│ │ [x] Save project settings with the report                      │ │
+│ │ Saved as FileAuditorSettings.json in the same folder as the .. │ │
+│ └────────────────────────────────────────────────────────────────┘ │
 │  Missing Files  ┌───────────────┐                                  │
 │ ┌──────────────┘Unindexed Files└─────────────────────────────────┐ │
 │ │ ┌ Folders to Check ──────────────────────────────────────────┐ │ │
-│ │ │ Include subfolders   Folder                                │ │ │
+│ │ │ Folder                              Include subfolders     │ │ │
 │ │ │ ┌──────────────────────────────────────┐ ┌──────────┐      │ │ │
-│ │ │ │ [x]  U:\Projects\D12345\Images       │ │ Add...   │      │ │ │
-│ │ │ │ [ ]  U:\Projects\D12345\Scans        │ │ Remove   │      │ │ │
+│ │ │ │ U:\Projects\D12345\Images        [x] │ │ Add...   │      │ │ │
+│ │ │ │ U:\Projects\D12345\Scans         [ ] │ │ Remove   │      │ │ │
 │ │ │ └──────────────────────────────────────┘ └──────────┘      │ │ │
 │ │ │ File types: [.bmp .doc .docx .eml .gif ..   ]  [ Edit... ] │ │ │
 │ │ │ Exclude:    [                              ]  [ Edit... ]  │ │ │
@@ -202,7 +212,6 @@ The diagram shows the Missing Files tab with the Report group in its built state
 │ │ │ Location:    [U:\Projects\D12345\DE\Final\]  Browse...     │ │ │
 │ │ │ File name:   [FileAuditorUnindexedReport_Interim.txt]      │ │ │
 │ │ │ Group file types by: (•) Listed type  ( ) Found extension  │ │ │
-│ │ │ [x] Save project settings with the report                  │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
 │ │ ┌ Audit ─────────────────────────────────────────────────────┐ │ │
 │ │ │ Total files: 48,207     Elapsed:      00:01:29             │ │ │
@@ -217,7 +226,8 @@ The diagram shows the Missing Files tab with the Report group in its built state
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-With *Use a custom report location and file name* ticked, the Report group hides its Project folder row and both stage groups on either tab (§5.3).
+With *Use a custom report location and file name* ticked, the Report group keeps its Project folder row and both stage groups visible but disabled on either tab (§5.3).
+The Unindexed Files tab's content scrolls vertically when it is taller than the tab (§5.2b).
 
 ### 5.1 Database group
 
@@ -233,13 +243,15 @@ With *Use a custom report location and file name* ticked, the Report group hides
   row, so no ID. On the Unindexed Files tab it stays editable and is still saved with the project.
 
 The Database and File Index Table groups sit **side by side**, Database on the left and File Index Table on the right, each with its fields stacked vertically, and stay above
-the tab control. They are used by every direction. (The side-by-side placement is a trial the user may reverse.)
+the tab control, with the Project Settings group (§5.3a) full-width beneath them. They are used by every direction. (The side-by-side placement is a trial the user may
+reverse.)
 
 ### 5.2a Tab control and Options group
 
-- A standard Win9x **tab control** sits below those two groups, one tab per audit direction: **Missing Files** and **Unindexed Files**. Its height is fixed (575 pixels), tall
-  enough for the taller Unindexed tab, so the window does not change size when the tab changes. The selected tab is not saved; the window opens on the first tab. Switching
-  tabs is allowed while an audit runs.
+- A standard Win9x **tab control** sits below those two groups, one tab per audit direction: **Missing Files** and **Unindexed Files**. It fills the window's remaining
+  (star) row, so its height is whatever the fixed 672-pixel window leaves (§5), which is the Missing Files tab's content height; the window does not change size when the tab
+  changes. The Unindexed Files tab is taller, so its content sits in a scroll viewer that scrolls vertically when needed and never horizontally. The selected tab is not
+  saved; the window opens on the first tab. Switching tabs is allowed while an audit runs.
 - The Missing Files tab holds, top to bottom: an **Options** group, the **Report** group (§5.3) and the **Audit** group (§5.4).
 - **Options** holds **Report empty (zero-byte) files as missing**: checkbox, checked by default. When ticked, an existing file of length 0 counts as *missing (empty)*. It
   applies to the missing-files direction only, which is why it is not in the shared File Index Table group.
@@ -250,8 +262,10 @@ The tab holds, top to bottom, the **Folders to Check** group, the **Report** gro
 
 **Folders to Check** holds:
 
-- A list of folders, one per row. Each row has an **Include subfolders** checkbox in a column at the row's left, ticked for a newly added folder, and the folder's path beside
-  it (cut with an ellipsis when long, the whole path in a tooltip). The list scrolls vertically only and is about as tall as the two buttons beside it.
+- A list of folders, one per row. Each row has the folder's path at the left (cut with an ellipsis when long, the whole path in a tooltip) and an **Include
+  subfolders** checkbox in a fixed 110-pixel column at the row's right, ticked for a newly added folder; the header row above the list names the two columns. The path is
+  truncated, never the checkbox, so the checkbox is always visible. The list never scrolls horizontally; its vertical scroll bar is always shown, and the header keeps a
+  16-pixel right margin (the bar's width) so the header and rows line up. The list is about as tall as the two buttons beside it.
 - **Add...** and **Remove**, stacked to the right of the list. *Add...* opens a folder picker (directories only) and appends the chosen folder, selecting it; a folder already
   listed (ignoring case and a trailing separator) is not added a second time. *Remove* removes the selected row and is disabled while no row is selected.
 - **File types:** a read-only, single-line summary of the extension whitelist (sorted, separated by spaces), with an **Edit...** button. A built-in list of 19 common document and
@@ -265,16 +279,16 @@ window (§11).
 
 **File Types dialogue.** Each *Edit...* opens a modal dialogue (`FileTypesDialogueWindow`, titled *Edit File Types* or *Edit Exclude List*; 360 × 300, fixed-size, centred on the
 main window, no maximise) that lists the entries one per row, as Windows' environment-variable editor does, with **New** (adds an empty row and focuses it), **Edit** (focuses the
-selected row), **Delete** (removes the selected row; disabled while none is selected), **Reset** (restores the built-in list; shown for File types only), **OK** and **Cancel**.
-**OK** validates every entry (the syntax of §6.5.1) and, when one is invalid, shows the error and keeps the dialogue open; otherwise the summary shows the normalised entries
-(lower case, one leading dot, duplicates dropped, sorted). **Cancel** discards every change, including a Reset. The Folders to Check group and its buttons are locked while an
-audit runs (§5.8).
+selected row), **Delete** (removes the selected row; disabled while none is selected), **Clear** (`C_lear`, access key `L`; removes every row; disabled while the list is empty;
+placed after *Delete* and before *Reset*), **Reset** (restores the built-in list; shown for File types only), **OK** and **Cancel**. **OK** validates every entry (the syntax of
+§6.5.1) and, when one is invalid, shows the error and keeps the dialogue open; otherwise the summary shows the normalised entries (lower case, one leading dot, duplicates
+dropped, sorted). **Cancel** discards every change, including a Reset. The Folders to Check group and its buttons are locked while an audit runs (§5.8).
 
 ### 5.3 Report group
 
 Each tab shows a complete Report group. Its values are **one set shared by every tab**: change one on a tab and every other tab shows the change. The only per-tab item is
 the **File name**, which belongs to the tab's direction (names are in §4), and, on the Unindexed Files tab only, the **Group file types by** option below it. The *Save project
-settings with the report* checkbox is shared too.
+settings with the report* checkbox lives in the Project Settings group (§5.3a), outside this group, and is shared too.
 
 - **Use a custom report location and file name**: checkbox, unchecked by default. It is the group's first control, because it decides whether the rest apply.
 - **Project folder**: text input with watermark `D12345`.
@@ -287,18 +301,31 @@ settings with the report* checkbox is shared too.
       the tab's built name, `FileAuditorMissingReport_<Audit Stage>.txt` on the Missing Files tab and `FileAuditorUnindexedReport_<Audit Stage>.txt` on the Unindexed Files tab.
       An empty Project folder shows as the literal placeholder
       `<Project Folder>`. **Browse...** is disabled.
-    - *Ticked (custom):* the Project folder row and both stage groups are **hidden**, not disabled, on both tabs, and come back when the box is unticked (the user's decision).
-      Location becomes an editable directory path, empty by default, with **Browse...** opening a *folder* picker (directories only). File name becomes editable, defaulting to
-      the tab's custom default, `FileAuditorMissingReport.txt` on the Missing Files tab and `FileAuditorUnindexedReport.txt` on the Unindexed Files tab; each tab keeps its own
-      custom file name. The two names must differ (§6.1).
-- **Group file types by** (Unindexed Files tab only): two radio buttons, *Listed type* (default) and *Found extension*, on the row above the Save checkbox. It chooses how the
-  unindexed report groups files (§7.1) and is saved in the project file (§8). It belongs to the direction, so the Missing Files tab does not show it.
-- **Save project settings with the report**: checkbox on the group's last row, below *File name*. It is **ticked by default** — on launch, after *Open project...* and after
-  *Close project* — and its state is not stored in the settings file; it is a per-session preference. It is disabled while an audit is running. Ticking it needs no
-  confirmation. **Unticking** first shows a warning dialogue (*"If you untick this box, this project's settings will no longer be saved automatically. You will be asked
-  whether to save them instead. Do you want to untick it?"*) with **Untick** and **Cancel**; *Cancel* leaves the box ticked. Once *Untick* has been chosen the warning is not
-  shown again, and later unticking goes straight through, until *Close project* or a fresh launch. What the box does is set out in §8.
+    - *Ticked (custom):* the Project folder row and both stage groups stay **visible but disabled** on both tabs, and are enabled again when the box is unticked (the user's
+      decision, milestone 4.1, reversing milestone 4's hiding). Location becomes an editable directory path, empty by default, with **Browse...** opening a *folder* picker
+      (directories only). File name becomes editable, defaulting to the tab's custom default, `FileAuditorMissingReport.txt` on the Missing Files tab and
+      `FileAuditorUnindexedReport.txt` on the Unindexed Files tab; each tab keeps its own custom file name. The two names must differ (§6.1).
+- **Group file types by** (Unindexed Files tab only): two radio buttons, *Listed type* (default) and *Found extension*, on the group's last row, below *File name*. It chooses how
+  the unindexed report groups files (§7.1) and is saved in the project file (§8). It belongs to the direction, so the Missing Files tab does not show it.
 
+### 5.3a Project Settings group
+
+A group box headed **Project Settings**, full width, between the Database / File Index Table row and the tab control (`ProjectSettingsView`, owned by the main window, so it is
+the same on both tabs). It holds the *Save project settings with the report* checkbox (access key `W`) and, below it, a wrapping status message. The checkbox's behaviour is
+unchanged from milestone 2:
+
+- It is **ticked by default** — on launch, after *Open project...* and after *Close project* — and its state is not stored in the settings file; it is a per-session preference.
+  It is disabled while an audit is running (the whole group is). Ticking it needs no confirmation. **Unticking** first shows a warning dialogue (*"If you untick this box, this
+  project's settings will no longer be saved automatically. You will be asked whether to save them instead. Do you want to untick it?"*) with **Untick** and **Cancel**;
+  *Cancel* leaves the box ticked. Once *Untick* has been chosen the warning is not shown again, and later unticking goes straight through, until *Close project* or a fresh
+  launch. What the box does is set out in §8.
+- The **status message** is exactly one of:
+    - ticked, and no settings file is open or the open file is in the report folder: `Saved as FileAuditorSettings.json in the same folder as the audit reports.`
+    - ticked, and the open settings file is in a different folder from the report folder: `Saved to the opened settings file, in a different folder from the audit reports.`
+    - unticked: `This project's settings are not being saved.`
+- The folders are compared with the save rule's normalisation (`ProjectSettingsService.SameFolder`, §8.2). An incomplete report location counts as "no mismatch" when no file is
+  open, and as "different" when a file is open. The message is recomputed whenever the checkbox, the report location, the open project (*Open project...*, *Close project*) or
+  the project file's path (a save that moves it) changes.
 ### 5.4 Audit group (Missing Files tab)
 
 The Audit group sits at the bottom of its tab, below the Report group; each direction's tab has its own, so a tab's statistics are those of its own last run.
@@ -794,17 +821,17 @@ XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj
 
 - `Startup/` — `App` and `Program`.
 - `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`, `FileTypesDialogueWindow`), `Groups/` (a `UserControl` per group box:
-  Database, File Index Table, Report, Audit, Unindexed Audit) and `Tabs/` (a `UserControl` per audit direction, the content of a tab: `MissingFilesTabView`,
+  Database, File Index Table, Project Settings, Report, Audit, Unindexed Audit) and `Tabs/` (a `UserControl` per audit direction, the content of a tab: `MissingFilesTabView`,
   `UnindexedFilesTabView`).
 - `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon`, `DialogueChoice`,
-  `FileTypesDialogueViewModel` and its row item `FileTypeEntryItem`), `Groups/` and `Tabs/` (`MissingFilesTabViewModel`, which owns the direction's *Report empty files* option,
-  its `ReportViewModel` and its `AuditViewModel`; `UnindexedFilesTabViewModel`, which owns the folder list, the two file-type summaries, its `ReportViewModel` and its
-  `UnindexedAuditViewModel`). `Groups/` also holds three types that are deliberately not a `*ViewModel` (they have no view of their own): `ReportLocationState`, the Report
-  group's shared values, owned by the main window (each direction's `ReportViewModel` reads it and adds the direction's file name and, for the Unindexed direction, the grouping
-  choice, so the tabs' Report groups cannot drift apart); `AuditStatusBase`, the base of both audit view models and what the status bar binds to (`StatusMessage`,
-  `StatusPercent`); and `ScanFolderItem`, a row of the folder list. `Main/` also holds `AuditRun` and its two subclasses `MissingAuditRun` and `UnindexedAuditRun`, which carry one
-  direction's run (progress object, phase text, refresh, result text) for `MainWindowViewModel`. `MainWindowViewModel` routes Start and View Report to the selected tab's
-  direction and Stop and the status bar to the running one.
+  `FileTypesDialogueViewModel` and its row item `FileTypeEntryItem`), `Groups/` (including `ProjectSettingsViewModel`, which owns the Project Settings group's status message) and
+  `Tabs/` (`MissingFilesTabViewModel`, which owns the direction's *Report empty files* option, its `ReportViewModel` and its `AuditViewModel`; `UnindexedFilesTabViewModel`, which
+  owns the folder list, the two file-type summaries, its `ReportViewModel` and its `UnindexedAuditViewModel`). `Groups/` also holds three types that are deliberately not a
+  `*ViewModel` (they have no view of their own): `ReportLocationState`, the Report group's shared values, owned by the main window (each direction's `ReportViewModel` reads it
+  and adds the direction's file name and, for the Unindexed direction, the grouping choice, so the tabs' Report groups cannot drift apart); `AuditStatusBase`, the base of both
+  audit view models and what the status bar binds to (`StatusMessage`, `StatusPercent`); and `ScanFolderItem`, a row of the folder list. `Main/` also holds `AuditRun` and its two
+  subclasses `MissingAuditRun` and `UnindexedAuditRun`, which carry one direction's run (progress object, phase text, refresh, result text) for `MainWindowViewModel`.
+  `MainWindowViewModel` routes Start and View Report to the selected tab's direction and Stop and the status bar to the running one.
 - `Services/` — `Settings/` (`SettingsStore`, which loads and saves one settings file at a path it is given and never creates a folder; `ProjectSettingsService`, which holds the
   open project's file path and baseline settings and runs the save rule of §8.2 with its prompts, returning a `SavePointResult` that says whether the triggering operation may
   proceed and whether the checkbox is to be ticked; it also remembers the three file-type warning answers of §6.5.1), `Sql/` (connection strings, SQL identifiers, query
@@ -833,8 +860,8 @@ shared file server, and nothing under `%APPDATA%`.
 ## 10. Builder's calls (decided by Claude, not the user)
 
 - Read-only preview of the built report path, with `<placeholders>`; Start disabled until the path is complete. *(shown in mock-up, accepted)*
-- Hiding, rather than disabling, the Project folder row and both stage groups while Custom is ticked, on both tabs. *(shown disabled in the mock-up and accepted; the user
-  changed it to hidden during milestone 4)*
+- Disabling, rather than hiding, the Project folder row and both stage groups while Custom is ticked, on both tabs. *(shown disabled in the mock-up and accepted; the user
+  changed it to hidden during milestone 4 and back to disabled in milestone 4.1)*
 - Pre-flight checks happen on Start, before the database is queried.
 - Report timestamps in local time; sorting by path; UTF-8 without BOM; CRLF.
 - Behaviour on Stop and on mid-run SQL failure (§6.4).
@@ -865,12 +892,12 @@ shared file server, and nothing under `%APPDATA%`.
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
 that failed, found by walking the path (§6.3); the close-mid-run prompt.
 
-Settled with the user for milestone 4: the second direction itself; one or more input folders, each with *Include subfolders* ticked by default; matching on the full path ignoring
-case; the editable extension whitelist and blacklist (the blacklist wins), the glob wildcards, the most-specific rule and the Start-time errors and warnings of §6.5.1; grouping
-by listed type or found extension; no up-front count, so no *Remaining*; and, during the build, the layout: a compact Unindexed tab and a fixed tab height, the *Include
-subfolders* column at the left of the folder list, File types and Exclude shown as read-only summaries edited in the File Types dialogue (with Reset only for File types), a custom
-report location hiding the project folder and stage options, *Unverified* in the first statistics column, and the Database and File Index Table groups side by side (a trial the
-user may reverse).
+Settled with the user for milestone 4: the second direction itself; one or more input folders, each with *Include subfolders* ticked by default; matching on the full path
+ignoring case; the editable extension whitelist and blacklist (the blacklist wins), the glob wildcards, the most-specific rule and the Start-time errors and warnings of §6.5.1;
+grouping by listed type or found extension; no up-front count, so no *Remaining*; and, during the build, the layout: a compact Unindexed tab and a fixed tab height, the *Include
+subfolders* column at the left of the folder list (moved to the right in milestone 4.1), File types and Exclude shown as read-only summaries edited in the File Types dialogue
+(with Reset only for File types), a custom report location hiding the project folder and stage options (disabled instead in milestone 4.1), *Unverified* in the first statistics
+column, and the Database and File Index Table groups side by side (a trial the user may reverse).
 
 ## 11. Left to the builder
 
@@ -886,9 +913,10 @@ Settled by the build (milestone 1), with no change in behaviour (milestone 4's a
   modal, fixed-size, centred on its owner, buttons along the bottom right.
 - **Number and time formatting in the report:** counts are formatted `N0` with the invariant culture, so reports diff identically on any machine; elapsed time is shown in
   total hours (at least two digits), not rolled over into days.
-- **Window size and access keys (milestone 4):** the window is 640 × 761 pixels with a 575-pixel tab control. On the Unindexed tab, *File t_ypes:* is `Y` and *E_xclude:* is `X`;
+- **Window size and access keys (milestone 4, size revised in 4.1):** the window is 640 × 672 pixels (outer), measured at the current display scale; the tab control fills the
+  remaining row. On the Unindexed tab, *File t_ypes:* is `Y` and *E_xclude:* is `X`;
   *Add...*, *Remove*, both *Edit...* buttons and the *Group file types by* radios carry none, because every letter is taken. In the File Types dialogue *New*, *Edit*, *Delete* and
-  *Reset* are `N`, `E`, `D` and `R`, and *OK* and *Cancel* carry none.
+  *Clear* (milestone 4.1) and *Reset* are `N`, `E`, `D`, `L` and `R`, and *OK* and *Cancel* carry none. In the Project Settings group the checkbox's access key is `W`.
 - **Concurrency and memory (milestone 4):** up to 16 folder listings at once; index paths held as 128-bit MD5 hashes (§6.5.2); the statistics refresh every 250 ms.
 - **Progress bar (milestone 4):** the Unindexed audit's moving block (§5.4a) is drawn by the view from a timer-driven column split, because the theme's marquee has a blank gap.
 - **Full-path validation:** a path is accepted as absolute only if `Path.IsPathFullyQualified` says so, so `C:x` and `\x` (which would resolve against the application's
@@ -916,7 +944,7 @@ Settled by the build (milestone 1), with no change in behaviour (milestone 4's a
 - **View composition pair rule:** every public `*ViewModel` has a sibling `*View.axaml` under the parallel `Views/…` folder, and vice versa. Windows are the exception
   to the `*View` suffix: `MainWindow`, `AboutWindow`, `MessageDialogueWindow` and `FileTypesDialogueWindow` pair with `MainWindowViewModel`, `AboutWindowViewModel`,
   `MessageDialogueViewModel` and `FileTypesDialogueViewModel`. State a view model needs but that has no view of its own is not named `*ViewModel` (`ReportLocationState`,
-  `AuditStatusBase`, `ScanFolderItem`, `FileTypeEntryItem`).
+  `AuditStatusBase`, `ScanFolderItem`, `FileTypeEntryItem`). The Project Settings group follows the rule: `ProjectSettingsViewModel` ↔ `ProjectSettingsView`.
 - **User-data writes** (settings, the report) use a temp file + `File.Move(overwrite: true)`, never an in-place write.
 - **Never `File.Exists` / `Directory.Exists` inside the audit check** (§6.3): they turn "couldn't check" into "missing". Pre-flight checks of the report folder may
   use them.
