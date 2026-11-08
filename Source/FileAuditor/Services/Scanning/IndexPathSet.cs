@@ -11,7 +11,7 @@ namespace FileAuditor.Services.Scanning;
 /// </remarks>
 public sealed class IndexPathSet
 {
-    private const int StackLimit = 256;
+    private const int StackLimit = 1024;
 
     private readonly HashSet<UInt128> _keys;
 
@@ -45,7 +45,17 @@ public sealed class IndexPathSet
         }
         else
         {
-            MD5.HashData(MemoryMarshal.AsBytes(trimmed.ToString().ToUpperInvariant().AsSpan()), digest);
+            char[] rented = ArrayPool<char>.Shared.Rent(trimmed.Length);
+
+            try
+            {
+                trimmed.ToUpperInvariant(rented);
+                MD5.HashData(MemoryMarshal.AsBytes(rented.AsSpan(start: 0, trimmed.Length)), digest);
+            }
+            finally
+            {
+                ArrayPool<char>.Shared.Return(rented);
+            }
         }
 
         return MemoryMarshal.Read<UInt128>(digest);

@@ -94,7 +94,7 @@ public sealed class IndexTableReader
     /// <summary>Streams the path column of the index table to a callback, restricted by the query's parameterised filter.</summary>
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The path query.</param>
-    /// <param name="onPath">Called once per non-null path; runs on the calling thread's continuation, one call at a time.</param>
+    /// <param name="onPath">Called once per non-null path, one call at a time.</param>
     /// <param name="ct">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
     /// <returns>Success, or <c>Sql.QueryFailed</c> when SQL Server reports an error.</returns>
     public async Task<ErrorOr<Success>> ReadPathsAsync(string connectionString, PathQuery query, Action<string> onPath, CancellationToken ct)
