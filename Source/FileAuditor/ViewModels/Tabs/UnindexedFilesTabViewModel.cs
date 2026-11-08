@@ -95,13 +95,6 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         Report.Load(settings);
     }
 
-    /// <summary>Rewrites both summaries in normal form (lower case, leading dot, sorted) once the pre-flight accepts them; a hand-edited project file may hold others.</summary>
-    /// <param name="settings">The settings the pre-flight accepted.</param>
-    public void Normalise(AppSettings settings)
-    {
-        FileTypesText = FileTypeList.Format(settings.FileTypes ?? []);
-        ExcludeText   = FileTypeList.Format(settings.ExcludeTypes ?? []);
-    }
 
     private static string[] Entries(string text) => text.Split(FileTypeList.Separators.ToArray(), StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 

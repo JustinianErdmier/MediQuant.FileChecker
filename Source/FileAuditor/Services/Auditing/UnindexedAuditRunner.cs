@@ -17,9 +17,20 @@ public sealed class UnindexedAuditRunner
     /// </returns>
     public async Task<ErrorOr<UnindexedReport>> RunAsync(AuditRequest request, UnindexedProgress progress, CancellationToken ct)
     {
-        AppSettings          settings   = request.Settings;
-        DateTime             startedUtc = DateTime.UtcNow;
-        IReadOnlyList<ScanFolder> folders = settings.ScanFolders ?? [];
+        AppSettings settings   = request.Settings;
+        DateTime    startedUtc = DateTime.UtcNow;
+
+        // Each folder is made canonical once, and the same list goes to the index query and to the walk, so both see the same prefixes whatever the user typed
+        // (`U:/A/./B`, a trailing separator, other letter case). The report still names each folder as it was entered.
+        ScanFolder[] folders = (settings.ScanFolders ?? []).Select(folder => folder with { Path = FolderWalker.NormaliseFolder(folder.Path) })
+                                                           .ToArray();
+
+        Dictionary<string, string> entered = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (ScanFolder folder in settings.ScanFolders ?? [])
+        {
+            entered.TryAdd(FolderWalker.NormaliseFolder(folder.Path), folder.Path);
+        }
 
         ErrorOr<PathQuery> built = QueryBuilder.BuildPaths(settings.Table, settings.PathColumn, folders.Select(folder => folder.Path).ToArray());
 
@@ -62,19 +73,31 @@ public sealed class UnindexedAuditRunner
         ConcurrentBag<UnverifiedFolder> unverified =
             [];
 
+        // Files reached through a link that leads outside every input: the index may hold their target path, which the prefix filter did not load.
+        ConcurrentBag<ScannedFile> deferred =
+            [];
+
         // The walker returns normally when stopped, so a stop is told apart by the token afterwards. An exception from a callback is a bug and surfaces as one.
         await _walker.WalkAsync(folders,
                                 filter,
-                                file =>
+                                walked =>
                                 {
-                                    bool indexed = paths.Contains(file.Path);
+                                    ScannedFile file = walked with { InputFolder = entered.GetValueOrDefault(walked.InputFolder, walked.InputFolder) };
 
-                                    if (!indexed)
+                                    if (paths.Contains(file.Path)
+                                        || (file.CanonicalPath is not null && paths.Contains(file.CanonicalPath)))
+                                    {
+                                        progress.Record(indexed: true);
+                                    }
+                                    else if (file.CanonicalPath is null)
                                     {
                                         unindexed.Add(file);
+                                        progress.Record(indexed: false);
                                     }
-
-                                    progress.Record(indexed);
+                                    else
+                                    {
+                                        deferred.Add(file);
+                                    }
                                 },
                                 folder =>
                                 {
@@ -82,6 +105,17 @@ public sealed class UnindexedAuditRunner
                                     progress.RecordUnverified();
                                 },
                                 ct);
+
+        if (!ct.IsCancellationRequested
+            && !deferred.IsEmpty)
+        {
+            ErrorOr<Success> resolved = await ResolveDeferredAsync(settings, built.Value, paths, deferred, unindexed, progress, ct);
+
+            if (resolved.IsError)
+            {
+                return resolved.Errors;
+            }
+        }
 
         AuditResultKind kind = ct.IsCancellationRequested ? AuditResultKind.StoppedByUser : AuditResultKind.Completed;
 
@@ -104,5 +138,91 @@ public sealed class UnindexedAuditRunner
         }
 
         return report;
+    }
+
+    // Decides the files that were reached through a link outside every input: loads the index rows under the link targets (all the rows were loaded already when
+    // the first query had no filter), then counts each file as indexed when the index holds its target path. A stop while the rows load abandons these files:
+    // they were not checked, so they are in neither count.
+    private async Task<ErrorOr<Success>> ResolveDeferredAsync(AppSettings settings, PathQuery first, IndexPathSet paths, ConcurrentBag<ScannedFile> deferred,
+                                                              ConcurrentBag<ScannedFile> unindexed, UnindexedProgress progress, CancellationToken ct)
+    {
+        IndexPathSet targets = paths;
+
+        if (first.Parameters.Count > 0)
+        {
+            ErrorOr<PathQuery> built = QueryBuilder.BuildPaths(settings.Table, settings.PathColumn, TargetRoots(deferred));
+
+            if (built.IsError)
+            {
+                return built.Errors;
+            }
+
+            progress.Phase = "Loading the index...";
+
+            targets = new IndexPathSet();
+
+            ErrorOr<Success> loaded;
+
+            try
+            {
+                loaded = await _reader.ReadPathsAsync(ConnectionStrings.Build(settings.Server, settings.Database), built.Value, targets.Add, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return Result.Success;
+            }
+
+            if (loaded.IsError)
+            {
+                return loaded.Errors;
+            }
+
+            if (ct.IsCancellationRequested)
+            {
+                return Result.Success;
+            }
+
+            progress.Phase = "Checking files...";
+        }
+
+        foreach (ScannedFile file in deferred)
+        {
+            bool indexed = targets.Contains(file.CanonicalPath!);
+
+            if (!indexed)
+            {
+                unindexed.Add(file);
+            }
+
+            progress.Record(indexed);
+        }
+
+        return Result.Success;
+    }
+
+    // The fewest folders whose prefixes cover every canonical path (a folder under another one is left out); once there are more than the prefix filter takes,
+    // the list is long enough for the query to load every row instead.
+    private static List<string> TargetRoots(ConcurrentBag<ScannedFile> deferred)
+    {
+        List<string> roots = [];
+
+        foreach (string folder in deferred.Select(file => FolderWalker.NormaliseFolder(Path.GetDirectoryName(file.CanonicalPath)!))
+                                          .Distinct(StringComparer.OrdinalIgnoreCase)
+                                          .OrderBy(folder => folder.Length))
+        {
+            if (roots.Any(root => folder.StartsWith(root, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            roots.Add(folder);
+
+            if (roots.Count > QueryBuilder.MaxFilterFolders)
+            {
+                break;
+            }
+        }
+
+        return roots;
     }
 }

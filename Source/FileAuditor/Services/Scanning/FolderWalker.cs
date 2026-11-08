@@ -4,8 +4,15 @@ namespace FileAuditor.Services.Scanning;
 ///     Walks the input folders of the unindexed-files audit and reports every file whose name belongs to a chosen file type (milestone 4 spec §3.2).
 ///     <para>
 ///         <b>Scope.</b> An input folder covers its own files and, when <see cref="ScanFolder.IncludeSubfolders" /> is set, every folder beneath it.
-///         Hidden and system files and folders are never listed (a skipped folder's contents go with it). Links (junctions, symbolic links, DFS links) are
-///         walked like folders, and a folder whose resolved target was already listed in this run is not listed again, which ends link loops.
+///         Hidden and system files and folders are never listed (a skipped folder's contents go with it).
+///     </para>
+///     <para>
+///         <b>Links.</b> A link (junction or symbolic link) whose resolved target lies inside the scope of an input folder (the folder itself, plus the folders
+///         beneath it when that input includes subfolders) is not walked: the input's own visit lists those files, so the direct visit always wins. A link whose
+///         target lies outside every input's scope is walked, and the files found through it carry a <see cref="ScannedFile.CanonicalPath" />, their path with
+///         the link's prefix replaced by the resolved target, so that the caller can match an index that holds either path. Folders are keyed for the loop guard
+///         by their canonical path, so a physical folder is never listed twice through different links, and a link loop ends at its first repeat. A link whose
+///         target cannot be resolved (a DFS link, for one) is an ordinary folder.
 ///     </para>
 ///     <para>
 ///         <b>Attribution.</b> A file is reported once, under the deepest input folder whose scope covers the folder it sits in. The walk is a single
@@ -19,8 +26,9 @@ namespace FileAuditor.Services.Scanning;
 ///         from a listing that fails part-way are not reported, so a folder is either wholly checked or wholly unverified.
 ///     </para>
 ///     <para>
-///         <b>Cancellation.</b> <see cref="WalkAsync" /> does not throw when the token is cancelled: it stops starting listings and returns once the
-///         running ones finish. The caller must check the token afterwards to tell a stopped walk from a finished one.
+///         <b>Cancellation.</b> <see cref="WalkAsync" /> does not throw when the token is cancelled: it stops starting listings, abandons the ones in progress
+///         (their files are not reported) and returns once every worker has noticed. The caller must check the token afterwards to tell a stopped walk from a
+///         finished one.
 ///     </para>
 /// </summary>
 public sealed class FolderWalker
@@ -37,7 +45,7 @@ public sealed class FolderWalker
     };
 
     /// <summary>Walks the folders, calling back for every matching file and every folder that could not be listed.</summary>
-    /// <param name="folders">The input folders.</param>
+    /// <param name="folders">The input folders; each path is normalised with <see cref="NormaliseFolder" />, which the caller may have done already.</param>
     /// <param name="filter">Decides which files are reported, and under which file type.</param>
     /// <param name="onFile">Called for each file found; may be called concurrently from several threads.</param>
     /// <param name="onUnverified">Called for each folder that could not be listed; may be called concurrently from several threads.</param>
@@ -65,7 +73,7 @@ public sealed class FolderWalker
 
         foreach (Root root in roots)
         {
-            walk.Enqueue(new Item(root.Path, true));
+            walk.Enqueue(new Item(root.Path, Canonical: null, IsLink: true));
         }
 
         // Dedicated threads: the listings block, and the thread pool would ramp up to 16 blocked threads slowly.
@@ -121,7 +129,7 @@ public sealed class FolderWalker
 
         foreach (ScanFolder folder in folders)
         {
-            string normalised = Normalise(folder.Path);
+            string normalised = NormaliseFolder(folder.Path);
 
             // The same folder listed twice (pre-flight refuses it) is one input; it includes subfolders if either entry does.
             byPath[normalised] = byPath.TryGetValue(normalised, out Root? existing)
@@ -133,7 +141,10 @@ public sealed class FolderWalker
         return byPath.Values.OrderByDescending(root => root.Path.Length).ToArray();
     }
 
-    private static string Normalise(string path)
+    /// <summary>Makes an input folder's path canonical: a full path with exactly one trailing separator, as the walk and the index query both use it.</summary>
+    /// <param name="path">The folder's path as entered.</param>
+    /// <returns>The full path with a trailing directory separator.</returns>
+    public static string NormaliseFolder(string path)
     {
         string full = Path.GetFullPath(path);
 
@@ -142,13 +153,18 @@ public sealed class FolderWalker
 
     private sealed record Root(string Path, string Entered, bool IncludeSubfolders);
 
-    /// <summary>A queued folder; <c>ResolveIdentity</c> is set for links and for the input folders, whose identity is their resolved target.</summary>
-    private readonly record struct Item(string Path, bool ResolveIdentity);
+    /// <summary>
+    ///     A queued folder. <c>Canonical</c> is its canonical path when it lies beneath a walked link (null otherwise); <c>IsLink</c> is set for folders the
+    ///     listing flagged as reparse points and for the input folders, whose target is resolved when they are listed.
+    /// </summary>
+    private readonly record struct Item(string Path, string? Canonical, bool IsLink);
 
-    /// <summary>What the loop guard knows about a listed folder: whether its subfolders were queued, and whether a failure ended it.</summary>
+    /// <summary>What the loop guard knows about a listed folder: whether its subfolders were queued, and whether it was already reported unverified.</summary>
     private sealed class Listed(bool descended)
     {
         public bool Descended { get; set; } = descended;
+
+        public bool Failed { get; set; }
     }
 
     private readonly record struct Entry(string Name, bool IsDirectory, bool IsLink);
@@ -206,15 +222,22 @@ public sealed class FolderWalker
                 return;
             }
 
+            // A link whose target lies in some input's scope is not walked: that input's own visit lists those files. This holds for a folder beneath a
+            // walked link as well (its canonical path may fall inside the scope of an input nested in the link's target).
+            string? canonical = item.IsLink && ResolveTarget(folder) is { } target ? target : item.Canonical;
+
+            if (canonical is not null
+                && _roots.Any(root => Covers(root, canonical)))
+            {
+                return;
+            }
+
             Root? owner   = null;
             bool  descend = false;
 
             foreach (Root root in _roots)
             {
-                bool covers = root.Path.Equals(folder, StringComparison.OrdinalIgnoreCase)
-                              || (root.IncludeSubfolders && folder.StartsWith(root.Path, StringComparison.OrdinalIgnoreCase));
-
-                if (!covers)
+                if (!Covers(root, folder))
                 {
                     continue;
                 }
@@ -232,12 +255,12 @@ public sealed class FolderWalker
                 return;
             }
 
-            // A folder whose identity was listed already is not listed again; this ends link loops. Only a link or an input needs resolving, for any
-            // other folder the identity is its own path. If the earlier visit did not queue the subfolders but this one needs to (the folder is an input
-            // without subfolders and is also reached through a link inside an input with subfolders), this visit only queues them: the files were
-            // reported already. The check and the upgrade are made under the entry's lock, so exactly one visit queues the subfolders.
+            // A folder whose identity was listed already is not listed again; this ends link loops. The identity is the canonical path beneath a walked
+            // link and the folder's own path otherwise. If the earlier visit did not queue the subfolders but this one needs to (the folder is an input
+            // without subfolders and is also reached as a subfolder of another input), this visit only queues them: the files were reported already. The
+            // check and the upgrade are made under the entry's lock, so exactly one visit queues the subfolders.
             var    entry = new Listed(descend);
-            string key   = item.ResolveIdentity ? ResolveIdentity(folder) : folder;
+            string key   = canonical ?? folder;
             Listed known = _listed.GetOrAdd(key, entry);
 
             bool subfoldersOnly = false;
@@ -279,10 +302,20 @@ public sealed class FolderWalker
             }
             catch (Exception ex)
             {
-                // Nothing beneath a folder that failed is listed, now or through a later link to it.
+                // Nothing beneath a folder that failed is listed, now or through a later link to it, and it is reported unverified once however many
+                // visits (a first listing and an upgrade, say) fail.
+                bool alreadyReported;
+
                 lock (known)
                 {
                     known.Descended = true;
+                    alreadyReported = known.Failed;
+                    known.Failed    = true;
+                }
+
+                if (alreadyReported)
+                {
+                    return;
                 }
 
                 MappedOutcome mapped = Win32ErrorMapper.Map(ex);
@@ -314,9 +347,10 @@ public sealed class FolderWalker
                     }
                 }
             }
+
             foreach ((string name, FileTypePattern type) in files)
             {
-                _onFile(new ScannedFile(folder + name, owner.Entered, type));
+                _onFile(new ScannedFile(folder + name, owner.Entered, type, canonical is null ? null : canonical + name));
             }
 
             if (!descend)
@@ -328,21 +362,26 @@ public sealed class FolderWalker
             {
                 string path = folder + sub.Name + Path.DirectorySeparatorChar;
 
-                Enqueue(new Item(path, sub.IsLink));
+                Enqueue(new Item(path, canonical is null ? null : canonical + sub.Name + Path.DirectorySeparatorChar, sub.IsLink));
             }
         }
 
-        private static string ResolveIdentity(string path)
+        private static bool Covers(Root root, string folder)
+            => root.Path.Equals(folder, StringComparison.OrdinalIgnoreCase)
+               || (root.IncludeSubfolders && folder.StartsWith(root.Path, StringComparison.OrdinalIgnoreCase));
+
+        // The normalised final target of a link, or null when the folder is not a link or its target cannot be resolved (then it is an ordinary folder).
+        private static string? ResolveTarget(string path)
         {
             try
             {
                 FileSystemInfo? target = new DirectoryInfo(path).ResolveLinkTarget(true);
 
-                return target is null ? path : Normalise(target.FullName);
+                return target is null ? null : NormaliseFolder(target.FullName);
             }
             catch (Exception)
             {
-                return path;
+                return null;
             }
         }
     }

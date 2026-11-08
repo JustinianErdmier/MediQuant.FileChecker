@@ -198,7 +198,7 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
         foreach (ScanFolder folder in folders)
         {
-            if (!seen.Add(Path.TrimEndingDirectorySeparator(folder.Path)))
+            if (!seen.Add(FolderWalker.NormaliseFolder(folder.Path)))
             {
                 return $"This folder is listed twice:\n{PathText.Breakable(folder.Path)}";
             }

@@ -123,23 +123,33 @@ public sealed class SettingsStore
                   .ToArray()
            ?? [];
 
-    // A null list takes the fallback. Entries are re-parsed so they are always normalised; the invalid ones are dropped, one at a time, so one bad entry keeps the rest.
+    // A null list takes the fallback (a copy, never the shared default array). A null element is dropped. Each valid entry is normalised; an invalid one is kept as
+    // written (trimmed), so that the tab shows it and the pre-flight names it when Start is pressed (spec §4), instead of the file silently losing it.
     private static string[] NormaliseTypes(string[]? types, string[] fallback)
     {
         if (types is null)
         {
-            return fallback;
+            return [ ..fallback ];
         }
 
         SortedSet<string> kept = new(StringComparer.Ordinal);
 
         foreach (string? type in types)
         {
-            ErrorOr<string[]> parsed = FileTypeList.Parse(type ?? string.Empty);
+            if (type is null)
+            {
+                continue;
+            }
+
+            ErrorOr<string[]> parsed = FileTypeList.Parse(type);
 
             if (!parsed.IsError)
             {
                 kept.UnionWith(parsed.Value);
+            }
+            else
+            {
+                kept.Add(type.Trim());
             }
         }
 

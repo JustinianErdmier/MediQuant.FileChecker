@@ -373,9 +373,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         if (direction == AuditDirection.Unindexed)
         {
-            // The pre-flight accepted both boxes, so they are shown in their normal form from here on.
-            UnindexedFiles.Normalise(settings);
-
             run = new UnindexedAuditRun(UnindexedFiles.Audit, _unindexedRunner, request);
         }
         else
