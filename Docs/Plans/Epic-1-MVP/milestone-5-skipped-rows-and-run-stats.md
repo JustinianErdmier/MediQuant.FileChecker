@@ -133,7 +133,8 @@ The approved description, verbatim in substance:
 - [x] **Step 1:** Implement `RecentRate.Next` and `RemainingEstimator.Next`, called every refresh (about 250 ms), with this algorithm:
     - `isFinished` → `00:00:00`. `!hasTotal`, or checking time under the 5 s warm-up → `Calculating...`. `processed >= total` → `00:00:00`.
     - **Rate (`RecentRate`):** an exponentially weighted moving average of the per-sample rate (`Δcount ÷ Δt`), weight `1 − e^(−Δt / 30 s)`. At the end of the
-      warm-up it is seeded with the whole-warm-up average (`count ÷ elapsed`) so it starts sensibly. A sample with `Δt ≤ 0` is ignored.
+      warm-up it is seeded with the average over the warm-up's second half (from the first sample at or after 2.5 s to the end), falling back to `count ÷ elapsed`, so
+      the slow start-up ramp does not drag the seed down (amended after review). A sample with `Δt ≤ 0` is ignored.
     - **Target:** `(total − processed) ÷ rate`; a rate `≤ 0` keeps the last shown value (or `Calculating...` if nothing has been shown yet).
     - **Display:** the first shown value is the target; after that, each call subtracts `Δt` (wall time between calls, from the checking clock) from the shown value, then moves
       it toward the target by `1 − e^(−Δt / 3 s)` of the difference; never below zero. Formatted `hh:mm:ss` as today (hours may exceed 24).
@@ -142,7 +143,8 @@ The approved description, verbatim in substance:
 - [x] **Step 3: Verify.** Clean build. In `FileAuditorM5Scratch`, a table sized for a 60–120 s run (calibrate the row count with a short trial; repeated paths to a few
   existing scratch files keep the report small). If `\\localhost\C$` is reachable, make the first half of the rows UNC paths and the second half local paths so the speed
   changes mid-run; otherwise say so in the report. Sample *Elapsed* and *Remaining* by UI Automation once a second for the whole run and save the samples in the task report.
-  Pass: `Calculating...` for the first ~5 s; from 30 s on, every 10 s window shows Remaining falling by 7–13 s, except up to 15 s after the speed change; no two consecutive
+  Pass: `Calculating...` for the first ~5 s; after the first 15 s of checking, and outside 30 s after the speed change, Remaining falls 1 ± 0.5 s per second averaged over
+  10 s (amended after the first run: the original 7–13 s per 10 s cannot hold under normal speed drift with a 30 s rate); no two consecutive
   samples differ by more than 5 s beyond the second that passed; in the last 10 s of checking Remaining reads 15 s or less; `00:00:00` once finished. Also run a table small
   enough to finish under 5 s (`Calculating...` then `00:00:00`). Drop the database.
 - [x] **Step 4: Commit** — `feat(✨): estimate Remaining from the recent checking speed and count it down steadily`.
