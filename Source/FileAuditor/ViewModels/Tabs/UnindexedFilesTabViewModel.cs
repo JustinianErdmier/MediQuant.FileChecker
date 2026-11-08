@@ -96,7 +96,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     }
 
 
-    private static string[] Entries(string text) => text.Split(FileTypeList.Separators.ToArray(), StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    private static string[] Entries(string text) => FileTypeList.Split(text);
 
     [ RelayCommand ]
     private async Task EditFileTypesAsync()
@@ -119,6 +119,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
             ExcludeText = FileTypeList.Format(edited);
         }
     }
+
     private bool CanRemove() => SelectedFolder is not null;
 
     [ RelayCommand(CanExecute = nameof(CanRemove)) ]

@@ -50,9 +50,31 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
         return item;
     }
 
-    /// <summary>Validates and normalises the entries.</summary>
+    /// <summary>Validates and normalises the entries. Each line is one entry, so a line holding a space or a comma is not valid.</summary>
     /// <returns>The normalised entries, or the first entry that is not valid.</returns>
-    public ErrorOr<string[]> Validate() => FileTypeList.Parse(string.Join(separator: ' ', Entries.Select(entry => entry.Text)));
+    public ErrorOr<string[]> Validate()
+    {
+        List<string> entries = [];
+
+        foreach (FileTypeEntryItem entry in Entries)
+        {
+            string text = entry.Text.Trim();
+
+            if (text.Length == 0)
+            {
+                continue;
+            }
+
+            if (text.Any(c => char.IsWhiteSpace(c) || c == ','))
+            {
+                return FileTypeList.InvalidEntry(text);
+            }
+
+            entries.Add(text);
+        }
+
+        return FileTypeList.Parse(string.Join(separator: ' ', entries));
+    }
 
     private bool CanDelete() => SelectedEntry is not null;
 

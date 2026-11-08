@@ -1,6 +1,8 @@
 namespace FileAuditor.Services.Auditing;
 
-/// <summary>The checks that run when Start is pressed, before the database is touched (SDD §6.1). Each failure or declined confirmation is explained in a dialogue.</summary>
+/// <summary>
+///     The checks that run when Start is pressed, before the database is touched (SDD §6.1). Each failure or declined confirmation is explained in a dialogue.
+/// </summary>
 /// <param name="dialogues">Shows the errors and confirmations.</param>
 /// <param name="project">Remembers which warnings were answered Continue this session.</param>
 public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsService project)
@@ -26,8 +28,8 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         if (!settings.UseCustomReportLocation
             && !ReportPathResolver.IsSingleFolderName(settings.ProjectFolder.Trim()))
         {
-            await
-                dialogues.ShowErrorAsync($"The project folder must be a single folder name, not a path, and must not contain characters that are not allowed:\n{settings.ProjectFolder.Trim()}");
+            await dialogues.ShowErrorAsync("The project folder must be a single folder name, not a path, and must not contain characters that are not allowed:\n"
+                                           + settings.ProjectFolder.Trim());
 
             return null;
         }
@@ -62,8 +64,8 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
             if (!Path.IsPathFullyQualified(report.Directory))
             {
-                await
-                    dialogues.ShowErrorAsync($"The report location must be a full path, such as C:\\Reports or \\\\server\\share\\Reports:\n{PathText.Breakable(report.Directory)}");
+                await dialogues.ShowErrorAsync(
+                    $"The report location must be a full path, such as C:\\Reports or \\\\server\\share\\Reports:\n{PathText.Breakable(report.Directory)}");
 
                 return null;
             }

@@ -18,6 +18,12 @@
     <Design.DataContext>
         <vm:FileTypesDialogueViewModel />
     </Design.DataContext>
+    <ClassicWindow.Styles>
+        <!-- The padding leaves a band of the selection colour around the text box, so the selected row shows. -->
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="3" />
+        </Style>
+    </ClassicWindow.Styles>
     <DockPanel Margin="12">
         <StackPanel DockPanel.Dock="Bottom"
                     Orientation="Horizontal"
@@ -48,6 +54,7 @@
                     Click="OnNewClick" />
             <Button x:Name="EditButton"
                     Content="_Edit"
+                    IsEnabled="{Binding SelectedEntry, Converter={x:Static ObjectConverters.IsNotNull}}"
                     MinWidth="75"
                     MinHeight="23"
                     HorizontalContentAlignment="Center"

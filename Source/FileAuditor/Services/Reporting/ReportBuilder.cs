@@ -54,6 +54,7 @@ public static class ReportBuilder
         ReportFormat.AddProjectLines(lines, settings);
         ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Result, report.FailureMessage);
     }
+
     private static void AddSummary(List<string> lines, AuditReport report)
     {
         long missing    = report.Problems.Count(result => result.Outcome is CheckOutcome.MissingEmpty or CheckOutcome.MissingDoesNotExist);

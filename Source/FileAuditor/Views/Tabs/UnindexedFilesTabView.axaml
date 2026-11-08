@@ -69,7 +69,7 @@
                 </StackPanel>
                 <Label Grid.Row="1"
                        Content="File t_ypes:"
-                       Target="{Binding #FileTypesBox}"
+                       Target="{Binding #EditFileTypesButton}"
                        VerticalAlignment="Center" />
                 <TextBox x:Name="FileTypesBox"
                          Grid.Row="1"
@@ -88,7 +88,7 @@
                         Command="{Binding EditFileTypesCommand}" />
                 <Label Grid.Row="2"
                        Content="E_xclude:"
-                       Target="{Binding #ExcludeBox}"
+                       Target="{Binding #EditExcludeButton}"
                        VerticalAlignment="Center" />
                 <TextBox x:Name="ExcludeBox"
                          Grid.Row="2"
@@ -106,7 +106,8 @@
                         HorizontalContentAlignment="Center"
                         Command="{Binding EditExcludeCommand}" />
             </Grid>
-        </ct:GroupBox>        <groups:ReportView DataContext="{Binding Report}"
+        </ct:GroupBox>
+        <groups:ReportView DataContext="{Binding Report}"
                            IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable}" />
         <groups:UnindexedAuditView DataContext="{Binding Audit}" />
     </StackPanel>

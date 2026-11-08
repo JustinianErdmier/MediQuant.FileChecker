@@ -24,7 +24,7 @@ public sealed partial class ReportViewModel : ObservableObject
         Shared          = shared;
         Direction       = direction;
         _customFileName = direction == AuditDirection.Missing ? AppSettings.Default.MissingCustomFileName : AppSettings.Default.UnindexedCustomFileName;
-        Current   =ReportPathResolver.Resolve(Resolved(), direction);
+        Current         = ReportPathResolver.Resolve(Resolved(), direction);
 
         Shared.PropertyChanged += OnSharedChanged;
 

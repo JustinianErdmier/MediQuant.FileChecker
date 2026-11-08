@@ -7,8 +7,6 @@ public static class FileTypeList
                                                    .Where(c => c is not ('*' or '?'))
                                                    .ToArray();
 
-    /// <summary>Gets the characters that separate entries in a list of file types: white space and commas.</summary>
-    public static IReadOnlyList<char> Separators { get; } = [ ',', ' ', '\t', '\r', '\n' ];
 
     /// <summary>Gets the built-in File types, sorted.</summary>
     public static IReadOnlyList<string> Defaults { get; } =
@@ -34,6 +32,14 @@ public static class FileTypeList
         ".xps"
     ];
 
+    /// <summary>Splits the text of a file types box into its entries: they are separated by white space (any kind) or commas.</summary>
+    /// <param name="text">The text typed.</param>
+    /// <returns>The entries as typed, without empty ones.</returns>
+    public static string[] Split(string text)
+        => text.Split(separator: ',')
+               .SelectMany(part => part.Split(separator: (char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+               .ToArray();
+
     /// <summary>Parses the text of a file types box: entries separated by white space or commas.</summary>
     /// <param name="text">The text typed.</param>
     /// <returns>
@@ -44,13 +50,13 @@ public static class FileTypeList
     {
         SortedSet<string> entries = new(StringComparer.Ordinal);
 
-        foreach (string raw in text.Split(Separators.ToArray(), StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (string raw in Split(text))
         {
             string? normalised = Normalise(raw);
 
             if (normalised is null)
             {
-                return Error.Validation(code: "FileTypes.Invalid", $"This file type is not valid:\n{raw}");
+                return InvalidEntry(raw);
             }
 
             entries.Add(normalised);
@@ -58,6 +64,11 @@ public static class FileTypeList
 
         return entries.ToArray();
     }
+
+    /// <summary>Creates the validation error that names an entry that is not a valid file type.</summary>
+    /// <param name="raw">The entry as typed.</param>
+    /// <returns>The error, whose description is the message to show.</returns>
+    public static Error InvalidEntry(string raw) => Error.Validation(code: "FileTypes.Invalid", $"This file type is not valid:\n{raw}");
 
     /// <summary>Formats entries for a file types box: sorted and space-separated.</summary>
     /// <param name="types">The normalised entries.</param>

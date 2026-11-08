@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ct="clr-namespace:Classic.Avalonia.Theme.Controls;assembly=Classic.Avalonia.Theme"
+             xmlns:cc="clr-namespace:Classic.CommonControls;assembly=Classic.CommonControls.Avalonia"
              xmlns:vm="clr-namespace:FileAuditor.ViewModels.Groups"
              xmlns:mainVm="clr-namespace:FileAuditor.ViewModels.Main"
              mc:Ignorable="d"
@@ -57,11 +58,11 @@
                              IsVisible="{Binding !IsRunning}" />
                 <!-- The total is unknown while a run is under way, so a fixed-width block moves across a sunken track instead of a fill that would read as a percentage. -->
                 <Border IsVisible="{Binding IsRunning}"
-                        BorderBrush="#808080"
+                        BorderBrush="{DynamicResource {x:Static cc:SystemColors.ControlDarkBrushKey}}"
                         BorderThickness="1,1,0,0">
-                    <Border BorderBrush="White"
+                    <Border BorderBrush="{DynamicResource {x:Static cc:SystemColors.ControlLightLightBrushKey}}"
                             BorderThickness="0,0,1,1"
-                            Background="#D4D0C8"
+                            Background="{DynamicResource {x:Static cc:SystemColors.ControlBrushKey}}"
                             ClipToBounds="True">
                         <Grid Margin="1">
                             <Grid.ColumnDefinitions>
@@ -70,11 +71,12 @@
                                 <ColumnDefinition Width="{Binding MarqueeAfter}" />
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="1"
-                                    Background="#0A246A" />
+                                    Background="{DynamicResource {x:Static cc:SystemColors.HighlightBrushKey}}" />
                         </Grid>
                     </Border>
                 </Border>
-            </Panel>            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+            </Panel>
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                 <Button Content="_View Report"
                         MinWidth="75"
                         MinHeight="23"

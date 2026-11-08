@@ -1,7 +1,7 @@
 namespace FileAuditor.Services.Scanning;
 
 /// <summary>
-///     The paths of the index table, kept as 128-bit hashes so that millions of rows cost about 30 bytes each instead of about 200.
+///     The paths of the index table, kept as 128-bit hashes so that millions of rows cost about 48 bytes each (measured, with the set) instead of about 200.
 /// </summary>
 /// <remarks>
 ///     A path's key is the MD5 hash of the UTF-16 bytes of <c>path.Trim().ToUpperInvariant()</c>. MD5 is used for its speed and even spread, not for security.
@@ -38,10 +38,10 @@ public sealed class IndexPathSet
 
         if (trimmed.Length <= StackLimit)
         {
-            Span<char> upper = stackalloc char[StackLimit];
+            Span<char> upper = stackalloc char[trimmed.Length];
 
             trimmed.ToUpperInvariant(upper);
-            MD5.HashData(MemoryMarshal.AsBytes(upper[..trimmed.Length]), digest);
+            MD5.HashData(MemoryMarshal.AsBytes(upper), digest);
         }
         else
         {
