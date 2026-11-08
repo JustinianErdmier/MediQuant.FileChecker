@@ -1,4 +1,4 @@
-namespace FileAuditor.Services.Reporting;
+namespace FileAuditor.Models.Reporting;
 
 /// <summary>Where the report is written: a folder and a file name, plus whether both are known yet.</summary>
 /// <param name="Directory">The report folder; for a built path with no project folder it holds the <c>&lt;Project Folder&gt;</c> placeholder.</param>

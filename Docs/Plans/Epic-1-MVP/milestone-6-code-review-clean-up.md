@@ -244,21 +244,21 @@ names are the report file names, as its remarks document.
   - `Views/Dialogues/FileTypesDialogueWindow.axaml.cs`, `Views/Groups/ReportView.axaml.cs` and `Views/Tabs/UnindexedFilesTabView.axaml.cs`;
   - `Services/Dialogues/DialogueService.cs` (the doc line only).
 
-- [ ] **Step 1: Move the records.** Use `git mv`, so each move is a pure rename. Then update each record's namespace.
-- [ ] **Step 2: Write `UnexpectedErrorHandler`.** Install it from `App` and `Program` as ruled above.
-- [ ] **Step 3: Wrap the click handlers.** **32 and 38.** All three `async void` handlers get a `try`/`catch (Exception exception)` around their body:
+- [x] **Step 1: Move the records.** Use `git mv`, so each move is a pure rename. Then update each record's namespace.
+- [x] **Step 2: Write `UnexpectedErrorHandler`.** Install it from `App` and `Program` as ruled above.
+- [x] **Step 3: Wrap the click handlers.** **32 and 38.** All three `async void` handlers get a `try`/`catch (Exception exception)` around their body:
   `FileTypesDialogueWindow.OnOkClick`, `ReportView.OnBrowseClick` and `UnindexedFilesTabView.OnAddClick`. The `catch` calls
   `UnexpectedErrorHandler.ReportRecoverable(exception)`, so no `async void` method lets an exception escape.
-- [ ] **Step 4: Build and run.** Build with 0 warnings. Then:
+- [x] **Step 4: Build and run.** Build with 0 warnings. Then:
   - Open the File Types editor, and accept it, cancel it, and accept it with an invalid entry.
   - Open the report folder Browse dialogue and the Add folder dialogue, and cancel each without reading its tree.
-- [ ] **Step 5: Exercise the handler.** Make each check below with a temporary source edit, then revert the edit. Screenshot each message, and confirm with `git diff` that nothing
+- [x] **Step 5: Exercise the handler.** Make each check below with a temporary source edit, then revert the edit. Screenshot each message, and confirm with `git diff` that nothing
   is left behind.
   - (a) A throw inside the Stop command while idle, through its menu item. The recoverable notice appears, and after OK the app still works.
   - (b) A throw in the audit refresh tick. One notice appears, not a stack of them, and the app carries on.
   - (c) A throw on a plain background `Thread`. The fatal message appears, and the process then exits.
   - (d) A throw in `App.OnFrameworkInitializationCompleted`. The fatal message appears.
-- [ ] **Step 6: Commit.** Use `feat(✨): add a global exception handler, move the plain records to Models and guard the async click handlers`.
+- [x] **Step 6: Commit.** Use `feat(✨): add a global exception handler, move the plain records to Models and guard the async click handlers`.
 
 ### Task 5: XAML inspections (items 33–44)
 

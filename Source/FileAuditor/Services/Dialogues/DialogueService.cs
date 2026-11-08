@@ -40,7 +40,10 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
     /// <param name="title">The window title.</param>
     /// <param name="entries">The entries to start with.</param>
     /// <param name="canReset">Whether the editor offers Reset, which restores the built-in file types.</param>
-    /// <returns>The accepted entries in normal form, or <see langword="null" /> when the editor was cancelled.</returns>
+    /// <returns>
+    ///     The accepted entries in normal form, or <see langword="null" /> when the editor was cancelled; an empty array means it was accepted with every entry removed, which the
+    ///     Exclude list allows.
+    /// </returns>
     public async Task<string[]?> EditFileTypesAsync(string title, IReadOnlyList<string> entries, bool canReset)
     {
         Window? owner = ownerProvider();

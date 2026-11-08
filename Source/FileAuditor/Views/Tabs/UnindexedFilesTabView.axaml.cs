@@ -8,23 +8,30 @@ public partial class UnindexedFilesTabView : UserControl
 
     private async void OnAddClick(object? sender, RoutedEventArgs eventArgs)
     {
-        if (DataContext is not UnindexedFilesTabViewModel viewModel
-            || TopLevel.GetTopLevel(this) is not { } topLevel)
+        try
         {
-            return;
+            if (DataContext is not UnindexedFilesTabViewModel viewModel
+                || TopLevel.GetTopLevel(this) is not { } topLevel)
+            {
+                return;
+            }
+
+            IReadOnlyList<IStorageFolder> folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title         = "Select a folder to check",
+                AllowMultiple = false
+            });
+
+            if (folders.Count > 0
+                && folders[index: 0]
+                    .TryGetLocalPath() is { } path)
+            {
+                viewModel.AddFolder(path);
+            }
         }
-
-        IReadOnlyList<IStorageFolder> folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        catch (Exception exception)
         {
-            Title         = "Select a folder to check",
-            AllowMultiple = false
-        });
-
-        if (folders.Count > 0
-            && folders[index: 0]
-                .TryGetLocalPath() is { } path)
-        {
-            viewModel.AddFolder(path);
+            UnexpectedErrorHandler.ReportRecoverable(exception);
         }
     }
 }

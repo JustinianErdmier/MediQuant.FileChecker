@@ -11,8 +11,17 @@ internal static class Program
     /// </remarks>
     [ STAThread ]
     public static void Main(string[] args)
-        => BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
+    {
+        try
+        {
+            BuildAvaloniaApp()
+                .StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception exception)
+        {
+            UnexpectedErrorHandler.ReportFatalAndExit(exception);
+        }
+    }
 
     /// <summary>Builds the Avalonia application; also used by the visual designer.</summary>
     /// <returns>The configured <see cref="AppBuilder" />.</returns>

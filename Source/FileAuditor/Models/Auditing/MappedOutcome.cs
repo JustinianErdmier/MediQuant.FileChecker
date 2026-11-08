@@ -1,4 +1,4 @@
-namespace FileAuditor.Services.Checking;
+namespace FileAuditor.Models.Auditing;
 
 /// <summary>An outcome derived from a file-system exception, with the reason and system message that accompany <see cref="CheckOutcomes.UnverifiedOther" />.</summary>
 /// <param name="Outcomes">The mapped outcome.</param>

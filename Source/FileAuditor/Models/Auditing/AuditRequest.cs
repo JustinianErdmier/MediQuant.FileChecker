@@ -1,4 +1,4 @@
-namespace FileAuditor.Services.Auditing;
+namespace FileAuditor.Models.Auditing;
 
 /// <summary>What an audit needs to run: the validated settings and the resolved report path.</summary>
 /// <param name="Settings">The settings the audit uses.</param>

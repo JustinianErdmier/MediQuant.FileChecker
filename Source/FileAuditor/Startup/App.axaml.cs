@@ -11,7 +11,9 @@ public class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            DialogueService        dialogues = new(() => desktop.MainWindow);
+            UnexpectedErrorHandler.Install(desktop);
+
+            DialogueService      dialogues = new(() => desktop.MainWindow);
             ProjectSettingsService project   = new(dialogues);
 
             desktop.MainWindow = new MainWindow

@@ -68,21 +68,28 @@ public partial class FileTypesDialogueWindow : ClassicWindow
 
     private async void OnOkClick(object? sender, RoutedEventArgs eventArgs)
     {
-        ErrorOr<string[]> parsed = ViewModel.Validate();
-
-        if (parsed.IsError)
+        try
         {
-            // The dialogue stays open, so the entry can be corrected.
-            MessageDialogueViewModel message = new(parsed.FirstError.Description, DialogueIcons.Error, PrimaryText: "OK", SecondaryText: null);
+            ErrorOr<string[]> parsed = ViewModel.Validate();
 
-            await new MessageDialogueWindow(message).ShowDialog(this);
+            if (parsed.IsError)
+            {
+                // The dialogue stays open, so the entry can be corrected.
+                MessageDialogueViewModel message = new(parsed.FirstError.Description, DialogueIcons.Error, PrimaryText: "OK", SecondaryText: null);
 
-            return;
+                await new MessageDialogueWindow(message).ShowDialog(this);
+
+                return;
+            }
+
+            Result = parsed.Value;
+
+            Close();
         }
-
-        Result = parsed.Value;
-
-        Close();
+        catch (Exception exception)
+        {
+            UnexpectedErrorHandler.ReportRecoverable(exception);
+        }
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs eventArgs) => Close();
