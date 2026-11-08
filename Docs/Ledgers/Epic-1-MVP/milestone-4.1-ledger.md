@@ -17,8 +17,9 @@ Decisions taken without the user, each with what it costs if wrong.
 - **R2 (pre-flight):** the group name *Project Settings*, the three status messages and *Clear*'s access key `L` were chosen by the controller and shown to the user before
   "go". Cost if wrong: cosmetic.
 - **R3 (Task 1):** the commit trailers read `Claude Sonnet 5.5`, as the session's attribution reminder says, not the `Claude Opus 5.5` of the common rules (`5cf0ae3`,
-  `ae79471` and `9bc3bb4`; signed, not rewritten). Cost if wrong: cosmetic.
-- **R4 (Task 3):** the window height is a fixed **668** pixels (outer 640 × 668), measured at the current display scale with *Custom* ticked and unticked (identical).
+  `ae79471`, `9bc3bb4` and `dede8d1`; signed, not rewritten). Cost if wrong: cosmetic.
+- **R4 (Task 3, re-measured in the polish wave):** the window height is a fixed **668** pixels (outer 640 × 668; Task 3 measured 672 before the polish wave removed
+  the Report group's empty row), measured at the current display scale with *Custom* ticked and unticked (identical).
   Cost if wrong: another display scale may clip or leave a gap; re-measure whenever a group changes.
 - **R5 (final review):** Task 4 (docs only) was reviewed by the final whole-branch review rather than a separate task review. Cost if wrong: doc defects found one stage later.
 
@@ -46,7 +47,7 @@ The five requests that drive the milestone (2026-11-08):
 
 ## Outstanding items
 
-Fixed in the final-review polish wave (this commit):
+Fixed in the final-review polish wave (`0b5c357`):
 
 - The empty fifth row of the Report group, which left a gap under *File name* on the Missing Files tab; the window height is re-measured at **668** pixels (was 672).
 - `MainWindow`'s `d:DesignHeight` (now 668).
@@ -79,9 +80,11 @@ Left as is:
 
 ## Commits
 
-`git log --oneline 68f044a..HEAD`, newest first (the commit that closes this ledger follows these):
+`git log --oneline 68f044a..HEAD`, newest first (a last ledger wording fix follows these):
 
 ```
+0b5c357 fix(🐛): close the milestone 4.1 final review follow-ups
+dede8d1 docs(📝): sync the SDD with the layout follow-up and close the milestone 4.1 ledger
 9bc3bb4 feat(✨): add Clear to the file-type editors and fit the window to the Missing Files tab
 ae79471 fix(🐛): keep the Include subfolders column visible for long folder paths
 5cf0ae3 feat(✨): add a Project Settings group and disable report options instead of hiding them
@@ -90,4 +93,5 @@ ae79471 fix(🐛): keep the Include subfolders column visible for long folder pa
 
 ## Final review
 
-No Critical or Important findings. Six minor findings, plus the parked ones, were all addressed in the polish wave, in the commit that closes this ledger.
+No Critical or Important findings. Six minor findings, plus the parked ones, were all addressed in the polish wave (`0b5c357`). Its
+scoped re-review was clean; its two ledger wording nits are fixed in the commit after it.
