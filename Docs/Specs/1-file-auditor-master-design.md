@@ -317,9 +317,9 @@ The Unindexed Files tab has its own group (headed *Audit*, `UnindexedAuditView`)
 
 - Read-only statistics in two columns: **Total files**, **Indexed**, **Unindexed** and **Unverified** on the left; **Elapsed** and **Files/second** on the right. There is **no
   Remaining**, neither label nor value, because the walk has no up-front count and so the total is not known until it ends. *Total files* is the files found so far, each of which
-  is checked the moment it is found, so Total files = Indexed + Unindexed; *Unverified* counts folders that could not be listed and links not followed (or that could not be
-  classified) (§6.5.3) and is never part of Total files. Counts,
-  times and the rate are formatted as in §5.4; Files/second is Total files over Elapsed and stays blank until a full second has elapsed. All are blank before the first run.
+  is checked the moment it is found, so Total files = Indexed + Unindexed; *Unverified* counts folders that could not be listed, links not followed and entries that could
+  not be classified (§6.5.3), and is never part of Total files. Counts, times and the rate are formatted as in §5.4; Files/second is Total files over Elapsed and stays
+  blank until a full second has elapsed. All are blank before the first run.
 - A progress bar. While a run is under way it shows a **moving block** a fifth of the track wide that crosses a sunken track from left to right and starts again, moved by the 250
   ms refresh timer, instead of a fill that would read as a percentage of an unknown total. When the run ends the bar is full (and the status bar's percentage pane reads `100%`);
   before the first run it is empty. Classic.Avalonia's own indeterminate marquee was not used: it is blank for about 2.4 seconds of every 5-second cycle and its animation cannot

@@ -168,19 +168,24 @@ call, per-pattern dot scans, the forwarding wrappers in `ReportBuilder`, and doc
 - **Scratch system changes in Tasks 3 and 4:** an ACE denying a folder, junctions and scratch databases were created on scratch paths for testing and all were removed or dropped
   before each task finished.
 
+- **Keystrokes typed into the user's Obsidian note (final fix wave 1):** the app's window opened behind Obsidian, and the harness's SendKeys typed a scratch path and Enter into
+  the user's note *Scratch* (end of line 17). The implementer undid both with Ctrl+Z; the note's modified time changed and the user was asked to check it. Every later wave
+  confirmed FileAuditor.exe was the foreground window before each keystroke or click.
+- **Fix wave 3 stopped by the user** before it committed anything; the tree, drives and junctions were left clean.
+
 ## Not exercised at runtime
 
 - **Stop during the walk, in the UI:** 300,000 files finish in under a second, so UI polling could not hit it. It was exercised at service level (a Stop 25 ms into the walk gave
   a *Stopped by user* report with partial counts). Stop during *Loading the index...* was exercised in the UI, with a stalled load.
 - **Cold network shares and large remote tables:** the walk was measured on a local SSD against LocalDB; behaviour over a real share, and at three million rows or
   more, is extrapolated, not measured. Mapped drives no longer matter for links, since none is followed.
+- **An unclassifiable reparse point** (R25): reviewed, not simulated.
 - **F5, Ctrl+R and Esc** through the menu hot keys: injected keystrokes do not trigger them under UI Automation (as in milestone 3). The XAML is unchanged, and the menu items
   enable and disable with the buttons. Worth a manual check, Esc as Stop especially.
 - **View Report on the Unindexed tab** was opened once, in the Task 5 round 0; after the layout rework only its enabled state was checked.
 - **Closing the window mid-run** on the Unindexed tab (the stop-and-exit prompt) was not driven.
 - **Case-sensitive column collations** in a real project database: covered at service level (a case-sensitive column collation on LocalDB), not on a project's own table.
 - **The final layout** was measured with UI Automation and screenshots, but has not been reviewed by the user at their screen size.
-
 - **Links** are no longer followed (the user's decision), so the outside-link second query and the mapped-drive and `subst` final-path handling no longer exist to be exercised. The
   not-followed rule was exercised at service level against LocalDB (a junction, a directory symlink and a file symlink, as inputs and inside inputs) and once in the app.
 
@@ -197,6 +202,16 @@ All on this machine, a local SSD and LocalDB, warm cache.
 `git log --oneline main..HEAD`, newest first (the commit that closes this ledger follows these):
 
 ```
+d964ff1 docs(📝): define Unverified as folders and links
+9118c9f fix(🐛): fail safe on unclassifiable links and tidy the walker
+6adb78e docs(📝): document the not-followed link rule
+68ac283 refactor(♻️): stop following links in the unindexed audit
+d31215f docs(📝): sync the SDD with the link and second-query fixes
+1774980 fix(🐛): keep link-only subtrees and match link targets in the roots' own form
+0d0744d docs(📝): sync the SDD and spec with the final-review fixes
+de70382 style(🎨): tidy the unindexed audit code
+4efa941 fix(🐛): stop links and non-canonical folders reporting indexed files as unindexed
+093b5a8 docs(📝): sync the SDD with the unindexed audit and close the milestone 4 ledger
 f376d08 fix(🐛): rework the Unindexed tab layout and the progress bar
 8927cb5 feat(✨): add the Unindexed Files tab
 5d4f0a3 feat(✨): run the unindexed audit and write its report
@@ -210,4 +225,9 @@ cc33399 feat(✨): add scan folders and file types to project settings
 
 ## Final review
 
-Pending.
+The Opus whole-branch review of `fd24069..093b5a8` found 0 Critical and 2 Important issues, both against anti-goal 1: links into the walked tree, and folder text
+that was not canonical for the SQL prefix filter. Fix wave 1 (`4efa941`, `de70382`, `0d0744d`) fixed both and the queued minors. Its re-review found three new
+Important issues in the link handling, fixed by wave 2 (`1774980`, `d31215f`); that re-review found one more (an input that is itself a link racing other inputs).
+Wave 3 was stopped by the user, who replaced link following with a simpler, stricter rule: links are refused (skipped and reported, never followed or checked). The
+simplification (`68ac283`, `6adb78e`) and a tidy wave (`9118c9f`, `d964ff1`) implemented it; the last re-review found no Critical or Important issues, and its two
+minors (the input-root link probe now gated on the reparse-point attribute, and an SDD §5.4a re-flow) went into the closing commit.

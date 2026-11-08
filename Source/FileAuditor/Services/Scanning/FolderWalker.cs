@@ -47,8 +47,10 @@ public sealed class FolderWalker
     /// <param name="folders">The input folders; each path is normalised with <see cref="NormaliseFolder" />, which the caller may have done already.</param>
     /// <param name="filter">Decides which files are reported, and under which file type.</param>
     /// <param name="onFile">Called for each file found; may be called concurrently from several threads.</param>
-    /// <param name="onUnverified">Called for each folder that could not be listed, each link that was not followed (a folder or a file) and each entry whose link status could not be read;
-    ///     may be called concurrently from several threads.</param>
+    /// <param name="onUnverified">
+    ///     Called for each folder that could not be listed, each link that was not followed (a folder or a file) and each entry whose link status could not be read;
+    ///     may be called concurrently from several threads.
+    /// </param>
     /// <param name="ct">Stops the walk promptly; see the cancellation note on the type.</param>
     /// <returns>A task that completes when no folder is queued or being listed, or the walk was stopped.</returns>
     public Task WalkAsync(IReadOnlyList<ScanFolder> folders, FileTypeFilter filter, Action<ScannedFile> onFile, Action<UnverifiedFolder> onUnverified,
@@ -72,7 +74,15 @@ public sealed class FolderWalker
 
         foreach (Root root in all)
         {
-            // An input whose link status cannot be read is not walked either: it is reported as unverified.
+            // Only a reparse point can be a link, so an ordinary input costs no extra probe and a missing or unreachable one is left for its listing to classify. An
+            // input whose link status cannot be read is not walked either: it is reported as unverified.
+            if (!IsReparsePoint(root.Path))
+            {
+                roots.Add(root);
+
+                continue;
+            }
+
             switch (Classify(new DirectoryInfo(root.Path), out string? failure))
             {
                 case LinkState.Link:
@@ -196,6 +206,20 @@ public sealed class FolderWalker
             failure = ex.Message;
 
             return LinkState.Unknown;
+        }
+    }
+
+    // Whether an input folder carries the reparse-point attribute. A folder whose attributes cannot be read is treated as ordinary here, so its listing reports the
+    // real reason (drive not found, unreachable, permission denied) rather than a link failure.
+    private static bool IsReparsePoint(string path)
+    {
+        try
+        {
+            return File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return false;
         }
     }
 
