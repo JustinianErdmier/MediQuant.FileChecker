@@ -17,9 +17,14 @@ public sealed class RemainingEstimator
 
     private const string Finished = "00:00:00";
 
+    // Ten thousand hours: far beyond any real run, small enough that no conversion can overflow.
+    private const double MaxSeconds = 36_000_000;
+
     private readonly RecentRate _rate = new();
 
     private double _lastSeconds;
+
+    private long _lastProcessed = -1;
 
     private double? _shown;
 
@@ -31,7 +36,8 @@ public sealed class RemainingEstimator
     {
         _rate.Reset();
 
-        _lastSeconds = 0;
+        _lastSeconds   = 0;
+        _lastProcessed = -1;
         _shown       = null;
     }
 
@@ -61,10 +67,12 @@ public sealed class RemainingEstimator
             return CalculatingText;
         }
 
-        double seconds = checkingElapsed.TotalSeconds;
-        double step    = Math.Max(val1: 0, seconds - _lastSeconds);
+        double seconds   = checkingElapsed.TotalSeconds;
+        double step      = Math.Max(val1: 0, seconds - _lastSeconds);
+        bool   unchanged = processed == _lastProcessed;
 
-        _lastSeconds = seconds;
+        _lastSeconds   = seconds;
+        _lastProcessed = processed;
 
         if (processed >= total)
         {
@@ -73,7 +81,12 @@ public sealed class RemainingEstimator
             return Finished;
         }
 
-        // A stalled run has no rate to divide by; keep the last shown value, counting down, rather than jump to infinity.
+        // A stalled run has no progress to extrapolate from: hold the display where it is (the rate keeps decaying underneath) rather than count down to zero.
+        if (_shown is not null && unchanged)
+        {
+            return FormatTime(_shown.Value);
+        }
+
         double? target = rate > 0 ? (total - processed) / rate : null;
 
         if (_shown is null)
@@ -83,22 +96,27 @@ public sealed class RemainingEstimator
                 return CalculatingText;
             }
 
-            _shown = target;
+            _shown = Math.Min(MaxSeconds, target.Value);
         }
-        else
+        else if (target is not null)
         {
             double shown = Math.Max(val1: 0, _shown.Value - step);
 
-            if (target is not null)
-            {
-                shown += (target.Value - shown) * (1 - Math.Exp(-step / EasingSeconds));
-            }
+            shown += (target.Value - shown) * (1 - Math.Exp(-step / EasingSeconds));
 
-            _shown = Math.Max(val1: 0, shown);
+            _shown = Math.Clamp(shown, min: 0, MaxSeconds);
         }
 
-        return FormatTime(TimeSpan.FromSeconds(_shown.Value));
+        return FormatTime(_shown.Value);
     }
 
-    private static string FormatTime(TimeSpan time) => $"{(long)time.TotalHours:00}:{time.Minutes:00}:{time.Seconds:00}";
+    /// <summary>Formats a duration as <c>hh:mm:ss</c> (hours may exceed 24) without going through <see cref="TimeSpan" />, so any value is safe.</summary>
+    /// <param name="seconds">The duration in seconds; negative and non-finite values are clamped.</param>
+    /// <returns>The duration as text.</returns>
+    internal static string FormatTime(double seconds)
+    {
+        long whole = double.IsNaN(seconds) ? 0 : (long)Math.Clamp(seconds, min: 0, MaxSeconds);
+
+        return $"{whole / 3600:00}:{whole / 60 % 60:00}:{whole % 60:00}";
+    }
 }

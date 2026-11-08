@@ -14,9 +14,15 @@ public sealed class RecentRate
 
     /// <summary>
     ///     The warm-up in seconds. A rate taken over the first few seconds is dominated by connection set-up and cache warming, so none is reported until this
-    ///     much time has passed; the average then starts from the whole warm-up's rate.
+    ///     much time has passed; the average then starts from the warm-up's second half.
     /// </summary>
     public const double WarmUpSeconds = 5;
+
+    private long _anchorCount;
+
+    private double _anchorSeconds;
+
+    private bool _hasAnchor;
 
     private long _previousCount;
 
@@ -33,6 +39,9 @@ public sealed class RecentRate
         _previousCount   = 0;
         _previousSeconds = 0;
         _seeded          = false;
+        _hasAnchor       = false;
+        _anchorCount     = 0;
+        _anchorSeconds   = 0;
         Value            = null;
     }
 
@@ -46,13 +55,21 @@ public sealed class RecentRate
 
         if (!_seeded)
         {
+            // The first sample in the warm-up's second half anchors the seed, so the slow start-up ramp does not drag it down.
+            if (!_hasAnchor && seconds >= WarmUpSeconds / 2)
+            {
+                _hasAnchor     = true;
+                _anchorCount   = count;
+                _anchorSeconds = seconds;
+            }
+
             if (seconds < WarmUpSeconds)
             {
                 return null;
             }
 
             _seeded = true;
-            Value   = count / seconds;
+            Value   = _hasAnchor && seconds > _anchorSeconds ? (count - _anchorCount) / (seconds - _anchorSeconds) : count / seconds;
         }
         else
         {

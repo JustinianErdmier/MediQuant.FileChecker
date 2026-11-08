@@ -76,13 +76,11 @@ public sealed partial class AuditViewModel : AuditStatusBase
         Missing        = progress.Missing.ToString(format: "N0", CultureInfo.CurrentCulture);
         Unverified     = progress.Unverified.ToString(format: "N0", CultureInfo.CurrentCulture);
         Skipped        = progress.Skipped.ToString(format: "N0", CultureInfo.CurrentCulture);
-        Elapsed        = FormatTime(elapsed);
+        Elapsed        = RemainingEstimator.FormatTime(elapsed.TotalSeconds);
         Remaining      = _remainingEstimator.Next(handled, total, progress.CheckingElapsed, progress.HasTotal, isFinished);
         FilesPerSecond = wholeRunSeconds >= 1 ? (done / wholeRunSeconds).ToString(format: "N0", CultureInfo.CurrentCulture) : "";
 
         Percent       = total > 0 ? Math.Min(val1: 100, handled * 100.0 / total) : isFinished && progress.HasTotal ? 100 : 0;
         StatusPercent = progress.HasTotal ? $"{Percent:0}%" : "";
     }
-
-    private static string FormatTime(TimeSpan time) => $"{(long)time.TotalHours:00}:{time.Minutes:00}:{time.Seconds:00}";
 }
