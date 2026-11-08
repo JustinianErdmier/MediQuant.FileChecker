@@ -1,12 +1,16 @@
 # File Auditor — Master Design
 
-**Date:** 2026-11-06 **Status:** Approved 2026-11-06
+**Date:** 2026-11-06 **Status:** Approved 2026-11-06; amended through milestone 4 (2026-11-08)
 
 ## 1. Intent
 
 On almost every MediQuant project that has documents on disk, the team builds a SQL **file index table**: one row per document, holding the document's full path (and
 usually an ID). **File Auditor** confirms that every file the index table points to actually exists on disk, and writes a plain-text **report** that is committed to the
 project's version-control repository as a record of the audit.
+
+Milestone 4 adds the reverse question as a second **direction**: *is every file on disk in the index table?* The **unindexed files audit** walks one or more folders and
+reports every document whose full path is not in the index table's path column. The two directions share the window's inputs and the report location, each has its own tab
+(§5) and each writes its own report (§7).
 
 File Auditor is a rewrite of the old WinForms .NET Framework tool *File Checker* (kept read-only under `OriginalSource/` for reference). The rewrite keeps the core job and
 changes almost everything around it:
@@ -30,6 +34,8 @@ changes almost everything around it:
 - **No hand-written SQL.** Users only ever need "path column (and ID column) from table"; typing the query is error-prone and unnecessary.
 - **A report, not a log.** The output is a durable record committed to the project repo. It has to read well to a person, say clearly when nothing is missing, and make it
   easy to act on many missing files at once — hence grouping by reason instead of a reason column.
+- **Two directions.** A project can go wrong both ways: an index row whose file is gone (*missing*), or a file on disk that nobody indexed (*unindexed*). Checking only the
+  first leaves the second invisible, so the app answers both, from the same inputs, in one window.
 
 ## 2. Goals, non-goals, anti-goals
 
@@ -40,10 +46,14 @@ changes almost everything around it:
 - Produce a readable, deterministic plain-text report suitable for committing.
 - Remember each project's inputs between runs, in a project settings file beside the report.
 - Look and behave like a native Windows 95/98 utility.
+- Find every file under chosen folders whose full path is not in the index table (milestone 4), at the scale of millions of files and rows, over network shares.
+- Let the user say which file types count, with wildcard extension patterns and a blacklist, and group the unindexed files in the report so they can be acted on in bulk.
 
 **Non-goals**
 
-- How missing files are followed up. That varies by project and is outside this app.
+- How missing files, or unindexed files, are followed up. That varies by project and is outside this app.
+- Translating between path spellings (`\\server\share` versus a mapped drive, relative paths): the index holds full paths that match the disk exactly, apart from letter case.
+- Guessing which files matter: the user's file-type lists decide, never the app.
 - SQL authentication, other database engines, or arbitrary queries.
 - Automated tests. This is a small app; none are written.
 - Multi-project / layered architecture. Everything lives in one project.
@@ -58,6 +68,8 @@ changes almost everything around it:
 - Asking the same save question again after the user has answered it, until the project is closed or the app is relaunched.
 - Losing the user's edits without asking when the window or the project is closed.
 - Discovering after a long run that the report cannot be written.
+- Reporting a file as *unindexed* when it is indexed (a hash collision, a letter-case difference, or a stray space in the table), or silently skipping a folder that could
+  not be read.
 
 ## 3. Technology
 
@@ -84,8 +96,8 @@ say.
 | Settings file (per project)         | `FileAuditorSettings.json`, beside the report   |
 | Missing report file (built)         | `FileAuditorMissingReport_<Audit Stage>.txt`    |
 | Missing report file (custom)        | `FileAuditorMissingReport.txt` (default, editable) |
-| Unindexed report file (built)       | `FileAuditorUnindexedReport_<Audit Stage>.txt` (milestone 4) |
-| Unindexed report file (custom)      | `FileAuditorUnindexedReport.txt` (default, editable; milestone 4) |
+| Unindexed report file (built)       | `FileAuditorUnindexedReport_<Audit Stage>.txt` |
+| Unindexed report file (custom)      | `FileAuditorUnindexedReport.txt` (default, editable) |
 | Version                             | 1.0.0                                           |
 | Company / copyright                 | MediQuant / Copyright © 2026 MediQuant          |
 
@@ -94,17 +106,18 @@ the GitHub repository is the user's call, outside this design).
 
 ## 5. The main window
 
-A single, **fixed-size** window (not resizable, no maximise button; minimise and close only; its height fits its content). Classic.Avalonia supplies the Win9x chrome. Tab
-order runs top to bottom, left to right.
+A single, **fixed-size** window: 640 × 761 pixels, not resizable, no maximise button; minimise and close only. Classic.Avalonia supplies the Win9x chrome. The size is the
+same on both tabs (the tab control has a fixed height, §5.2a), so switching tabs never moves the window's edges. Tab order runs top to bottom, left to right.
 
-The window holds one audit **direction** per tab (a standard Win9x tab control). Today the only direction is **Missing Files**: every file the index table points to is on
-disk. Milestone 4 adds **Unindexed Files**: every file on disk is in the index table. The inputs both directions use (the Database and File Index Table groups) stay above
-the tabs; the Report group is shown on every tab and its values are shared (§5.3).
+The window holds one audit **direction** per tab (a standard Win9x tab control): **Missing Files**, where every file the index table points to is on disk, and **Unindexed
+Files**, where every file on disk is in the index table. The inputs both directions use (the Database and File Index Table groups, side by side) stay above the tabs; the
+Report group is shown on every tab and its values are shared (§5.3).
 
 **Win9x conventions.** Every window looks and behaves like a native Windows 95/98 utility:
 
 - **Group boxes** organise related inputs; labels sit to the left of their inputs and end with a colon.
-- **Access keys** on every label, input, button and menu item (`_` prefix in XAML), unique within a window. The exception is *OK* and *Cancel* in message dialogues (§11).
+- **Access keys** on every label, input, button and menu item (`_` prefix in XAML), unique within a window. The exceptions are *OK* and *Cancel* in dialogues and a few
+  controls on the Unindexed Files tab for which no letter is free (§11).
 - **Command buttons** are 75 × 23 minimum, laid out horizontally; the action comes first, the escape after it (*Start* then *Stop*, *OK* then *Cancel*, *Overwrite*
   then *Cancel*).
 - **Ellipsis (`...`)** only on a command that needs more input before it completes (e.g. *Browse...*). A command that acts immediately — including opening a file in
@@ -119,21 +132,18 @@ with the tab control (including milestone 4's *Unindexed Files* tab), [`main-win
 [`report-section-states.html`](../UserInterfaceDesign/Mockups/report-section-states.html). They are a design reference only: the latter's state 1 predates the Interim
 default for Audit Stage, and the last two predate the tab control, the per-direction report names, the *Options* group, the final Report-file rows, the access keys, the *Audit*
 group (named *Progress* there), and the project settings (the *Save project settings with the report* checkbox and the *Open project...* and *Close project* menu
-items, milestone 2). The XAML and this section are the contract.
+items, milestone 2), and none of them shows milestone 4's final layout (the Database and File Index Table groups side by side, the fixed tab height, the compact Unindexed tab
+and the File Types dialogue). The XAML and this section are the contract.
 
 ```text
 ┌ File Auditor ───────────────────────────────────────────────── _ × ┐
 │ File  Help                                                         │
-│ ┌ Database ──────────────────────────────────────────────────────┐ │
-│ │ Server:       [                                            ]   │ │
-│ │ Database:     [                                            ]   │ │
-│ └────────────────────────────────────────────────────────────────┘ │
-│ ┌ File Index Table ──────────────────────────────────────────────┐ │
-│ │ Table:        [                                            ]   │ │
-│ │ Path column:  [                                            ]   │ │
-│ │ ID column:    [                                ] (Optional)    │ │
-│ └────────────────────────────────────────────────────────────────┘ │
-│  ┌─────────────┐                                                   │
+│ ┌ Database ────────────────────┐ ┌ File Index Table ─────────────┐ │
+│ │ Server:   [                ] │ │ Table:       [               ]│ │
+│ │ Database: [                ] │ │ Path column: [               ]│ │
+│ │                              │ │ ID column:   [        ] (Opt.)│ │
+│ └──────────────────────────────┘ └───────────────────────────────┘ │
+│  ┌─────────────┐ Unindexed Files                                   │
 │ ┌┘Missing Files└─────────────────────────────────────────────────┐ │
 │ │ ┌ Options ───────────────────────────────────────────────────┐ │ │
 │ │ │ [x] Report empty (zero-byte) files as missing              │ │ │
@@ -141,9 +151,9 @@ items, milestone 2). The XAML and this section are the contract.
 │ │ ┌ Report ────────────────────────────────────────────────────┐ │ │
 │ │ │ [ ] Use a custom report location and file name             │ │ │
 │ │ │ Project folder: [D12345  ]                                 │ │ │
-│ │ │ ┌ Project Stage ─────────┐ ┌ Audit Stage ──────────┐       │ │ │
-│ │ │ │ ( ) Sample  (•) Final  │ │ (•) Interim ( ) Final │       │ │ │
-│ │ │ └────────────────────────┘ └───────────────────────┘       │ │ │
+│ │ │ ┌ Project Stage ───────────┐ ┌ Audit Stage ─────────────┐  │ │ │
+│ │ │ │ ( ) Sample  (•) Final    │ │ (•) Interim  ( ) Final   │  │ │ │
+│ │ │ └──────────────────────────┘ └──────────────────────────┘  │ │ │
 │ │ │ Location:    [U:\Projects\D12345\DE\Final\]  Browse...     │ │ │
 │ │ │ File name:   [FileAuditorMissingReport_Interim.txt]        │ │ │
 │ │ │ [x] Save project settings with the report                  │ │ │
@@ -161,6 +171,54 @@ items, milestone 2). The XAML and this section are the contract.
 └────────────────────────────────────────────────────────────────────┘
 ```
 
+The diagram shows the Missing Files tab with the Report group in its built state. The Unindexed Files tab (§5.2b) replaces the Options group with *Folders to Check* and adds a
+*Group file types by* row to the Report group:
+
+```text
+┌ File Auditor ───────────────────────────────────────────────── _ × ┐
+│ File  Help                                                         │
+│ ┌ Database ────────────────────┐ ┌ File Index Table ─────────────┐ │
+│ │ Server:   [                ] │ │ Table:       [               ]│ │
+│ │ Database: [                ] │ │ Path column: [               ]│ │
+│ │                              │ │ ID column:   [        ] (Opt.)│ │
+│ └──────────────────────────────┘ └───────────────────────────────┘ │
+│  Missing Files  ┌───────────────┐                                  │
+│ ┌──────────────┘Unindexed Files└─────────────────────────────────┐ │
+│ │ ┌ Folders to Check ──────────────────────────────────────────┐ │ │
+│ │ │ Include subfolders   Folder                                │ │ │
+│ │ │ ┌──────────────────────────────────────┐ ┌──────────┐      │ │ │
+│ │ │ │ [x]  U:\Projects\D12345\Images       │ │ Add...   │      │ │ │
+│ │ │ │ [ ]  U:\Projects\D12345\Scans        │ │ Remove   │      │ │ │
+│ │ │ └──────────────────────────────────────┘ └──────────┘      │ │ │
+│ │ │ File types: [.bmp .doc .docx .eml .gif ..   ]  [ Edit... ] │ │ │
+│ │ │ Exclude:    [                              ]  [ Edit... ]  │ │ │
+│ │ └────────────────────────────────────────────────────────────┘ │ │
+│ │ ┌ Report ────────────────────────────────────────────────────┐ │ │
+│ │ │ [ ] Use a custom report location and file name             │ │ │
+│ │ │ Project folder: [D12345  ]                                 │ │ │
+│ │ │ ┌ Project Stage ───────────┐ ┌ Audit Stage ─────────────┐  │ │ │
+│ │ │ │ ( ) Sample  (•) Final    │ │ (•) Interim  ( ) Final   │  │ │ │
+│ │ │ └──────────────────────────┘ └──────────────────────────┘  │ │ │
+│ │ │ Location:    [U:\Projects\D12345\DE\Final\]  Browse...     │ │ │
+│ │ │ File name:   [FileAuditorUnindexedReport_Interim.txt]      │ │ │
+│ │ │ Group file types by: (•) Listed type  ( ) Found extension  │ │ │
+│ │ │ [x] Save project settings with the report                  │ │ │
+│ │ └────────────────────────────────────────────────────────────┘ │ │
+│ │ ┌ Audit ─────────────────────────────────────────────────────┐ │ │
+│ │ │ Total files: 48,207     Elapsed:      00:01:29             │ │ │
+│ │ │ Indexed:     48,187     Files/second: 541.65               │ │ │
+│ │ │ Unindexed:   20                                            │ │ │
+│ │ │ Unverified:  3                                             │ │ │
+│ │ │ [██████████████████                            ]           │ │ │
+│ │ │ [View Report]                      [Start]  [Stop]         │ │ │
+│ │ └────────────────────────────────────────────────────────────┘ │ │
+│ └────────────────────────────────────────────────────────────────┘ │
+│ Checking files...                                        │ 49%     │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+With *Use a custom report location and file name* ticked, the Report group hides its Project folder row and both stage groups on either tab (§5.3).
+
 ### 5.1 Database group
 
 - **Server** and **Database**: text inputs, both required.
@@ -171,22 +229,52 @@ items, milestone 2). The XAML and this section are the contract.
 
 - **Table**: required. Accepts `table` or `schema.table`.
 - **Path column**: required.
-- **ID column**: optional, with a muted "(Optional)" note beside it. It is shared by both directions.
+- **ID column**: optional, with a muted "(Optional)" note beside it. It is shared by both directions, but only the missing-files direction uses it: an unindexed file has no
+  row, so no ID. On the Unindexed Files tab it stays editable and is still saved with the project.
 
-The Database and File Index Table groups stay above the tab control and are used by every direction.
+The Database and File Index Table groups sit **side by side**, Database on the left and File Index Table on the right, each with its fields stacked vertically, and stay above
+the tab control. They are used by every direction. (The side-by-side placement is a trial the user may reverse.)
 
 ### 5.2a Tab control and Options group
 
-- A standard Win9x **tab control** sits below the File Index Table group, one tab per audit direction: **Missing Files** now, **Unindexed Files** with milestone 4. The
-  selected tab is not saved; the window opens on the first tab.
+- A standard Win9x **tab control** sits below those two groups, one tab per audit direction: **Missing Files** and **Unindexed Files**. Its height is fixed (575 pixels), tall
+  enough for the taller Unindexed tab, so the window does not change size when the tab changes. The selected tab is not saved; the window opens on the first tab. Switching
+  tabs is allowed while an audit runs.
 - The Missing Files tab holds, top to bottom: an **Options** group, the **Report** group (§5.3) and the **Audit** group (§5.4).
 - **Options** holds **Report empty (zero-byte) files as missing**: checkbox, checked by default. When ticked, an existing file of length 0 counts as *missing (empty)*. It
   applies to the missing-files direction only, which is why it is not in the shared File Index Table group.
 
+### 5.2b The Unindexed Files tab
+
+The tab holds, top to bottom, the **Folders to Check** group, the **Report** group (§5.3) and the **Unindexed Audit** group (§5.4a).
+
+**Folders to Check** holds:
+
+- A list of folders, one per row. Each row has an **Include subfolders** checkbox in a column at the row's left, ticked for a newly added folder, and the folder's path beside
+  it (cut with an ellipsis when long, the whole path in a tooltip). The list scrolls vertically only and is about as tall as the two buttons beside it.
+- **Add...** and **Remove**, stacked to the right of the list. *Add...* opens a folder picker (directories only) and appends the chosen folder, selecting it; a folder already
+  listed (ignoring case and a trailing separator) is not added a second time. *Remove* removes the selected row and is disabled while no row is selected.
+- **File types:** a read-only, single-line summary of the extension whitelist (sorted, separated by spaces), with an **Edit...** button. A built-in list of 19 common document and
+  image formats is the default (`.bmp .doc .docx .eml .gif .jpeg .jpg .msg .odt .pdf .png .ppt .pptx .rtf .tif .tiff .xls .xlsx .xps`); `.txt`, `.json` and other text or
+  configuration formats are not on it, so the app's own reports and project files are never reported.
+- **Exclude:** the extension blacklist, in the same form, empty by default, with its own **Edit...** button. A file that matches an Exclude entry is never checked, even when
+  File types matches it: the blacklist wins.
+
+The labels *File t_ypes:* and *E_xclude:* carry the access keys Y and X; *Add...*, *Remove* and the two *Edit...* buttons carry none, because every letter is taken on this
+window (§11).
+
+**File Types dialogue.** Each *Edit...* opens a modal dialogue (`FileTypesDialogueWindow`, titled *Edit File Types* or *Edit Exclude List*; 360 × 300, fixed-size, centred on the
+main window, no maximise) that lists the entries one per row, as Windows' environment-variable editor does, with **New** (adds an empty row and focuses it), **Edit** (focuses the
+selected row), **Delete** (removes the selected row; disabled while none is selected), **Reset** (restores the built-in list; shown for File types only), **OK** and **Cancel**.
+**OK** validates every entry (the syntax of §6.5.1) and, when one is invalid, shows the error and keeps the dialogue open; otherwise the summary shows the normalised entries
+(lower case, one leading dot, duplicates dropped, sorted). **Cancel** discards every change, including a Reset. The Folders to Check group and its buttons are locked while an
+audit runs (§5.8).
+
 ### 5.3 Report group
 
 Each tab shows a complete Report group. Its values are **one set shared by every tab**: change one on a tab and every other tab shows the change. The only per-tab item is
-the **File name**, which belongs to the tab's direction (names are in §4). The *Save project settings with the report* checkbox is shared too.
+the **File name**, which belongs to the tab's direction (names are in §4), and, on the Unindexed Files tab only, the **Group file types by** option below it. The *Save project
+settings with the report* checkbox is shared too.
 
 - **Use a custom report location and file name**: checkbox, unchecked by default. It is the group's first control, because it decides whether the rest apply.
 - **Project folder**: text input with watermark `D12345`.
@@ -196,18 +284,22 @@ the **File name**, which belongs to the tab's direction (names are in §4). The 
   selected.
 - **Location** and **File name**:
     - *Unticked (built):* both are read-only previews. Location is `U:\Projects\<Project Folder>\DE\<Project Stage>\`; File name is
-      the tab's built name, `FileAuditorMissingReport_<Audit Stage>.txt` on the Missing Files tab. An empty Project folder shows as the literal placeholder
+      the tab's built name, `FileAuditorMissingReport_<Audit Stage>.txt` on the Missing Files tab and `FileAuditorUnindexedReport_<Audit Stage>.txt` on the Unindexed Files tab.
+      An empty Project folder shows as the literal placeholder
       `<Project Folder>`. **Browse...** is disabled.
-    - *Ticked (custom):* Project folder and both stage groups are disabled. Location becomes an editable directory path, empty by default, with **Browse...** opening a *folder*
-      picker (directories only). File name becomes editable, defaulting to the tab's custom default, `FileAuditorMissingReport.txt` on the Missing Files tab; each tab keeps
-      its own custom file name.
+    - *Ticked (custom):* the Project folder row and both stage groups are **hidden**, not disabled, on both tabs, and come back when the box is unticked (the user's decision).
+      Location becomes an editable directory path, empty by default, with **Browse...** opening a *folder* picker (directories only). File name becomes editable, defaulting to
+      the tab's custom default, `FileAuditorMissingReport.txt` on the Missing Files tab and `FileAuditorUnindexedReport.txt` on the Unindexed Files tab; each tab keeps its own
+      custom file name. The two names must differ (§6.1).
+- **Group file types by** (Unindexed Files tab only): two radio buttons, *Listed type* (default) and *Found extension*, on the row above the Save checkbox. It chooses how the
+  unindexed report groups files (§7.1) and is saved in the project file (§8). It belongs to the direction, so the Missing Files tab does not show it.
 - **Save project settings with the report**: checkbox on the group's last row, below *File name*. It is **ticked by default** — on launch, after *Open project...* and after
   *Close project* — and its state is not stored in the settings file; it is a per-session preference. It is disabled while an audit is running. Ticking it needs no
   confirmation. **Unticking** first shows a warning dialogue (*"If you untick this box, this project's settings will no longer be saved automatically. You will be asked
   whether to save them instead. Do you want to untick it?"*) with **Untick** and **Cancel**; *Cancel* leaves the box ticked. Once *Untick* has been chosen the warning is not
   shown again, and later unticking goes straight through, until *Close project* or a fresh launch. What the box does is set out in §8.
 
-### 5.4 Audit group
+### 5.4 Audit group (Missing Files tab)
 
 The Audit group sits at the bottom of its tab, below the Report group; each direction's tab has its own, so a tab's statistics are those of its own last run.
 
@@ -219,12 +311,26 @@ The Audit group sits at the bottom of its tab, below the Report group; each dire
 - A progress bar (percentage of rows checked).
 - A row of command buttons: **View Report** left-justified; **Start** then **Stop** right-justified. There is no Close button.
 
+### 5.4a Unindexed Audit group
+
+The Unindexed Files tab has its own group (headed *Audit*, `UnindexedAuditView`) at the bottom of the tab. It holds:
+
+- Read-only statistics in two columns: **Total files**, **Indexed**, **Unindexed** and **Unverified** on the left; **Elapsed** and **Files/second** on the right. There is **no
+  Remaining**, neither label nor value, because the walk has no up-front count and so the total is not known until it ends. *Total files* is the files found so far, each of which
+  is checked the moment it is found, so Total files = Indexed + Unindexed; *Unverified* counts folders that could not be listed (§6.5.3) and is never part of Total files. Counts,
+  times and the rate are formatted as in §5.4; Files/second is Total files over Elapsed and stays blank until a full second has elapsed. All are blank before the first run.
+- A progress bar. While a run is under way it shows a **moving block** a fifth of the track wide that crosses a sunken track from left to right and starts again, moved by the 250
+  ms refresh timer, instead of a fill that would read as a percentage of an unknown total. When the run ends the bar is full (and the status bar's percentage pane reads `100%`);
+  before the first run it is empty. Classic.Avalonia's own indeterminate marquee was not used: it is blank for about 2.4 seconds of every 5-second cycle and its animation cannot
+  be restyled.
+- The same row of command buttons as §5.4: **View Report** left-justified, **Start** then **Stop** right-justified.
+
 ### 5.5 Status bar
 
-One status bar for the window, with two sunken panes: a message pane that fills the width (`Ready`, `Counting files...`, `Checking files...`, `Writing report...`,
-`Completed`, `Stopped`, `Failed`) and a fixed-width percentage pane at the right edge. **While an audit runs**, the bar shows that run's phase and percentage whichever tab
-is selected, so switching tabs never hides a run. **Otherwise** it shows the selected tab's own state: with no run on that tab, the message reads `Ready` only while that
-tab's **Start** is enabled, and `Enter the required details` while it is not. Once a run has ended, its result (`Completed`, `Stopped` or `Failed`) stays on that tab until
+One status bar for the window, with two sunken panes: a message pane that fills the width (`Ready`, `Counting files...`, `Loading the index...`, `Checking files...`, `Writing
+report...`, `Completed`, `Stopped`, `Failed`) and a fixed-width percentage pane at the right edge. **While an audit runs**, the bar shows that run's phase and percentage
+whichever tab is selected, so switching tabs never hides a run. **Otherwise** it shows the selected tab's own state: with no run on that tab, the message reads `Ready` only while
+that tab's **Start** is enabled, and `Enter the required details` while it is not. Once a run has ended, its result (`Completed`, `Stopped` or `Failed`) stays on that tab until
 its next run starts. Each tab keeps its own last result.
 
 ### 5.6 Menu bar
@@ -256,6 +362,9 @@ The report path is complete when, *built*: Project folder is filled (an Audit St
 including the *Save project settings with the report* checkbox, are disabled while a run is in progress. Start and View Report follow the selected tab; Stop follows the
 running audit.
 
+**One run at a time.** While either direction runs, both tabs' Start buttons are disabled and every input is locked: the shared groups, the Folders to Check group (the list, its
+checkboxes, *Add...*, *Remove* and both *Edit...* buttons) and the Report group. Only Stop, the tab selection and the Help menu stay live.
+
 **Busy.** Start, *Open project...* and *Close project* are *busy* from the moment the command begins until it ends, including while its pre-flight checks, save prompts, file
 picker or error dialogues are open (Start's busy period runs on into the audit itself). They never overlap: while one is busy the other two are disabled, and so is Start. The
 inputs, including the checkbox, are disabled as well, so nothing can be edited and then wiped by a project being opened. Closing the window while one of them is busy but no
@@ -270,6 +379,8 @@ stop-and-exit question (§6.4).
 
 1. Validate inputs (identifiers well formed; custom File name has no invalid file-name characters). With the built location, the Project folder must be a single
    folder name: not rooted, no `\` or `/`, not `.` or `..`, and no invalid file-name characters. Failure → error dialog, run does not start.
+   With a custom location the two tabs' custom file names must also differ (ignoring case), since both reports are written to that one location and would overwrite each
+   other. For the Unindexed direction the checks of §6.5.1 run after the identifier, Project folder and file-name checks above and before the rest of this step.
 2. Report folder:
     - *Built location* and the folder does not exist → **error dialog**; the run does not start.
     - *Custom location* and the folder does not exist → **warning dialog** with **Create Folder** and **Cancel**. Create Folder tries to create it (failure → error dialog,
@@ -291,7 +402,7 @@ SELECT [PathColumn] AS [Path], [IdColumn] AS [Id] FROM [schema].[table];   -- ID
 ```
 
 The count runs first (status `Counting files...`) so progress and remaining time can be shown. Values are read as strings (`NULL` → empty). Command timeouts are long
-enough for large tables.
+enough for large tables. The unindexed direction reads only the path column, in the query of §6.5.2.
 
 ### 6.3 Checking a file
 
@@ -332,6 +443,8 @@ long*, *Invalid characters in path*, *Path is empty in the index table*) never s
 
 ### 6.4 Progress, stop and failure
 
+This section describes the missing-files audit; §6.5.4 gives the unindexed audit's differences. Closing the window mid-run and the save rule behave the same for both.
+
 - The UI refreshes stats a few times per second. Remaining time is estimated from the checking rate so far; Files/second is over the whole run (§5.4).
 - **Stop**: stops reading rows and checking files, then writes the report with `Result: Stopped by user`. Counts reflect only what was checked.
   If Stop is pressed while the rows are still being counted (before the count query returns), no report is written and the status bar reads `Stopped`: nothing
@@ -346,14 +459,97 @@ long*, *Invalid characters in path*, *Path is empty in the index table*) never s
   goes. During a run the stop-and-exit prompt above comes first, and the save rule runs only if the answer is Yes. *Cancel* on any of the save rule's prompts keeps the
   window open.
 
+### 6.5 Running the unindexed audit
+
+Start on the Unindexed Files tab runs the pre-flight checks of §6.1 (the ID column is not used), then those of §6.5.1, then the run itself.
+
+#### 6.5.1 Pre-flight additions
+
+Each is an error dialogue that stops the Start, unless marked *warning*. The first problem found is the one shown, with the offending entry.
+
+- **Folders:** at least one folder; each a fully qualified path that exists (probed off the UI thread, since it may be on a slow share); no folder listed twice (ignoring case
+  and a trailing separator).
+- **File types syntax.** An *entry* is one or more dot-separated *parts*, such as `pdf`, `tar.gz`, `zip.001` or `zip.*`. A leading dot is optional (`pdf` and `.pdf` are the same)
+  and a leading `*.` means the same as a leading dot. Entries are case-insensitive and are kept in lower case with a leading dot, duplicates dropped, sorted. `*` stands for any
+  run of characters and `?` for exactly one, the usual glob meanings; there are no character sets, and a wildcard stays within one part (it never matches a dot). An entry is
+  invalid when it is empty after the leading dot, has an empty part (`a..b`), or contains a path separator or a character Windows forbids in file names other than `*` and `?`.
+  The File Types dialogue accepts only valid entries, so an invalid one can reach Start only through a hand-edited project file.
+- **File types** has at least one entry.
+- **Exclude** has no entry that matches every file (error: it would exclude everything).
+
+An entry **matches every file** when it has exactly one part, that part is made only of wildcards, and it contains at least one `*` and at most one `?`. So `*`, `*.*` (the same
+as `*`), `?*` and `**` match every file, while `?` (every one-character extension) and `.*.*` (two parts) do not, and are accepted. Messages show the normalised entry, in which
+`*` appears as `.*`.
+
+Three **warnings** (*Continue* and *Cancel*) follow, in this order. *Cancel* stops the Start. Each one, once answered *Continue*, is not asked again until *Close project*, *Open
+project...* or a fresh launch, like the remembered answers of §8.1; each has its own remembered answer, and none is saved in the project file.
+
+1. File types has a match-every-file entry **and other entries**: the wildcard makes the others redundant.
+2. File types has a match-every-file entry **and** Exclude is not empty: every file will be checked except the excluded types.
+3. The same entry (after normalising) is in both lists: the blacklist wins, so that type is not checked. Only identical entries count; overlapping patterns such as `zip.*` and
+   `zip.000` are ordinary use and raise nothing.
+
+A match-every-file entry alone in File types, with an empty Exclude list, is accepted without a warning.
+
+#### 6.5.2 Loading the index
+
+Status `Loading the index...`. Only the path column is read (never the ID), forward-only and with no command timeout:
+
+```sql
+SELECT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filter>;   -- every part bracket-quoted as in §6.2
+```
+
+- **Prefix filter.** For one to 20 folders the statement asks SQL only for rows under those folders: one case-insensitive `LIKE '<folder>\%'` per folder (`COLLATE
+  Latin1_General_100_CI_AS`, so a case-sensitive column collation cannot drop rows), with `|`, `%`, `_` and `[` escaped, joined with `OR`. The filter ignores *Include subfolders*
+  (a folder's prefix is a superset of its direct files), so tables that span many projects send only the relevant rows. A further `OR` clause selects every row whose value
+  **starts with a whitespace character**, because the values are trimmed before they are matched (§6.5.3) and such a row would miss every prefix. With no folder, more than 20
+  folders, or an empty folder path, the filter is dropped and every row is loaded. The filter is an optimisation only; it never changes the result.
+- **Hashes.** Each path is trimmed, upper-cased (invariant culture) and hashed to **128 bits** (MD5 of its UTF-16 bytes: an in-box algorithm chosen for speed and even spread, not
+  security); only the hashes are kept, in a set. `NULL` values are skipped. A 128-bit hash makes a false match, which would hide an unindexed file (anti-goal), practically
+  impossible. Memory is about **48 MB per million rows**, measured (one million rows loaded in 1.6 seconds on a local SQL Server), so three million rows take roughly 150 MB.
+- A path is **indexed** when its full path equals a value in the column ignoring letter case and nothing else; leading and trailing whitespace in the value is ignored.
+
+#### 6.5.3 Walking the folders
+
+Status `Checking files...`.
+
+- **One traversal** over the union of the input folders, not one walk per input. Up to **16 folder listings run at once**, on dedicated threads, because each listing over a
+  network share is a round trip; the per-file lookup in the hashes takes a microsecond, so files are not batched across threads. A listing returns the files' attributes, so hidden
+  and system files and folders are skipped with no further disk access; **a hidden or system folder's contents are skipped with it**.
+- **Which files are checked.** A file name is split on dots; the first part is the *stem* and must not be empty, so a name with no dot, or one that starts with a dot
+  (`.gitignore`), has no extension and matches nothing. An entry of *k* parts matches a name that has at least *k* parts after the stem when the name's **last *k* parts** match
+  the entry's parts one for one, each compared with its wildcards, ignoring case. So `.zip.001` matches `Backup.zip.001` but neither `Backup.zip` nor `Backup.zip.001.bak`;
+  `zip.*` matches `Backup.zip.01` and `Backup.zip.001`; and with File types `.gz` and Exclude `.tar.gz`, `x.gz` is checked and `x.tar.gz` is not (the blacklist wins). A file that
+  matches several File types entries belongs to the **most specific**: the most parts, then the fewest wildcard characters, then the first alphabetically. A file is checked
+  only when a File types entry matches it and no Exclude entry does.
+- **Nested inputs.** A file reached through two input folders (one inside another) is checked and reported **once**, under the deepest input folder whose scope covers its
+  folder. With inputs `A` (with subfolders) and `A\B` (without), `A\B\x.pdf` is reported under `A\B` and `A\B\C\y.pdf` under `A`.
+- **Links are followed.** Junctions, symbolic links and DFS links to folders are walked like folders (DFS namespaces on file shares appear as links, and skipping them would
+  silently drop content), and files are reported by the path they were reached through. To end loops, a folder whose resolved target was already listed in this run is not
+  listed again; if it was first listed without descending and a later visit needs its subfolders, the later visit lists those. When a target is reachable both directly and
+  through a link, whichever path is listed first wins, so attribution and reported paths can differ between runs, and content reachable through links to a folder and to one of
+  its descendants can be reported twice, under different link paths.
+- **Unverified folders.** A folder that cannot be listed (permission denied, share unreachable, path too long, any other I/O failure; a folder deleted mid-run is *Other errors*)
+  is reported once as **unverified** and nothing beneath it is walked. Its contents are not checked, so it is counted separately (*Unverified*, in folders), never in *Total
+  files*. A listing that fails part-way reports none of that folder's files, so a folder is either wholly checked or wholly unverified.
+
+#### 6.5.4 Progress, stop and failure
+
+- **Counting.** Every file found is checked at once, so *Total files* = *Indexed* + *Unindexed*; the audit never opens a file, so no single file can fail. The UI refreshes four
+  times a second. There is no up-front count, no percentage and no *Remaining* (§5.4a).
+- **Stop** while the index is loading: no report is written and the status bar reads `Stopped`. After that, Stop (button, menu and Esc) stops starting new listings, lets the
+  running ones finish and writes the report with `Result: Stopped by user`; the counts are what was found and checked, and there is no *Not checked* line, since the total is
+  unknown. A Stop that arrives after the walk has finished but before the run reads its stop request produces a *Stopped by user* report for a complete walk; this is cosmetic.
+- **SQL failure** while loading (connection, bad table or column): an error dialogue, and no report, since nothing has been walked. **Report write failure:** an error dialogue.
+- **Closing the window mid-run** asks the question of §6.4; *Yes* stops the run as above (no report if the index was still loading) and exits.
+
 ## 7. The report
 
 Plain text, UTF-8 without BOM, Windows (CRLF) line endings. Timestamps are local time (a person reads this). Within each group, files are sorted by path (ordinal,
 case-insensitive) so re-runs produce stable diffs. Each file line is `<IdColumn> <IdValue>   <Path>` when an ID column is set, otherwise just `<Path>`. Columns are aligned
 with spaces.
 
-This is the **missing-files** report (`FileAuditorMissingReport_<Audit Stage>.txt`); milestone 4 specifies the unindexed-files report, titled *File Auditor Unindexed
-Report*.
+This is the **missing-files** report (`FileAuditorMissingReport_<Audit Stage>.txt`); the unindexed-files report, titled *File Auditor Unindexed Report*, follows in §7.1.
 
 ```text
 File Auditor Missing Report
@@ -416,19 +612,101 @@ Rules:
 - `Total files:` is always the table's row count. When the result is *Stopped by user* or *Failed*, the Summary adds a `Not checked:` line, so that Found + Missing +
   Unverified + Not checked = Total files. The line is omitted for a completed run.
 
+### 7.1 The unindexed report
+
+`FileAuditorUnindexedReport_<Audit Stage>.txt`, with the same rules as §7 (UTF-8 without BOM, CRLF, local timestamps, deterministic order, aligned labels):
+
+```text
+File Auditor Unindexed Report
+=============================
+
+Server:          KDCSQL15
+Database:        InterimBJC_Soarian_DocStorage
+Table:           _DMS_Generic_Index
+Path column:     MQ_FullPath
+Folders:         U:\Projects\D12345\Images (with subfolders)
+                 U:\Projects\D12345\Scans
+File types:      .doc .docx .jpg .pdf .png .tif .tiff .zip.*
+Exclude:         .zip.000
+Grouped by:      Listed type
+Project folder:  D12345
+Project stage:   Final
+Audit stage:     Interim
+
+Started:         2026-11-08 14:02:11
+Finished:        2026-11-08 14:03:40
+Elapsed:         00:01:29
+Result:          Completed
+
+Summary
+-------
+Total files:     48,207
+Indexed:         48,187
+Unindexed:       20
+Unverified:      3
+
+Unindexed Files (20)
+--------------------
+[U:\Projects\D12345\Images (17)]
+
+  [.pdf (2)]
+  U:\Projects\D12345\Images\2019\05\10871.pdf
+  U:\Projects\D12345\Images\2019\06\11002.pdf
+
+  [.tif (15)]
+  U:\Projects\D12345\Images\2019\04\10443.tif
+  ...
+
+[U:\Projects\D12345\Scans (3)]
+
+  [.jpg (3)]
+  U:\Projects\D12345\Scans\IMG_0041.jpg
+  ...
+
+Unverified Folders (3)
+----------------------
+[Permission denied (2)]
+U:\Projects\D12345\Images\Restricted\
+U:\Projects\D12345\Images\Restricted2\
+
+[Other errors (1)]
+U:\Projects\D12345\Images\2020\   I/O error   The semaphore timeout period has expired.
+```
+
+- **Unindexed Files** are grouped by **input folder** (in the order listed), then by **file type** (alphabetical), then sorted by path (ordinal, ignoring case). A folder group
+  and a file-type group are each wrapped in square brackets with their counts; type groups and file lines are indented two spaces; a blank line separates the groups. Every folder
+  that has unindexed files gets its group, even when only one folder was chosen; groups with none are omitted. `No unindexed files.` when there are none.
+- **File-type groups** follow the *Group file types by* option (§5.3), saved in the project file:
+    - *Listed type* (default): one group per File types entry as normalised, such as `[.zip.* (12)]` or `[.pdf (2)]`.
+    - *Found extension*: one group per real extension found, the file name's last *k* parts in lower case, where *k* is the matching entry's part count, such as `[.zip.001 (5)]`
+      and `[.zip.002 (7)]`.
+    - Either way, a file that matches several File types entries is grouped through the most specific one (§6.5.3).
+- **Header.** `Folders:` lists each input folder on its own line, `(with subfolders)` where ticked (`(none)` when the list is empty). `File types:` and `Exclude:` are each sorted
+  and space-separated, and `Exclude:` reads `(none)` when empty. `Grouped by:` reads `Listed type` or `Found extension`. The Project folder and stage lines are omitted when a
+  custom location is used. There is no ID column line.
+- **Summary.** `Total files:` is the files found and checked, so Total files = Indexed + Unindexed. `Unverified:` counts folders, not files. A *Stopped by user* report has
+  `Result: Stopped by user` and no `Not checked:` line, since the total is unknown. A run that fails while loading the index writes no report (§6.5.4).
+- **Unverified Folders** lists the folders that could not be listed (the path ends in `\`; their contents were not checked) in groups ordered as in §6.3: *Drive or share not
+  found*, *Permission denied*, *Network location unreachable*, *Path too long*, *Other errors*. *Other errors* shows the reason and the system message in aligned columns and also
+  holds a folder whose path is malformed or any failure not listed above (reason text, no system message). A folder is listed once, and nothing beneath it is. `No unverified
+  folders.` when there are none.
+
 ## 8. Settings
 
 Settings belong to the **project**, not the Windows user. They are saved as `FileAuditorSettings.json` beside the project's report, so that the file lives in the project's
 repository with the report and any teammate can open the same project. The per-user `%APPDATA%\MediQuant\FileAuditor\settings.json` of earlier builds is no longer read or
 written; it is left on disk untouched and is not migrated.
 
-The file holds every input of every direction: server, database, table, path column, ID column, empty-files option, project folder, project stage, audit stage (default
-Interim), custom-location flag, custom location, and the custom file name of the missing-files report (`MissingCustomFileName`, default
-`FileAuditorMissingReport.txt`). Milestone 4 adds the unindexed direction's folders, file types and custom file name. Older files load, but their custom file name
-falls back to the default; no migration is attempted. No credentials. The *Save project settings with the report* checkbox is not stored in it. The file is written
-with a temp file + `File.Move(overwrite: true)`; a save never creates a folder. A null string value or an undefined enum value in the file falls back, field by field, to its
-default; other values are kept. Window size and position are not saved — the window is fixed-size. The milestone 2 spec
-(`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`) has the full prompt texts.
+The file holds every input of every direction: server, database, table, path column, ID column, empty-files option, project folder, project stage, audit stage (default Interim),
+custom-location flag, custom location, and the custom file name of the missing-files report (`MissingCustomFileName`, default `FileAuditorMissingReport.txt`). The unindexed
+direction adds its folder list (`ScanFolders`: each folder's path and *Include subfolders* flag), the whitelist (`FileTypes`), the blacklist (`ExcludeTypes`), the grouping choice
+(`GroupByFoundExtension`) and its own custom file name (`UnindexedCustomFileName`, default `FileAuditorUnindexedReport.txt`). A file without them loads with an empty folder list,
+the 19 built-in file types, an empty blacklist, *Listed type* grouping and the default name; a folder entry without a path is dropped, and an invalid entry in either type list is
+dropped on its own while the others are kept. Older files load, but their custom file names fall back to the defaults; no migration is attempted. The remembered answers to the
+three file-type warnings (§6.5.1) are not stored either. No credentials. The *Save project settings with the report* checkbox is not stored in it. The file is written with a temp
+file + `File.Move(overwrite: true)`; a save never creates a folder. A null string value or an undefined enum value in the file falls back, field by field, to its default; other
+values are kept. Window size and position are not saved — the window is fixed-size. The milestone 2 spec (`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`) has the
+full prompt texts.
 
 ### 8.1 Start-up, opening and closing a project
 
@@ -443,8 +721,9 @@ default; other values are kept. Window size and position are not saved — the w
       folder is used instead), so a slow or disconnected drive does not freeze the window.
     - *File read:* the project is reset as for *Close project*, the file's settings are loaded, and it becomes the project's file. The loaded settings are the baseline for
       "nothing has changed" (§8.2). The window title does not show the open project.
-- **Close project** runs the save rule, then resets every input to its default, ticks the checkbox, forgets the *No* answer, the untick-warning answer and the open file, and
-  clears the Audit group's statistics and the last run's status (the status bar reads `Enter the required details`, §5.5). It is equivalent to relaunching the app.
+- **Close project** runs the save rule, then resets every input to its default, ticks the checkbox, forgets the *No* answer, the untick-warning answer, the three file-type
+  warning answers (§6.5.1) and the open file, and clears both Audit groups' statistics and the last run's status (the status bar reads `Enter the required details`, §5.5). It is
+  equivalent to relaunching the app.
 
 ### 8.2 The save rule
 
@@ -499,27 +778,35 @@ app icon, and `Assets/Win95Icons/` the Windows 95 icon set. Dialogue icons are t
 XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj`. The code folders are:
 
 - `Startup/` — `App` and `Program`.
-- `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`), `Groups/` (a `UserControl` per group box: Database, File Index
-  Table, Report, Audit) and `Tabs/` (a `UserControl` per audit direction, the content of a tab: `MissingFilesTabView`).
-- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon` and `DialogueChoice`),
-  `Groups/` and `Tabs/` (`MissingFilesTabViewModel`, which owns the direction's *Report empty files* option, its `ReportViewModel` and its `AuditViewModel`). `Groups/` also
-  holds `ReportLocationState`, which is deliberately not a `*ViewModel` (it has no view of its own): the Report group's shared values, owned by the main window. Each
-  direction's `ReportViewModel` reads it and adds the direction's file name, so the tabs' Report groups cannot drift apart. `MainWindowViewModel` routes Start and View Report
-  to the selected tab's direction and Stop and the status bar to the running one.
+- `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`, `FileTypesDialogueWindow`), `Groups/` (a `UserControl` per group box:
+  Database, File Index Table, Report, Audit, Unindexed Audit) and `Tabs/` (a `UserControl` per audit direction, the content of a tab: `MissingFilesTabView`,
+  `UnindexedFilesTabView`).
+- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon`, `DialogueChoice`,
+  `FileTypesDialogueViewModel` and its row item `FileTypeEntryItem`), `Groups/` and `Tabs/` (`MissingFilesTabViewModel`, which owns the direction's *Report empty files* option,
+  its `ReportViewModel` and its `AuditViewModel`; `UnindexedFilesTabViewModel`, which owns the folder list, the two file-type summaries, its `ReportViewModel` and its
+  `UnindexedAuditViewModel`). `Groups/` also holds three types that are deliberately not a `*ViewModel` (they have no view of their own): `ReportLocationState`, the Report
+  group's shared values, owned by the main window (each direction's `ReportViewModel` reads it and adds the direction's file name and, for the Unindexed direction, the grouping
+  choice, so the tabs' Report groups cannot drift apart); `AuditStatusBase`, the base of both audit view models and what the status bar binds to (`StatusMessage`,
+  `StatusPercent`); and `ScanFolderItem`, a row of the folder list. `Main/` also holds `AuditRun` and its two subclasses `MissingAuditRun` and `UnindexedAuditRun`, which carry one
+  direction's run (progress object, phase text, refresh, result text) for `MainWindowViewModel`. `MainWindowViewModel` routes Start and View Report to the selected tab's
+  direction and Stop and the status bar to the running one.
 - `Services/` — `Settings/` (`SettingsStore`, which loads and saves one settings file at a path it is given and never creates a folder; `ProjectSettingsService`, which holds the
   open project's file path and baseline settings and runs the save rule of §8.2 with its prompts, returning a `SavePointResult` that says whether the triggering operation may
-  proceed and whether the checkbox is to be ticked), `Sql/` (connection strings, SQL identifiers, query builder, index table reader), `Checking/` (file checker and Win32 error
-  mapper), `Auditing/` (audit runner, pre-flight checker, request and progress types), `Reporting/` (report builder, writer and path resolver) and `Dialogues/` (dialogue
-  service, which also offers a three-button choice returning a `DialogueChoice` and the *Open Project* file picker). Return `ErrorOr<T>` for expected failures.
-- `Models/` — `Settings/` (settings record and the project and audit stage enums), `Auditing/` (audit query, index row, check outcome and result, and `AuditDirection`,
-  the enum of directions, `Missing` now and `Unindexed` with milestone 4, whose member names the report file names are tied to) and `Reporting/` (audit report and result
-  kind).
+  proceed and whether the checkbox is to be ticked; it also remembers the three file-type warning answers of §6.5.1), `Sql/` (connection strings, SQL identifiers, query
+  builder, which also builds the path-only, prefix-filtered query, and index table reader, which also reads the paths for the unindexed audit), `Checking/` (file checker and Win32
+  error mapper), `Scanning/` (the unindexed direction's `FileTypeList`, `FileTypePattern` and `FileTypeFilter`, the 128-bit-hash `IndexPathSet` and the concurrent `FolderWalker`),
+  `Auditing/` (audit runner and `UnindexedAuditRunner`, pre-flight checker, request and progress types including `UnindexedProgress`), `Reporting/` (the two report builders,
+  `ReportFormat` with the formatting they share, writer and path resolver) and `Dialogues/` (dialogue service, which also offers a three-button choice returning a
+  `DialogueChoice`, the *Open Project* file picker and the File Types dialogue). Return `ErrorOr<T>` for expected failures.
+- `Models/` — `Settings/` (settings record, `ScanFolder` and the project and audit stage enums), `Auditing/` (audit query, `PathQuery`, index row, check outcome and result,
+  `ScannedFile`, `UnverifiedFolder`, and `AuditDirection`, the enum of directions, `Missing` and `Unindexed`, whose member names the report file names are tied to) and
+  `Reporting/` (audit report, `UnindexedReport` and result kind).
 - `Common/` — `GlobalUsings.cs`; `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/` (`ClassicWindow` helpers); `Links/`
   (`HelpLinks`, the user-guide address); `Serialisation/` (the source-generated settings JSON context).
 
-Services are wired by hand in `App`; there is no dependency-injection container. `MainWindow.axaml` composes the shared group-box views and the tab control (each tab's
-content is a `Tabs/` view) and holds the menu bar and status bar; it stays at 100 lines or fewer by pushing content into the group-box and tab `UserControl`s.
-`ReportPathResolver.Resolve` takes the settings and an `AuditDirection`, so a direction's report name comes from one place.
+Services are wired by hand in `App`; there is no dependency-injection container. `MainWindow.axaml` composes the shared group-box views (the Database and File Index Table groups
+in a two-column grid) and the tab control (each tab's content is a `Tabs/` view) and holds the menu bar and status bar; it stays at 100 lines or fewer by pushing content into the
+group-box and tab `UserControl`s. `ReportPathResolver.Resolve` takes the settings and an `AuditDirection`, so a direction's report name comes from one place.
 
 **Errors.** Services return `ErrorOr<T>`: expected failures (bad input, SQL errors, an unwritable report, unreadable settings) are values with custom errors from
 `Common/Errors/`, not exceptions. Exceptions are caught at the boundary where they occur (SQL, file system) and translated into errors or check outcomes. SQL access is
@@ -531,7 +818,8 @@ shared file server, and nothing under `%APPDATA%`.
 ## 10. Builder's calls (decided by Claude, not the user)
 
 - Read-only preview of the built report path, with `<placeholders>`; Start disabled until the path is complete. *(shown in mock-up, accepted)*
-- Disabling Project folder and both stage groups while Custom is ticked. *(shown in mock-up, accepted)*
+- Hiding, rather than disabling, the Project folder row and both stage groups while Custom is ticked, on both tabs. *(shown disabled in the mock-up and accepted; the user
+  changed it to hidden during milestone 4)*
 - Pre-flight checks happen on Start, before the database is queried.
 - Report timestamps in local time; sorting by path; UTF-8 without BOM; CRLF.
 - Behaviour on Stop and on mid-run SQL failure (§6.4).
@@ -549,22 +837,45 @@ shared file server, and nothing under `%APPDATA%`.
   the idle status follow the selected tab, Stop and the running status follow the running audit; the selected tab is not saved; the missing report's title is *File Auditor
   Missing Report*; the custom-name setting is `MissingCustomFileName`; *Help Topics* is F1 (the Windows standard), disabled while the article address is empty.
 
+- Unindexed audit (milestone 4): *Group file types by* is a pair of radio buttons in the Unindexed tab's Report group, owned by that tab's `ReportViewModel`; ties between
+  equally specific file types go to the fewest wildcard characters, then the first alphabetically; an entry is invalid when it is empty after the leading dot, has an empty part,
+  or contains a path separator or a character Windows forbids in file names other than `*` and `?`; `.txt` and `.json` are not default file types, so the app's own reports and
+  project files are never reported; hidden and system folders are skipped with their contents; a file under two input folders is reported once, under the deepest; the path column
+  is trimmed before hashing; the SQL prefix filter is an optimisation with a fallback to every row (§6.5.2); hashing is an in-box algorithm (MD5), so no package was added;
+  *Indexed* replaces *Checked* in the statistics (every file found is checked at once); links are followed with a loop guard; Stop and the status bar follow the running audit
+  rather than the selected tab; Stop while the index loads writes no report; equal custom file names on the two tabs are refused; up to 16 folder listings run at once and the
+  statistics refresh four times a second; a duplicate folder is not added to the list and, when it reaches Start by a hand-edited file, is refused; what "matches every file" means
+  is defined in §6.5.1.
+
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
 that failed, found by walking the path (§6.3); the close-mid-run prompt.
+
+Settled with the user for milestone 4: the second direction itself; one or more input folders, each with *Include subfolders* ticked by default; matching on the full path ignoring
+case; the editable extension whitelist and blacklist (the blacklist wins), the glob wildcards, the most-specific rule and the Start-time errors and warnings of §6.5.1; grouping
+by listed type or found extension; no up-front count, so no *Remaining*; and, during the build, the layout: a compact Unindexed tab and a fixed tab height, the *Include
+subfolders* column at the left of the folder list, File types and Exclude shown as read-only summaries edited in the File Types dialogue (with Reset only for File types), a custom
+report location hiding the project folder and stage options, *Unverified* in the first statistics column, and the Database and File Index Table groups side by side (a trial the
+user may reverse).
 
 ## 11. Left to the builder
 
 Concurrency mechanism and degree; UI refresh interval; exact window dimensions; access-key letters; how dialogs are implemented on Classic.Avalonia; icon artwork.
 
-Settled by the build (milestone 1), with no change in behaviour:
+Settled by the build (milestone 1), with no change in behaviour (milestone 4's additions are marked):
 
 - **Access keys:** *Browse...* is `B`, *Start* is `A` (St **a**rt) and *Stop* is `O` (St **o**p); `R` and `M` were already taken by neighbouring labels. The *OK* and *Cancel*
   buttons in message dialogues carry no access keys, as with Win9x message boxes (Enter and Esc).
 - **Default button:** *Start* is the window's default button, so Enter starts an audit.
-- **Dialogues:** every dialogue uses the custom `MessageDialogueWindow` (a `ClassicWindow` with icon, message and right-aligned buttons), because Classic.Avalonia's own
-  message box cannot take custom button text.
+- **Dialogues:** every message dialogue uses the custom `MessageDialogueWindow` (a `ClassicWindow` with icon, message and right-aligned buttons), because Classic.Avalonia's
+  own message box cannot take custom button text. The one editing dialogue, `FileTypesDialogueWindow` (milestone 4), is a `ClassicWindow` of its own with the same conventions:
+  modal, fixed-size, centred on its owner, buttons along the bottom right.
 - **Number and time formatting in the report:** counts are formatted `N0` with the invariant culture, so reports diff identically on any machine; elapsed time is shown in
   total hours (at least two digits), not rolled over into days.
+- **Window size and access keys (milestone 4):** the window is 640 × 761 pixels with a 575-pixel tab control. On the Unindexed tab, *File t_ypes:* is `Y` and *E_xclude:* is `X`;
+  *Add...*, *Remove*, both *Edit...* buttons and the *Group file types by* radios carry none, because every letter is taken. In the File Types dialogue *New*, *Edit*, *Delete* and
+  *Reset* are `N`, `E`, `D` and `R`, and *OK* and *Cancel* carry none.
+- **Concurrency and memory (milestone 4):** up to 16 folder listings at once; index paths held as 128-bit MD5 hashes (§6.5.2); the statistics refresh every 250 ms.
+- **Progress bar (milestone 4):** the Unindexed audit's moving block (§5.4a) is drawn by the view from a timer-driven column split, because the theme's marquee has a blank gap.
 - **Full-path validation:** a path is accepted as absolute only if `Path.IsPathFullyQualified` says so, so `C:x` and `\x` (which would resolve against the application's
   current drive or folder) count as *Invalid characters in path*.
 
@@ -588,8 +899,9 @@ Settled by the build (milestone 1), with no change in behaviour:
 - **Designer constructors:** view models expose a parameterless constructor for the XAML designer only, built from `AppSettings.Default` and parameterless concrete
   services. No interfaces are introduced just for the designer.
 - **View composition pair rule:** every public `*ViewModel` has a sibling `*View.axaml` under the parallel `Views/…` folder, and vice versa. Windows are the exception
-  to the `*View` suffix: `MainWindow`, `AboutWindow` and `MessageDialogueWindow` pair with `MainWindowViewModel`, `AboutWindowViewModel` and
-  `MessageDialogueViewModel`.
+  to the `*View` suffix: `MainWindow`, `AboutWindow`, `MessageDialogueWindow` and `FileTypesDialogueWindow` pair with `MainWindowViewModel`, `AboutWindowViewModel`,
+  `MessageDialogueViewModel` and `FileTypesDialogueViewModel`. State a view model needs but that has no view of its own is not named `*ViewModel` (`ReportLocationState`,
+  `AuditStatusBase`, `ScanFolderItem`, `FileTypeEntryItem`).
 - **User-data writes** (settings, the report) use a temp file + `File.Move(overwrite: true)`, never an in-place write.
 - **Never `File.Exists` / `Directory.Exists` inside the audit check** (§6.3): they turn "couldn't check" into "missing". Pre-flight checks of the report folder may
   use them.

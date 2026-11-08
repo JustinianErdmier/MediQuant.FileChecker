@@ -262,10 +262,10 @@ place milestone 4 must touch (above `IsTabbed`).
 - Create: `Docs/Ledgers/Epic-1-MVP/milestone-4-ledger.md`
 - Modify: `MediQuant.FileAuditor.slnx`
 
-- [ ] **Step 1:** Amend the SDD in every section the spec's §5 lists (the second direction in §1–§2; the Unindexed tab, its groups, command states and
+- [x] **Step 1:** Amend the SDD in every section the spec's §5 lists (the second direction in §1–§2; the Unindexed tab, its groups, command states and
   one-run-at-a-time in §5; a new §6 subsection for running the unindexed audit; the unindexed report in §7; the project-file additions in §8; the new types in §9;
   §10/§11). Update the window diagram.
-- [ ] **Step 2:** Write the ledger (rulings, user decisions, plan defects, outstanding items by when to revisit, incidents, not exercised, commits, final review
+- [x] **Step 2:** Write the ledger (rulings, user decisions, plan defects, outstanding items by when to revisit, incidents, not exercised, commits, final review
   "Pending.").
-- [ ] **Step 3: Verify** — clean build; Markdown prose ≤ 180 characters; every file under `Docs/` is in the `.slnx`.
-- [ ] **Step 4: Commit** — `docs(📝): sync the SDD with the unindexed audit and close the milestone 4 ledger`.
+- [x] **Step 3: Verify** — clean build; Markdown prose ≤ 180 characters; every file under `Docs/` is in the `.slnx`.
+- [x] **Step 4: Commit** — `docs(📝): sync the SDD with the unindexed audit and close the milestone 4 ledger`.

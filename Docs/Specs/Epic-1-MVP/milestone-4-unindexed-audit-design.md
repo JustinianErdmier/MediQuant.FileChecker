@@ -3,6 +3,10 @@
 **Date:** 2026-11-08
 **Status:** Approved 2026-11-08; §3.3 and §3.7 amended the same day with the user's whitelist, blacklist and wildcard decisions
 
+> **Amended during the build (2026-11-08).** §3.1 now records the layout the user settled on while the tab was being built; §3.3 defines what "matches every file" means; §3.5
+> adds the whitespace-led rows to the index load and corrects the memory figure; §3.6 describes the moving block that replaced the indeterminate bar; §4 notes the File Types
+> dialogue. The master SDD (`Docs/Specs/1-file-auditor-master-design.md`) describes what was built and is authoritative where the two differ.
+
 ## 1. Intent
 
 Today's audit answers *"is every indexed file on disk?"* and finds **missing** files. It cannot find the opposite problem: files sitting on disk that nobody
@@ -42,14 +46,24 @@ The version stays **1.0.0** (MVP epic).
 Milestone 3's tab control gains a second tab, **Unindexed Files**. Top to bottom:
 
 1. **Folders to Check** group:
-   - a list of folders, one per row, each with an **Include subfolders** checkbox, **ticked by default** (the user's decision);
-   - **Add...** opens a folder picker and appends the folder; **Remove** removes the selected row;
-   - **File types:** the extension whitelist (§3.3), with **Reset** restoring the built-in list;
-   - **Exclude:** the extension blacklist (§3.3), empty by default, with no Reset of its own.
+   - a list of folders, one per row, each with an **Include subfolders** checkbox in a column at the row's left, **ticked by default** (the user's decision);
+   - **Add...** opens a folder picker and appends the folder; **Remove** removes the selected row; both buttons sit to the right of the list;
+   - **File types:** a read-only one-line summary of the extension whitelist (§3.3) with an **Edit...** button;
+   - **Exclude:** the same for the extension blacklist (§3.3), empty by default.
+
+   Each **Edit...** opens the **File Types dialogue**: one entry per row, as in Windows' environment-variable editor, with **New**, **Edit** and **Delete**, **Reset** (restoring
+   the built-in list) in the File types dialogue only, and **OK** and **Cancel**. OK checks the entries and keeps the dialogue open on an invalid one; Cancel discards every
+   change. (The first design was one text box per list; the user changed it during the build.)
 2. The complete **Report** group, shared with the Missing Files tab exactly as milestone 3 describes; the file name here is the unindexed report's
    (`FileAuditorUnindexedReport_<Audit Stage>.txt`, custom default `FileAuditorUnindexedReport.txt`). On this tab only, the group has one more option below the
-   file name: **Group file types by** — *Listed type* (default) or *Found extension* (§3.7; the user's decision).
+   file name: **Group file types by** — *Listed type* (default) or *Found extension* (§3.7; the user's decision). With the custom option ticked, the project folder and the
+   stage options are **hidden**, not disabled, on both tabs (the user's decision).
 3. The **Audit** group (§3.6) with View Report / Start / Stop.
+
+**Layout decisions taken by the user while the tab was built (2026-11-08).** The Unindexed tab is compact and the tab control has a fixed height, so the window does not jump
+between tabs (built: 640 × 761 pixels on both tabs). The Include subfolders column sits at the left of the folder list. File types and Exclude are summaries edited in a
+dialogue (above), with Reset only for File types. A custom report location hides the project folder and stage options. *Unverified* is the fourth statistic of the first column
+(§3.6). The Database and File Index Table groups sit side by side, each vertical inside; this is a trial the user may reverse.
 
 The shared Database and File Index Table groups above the tabs are used as they are; the **ID column is not used** by this direction (an unindexed file has no
 row, so no ID).
@@ -104,7 +118,9 @@ Two editable lists of extension patterns, both saved in the project file (the us
 one with the most parts; among those, the fewest wildcard characters; among those, the first in alphabetical order (the user's decision on overlap; the tie-breaks
 are the builder's).
 
-**Checks at Start** (part of pre-flight, SDD §6.1; the user's decisions). An entry made only of wildcards (`*`, `*.*`, `?*`) is a **wildcard-only** entry.
+**Checks at Start** (part of pre-flight, SDD §6.1; the user's decisions). An entry is **wildcard-only**, meaning it matches every file, when it has exactly one part, that part is
+made only of wildcards, and it contains at least one `*` and at most one `?`. So `*`, `*.*` (the same as `*`), `?*` and `**` are wildcard-only, while `?` (every one-character
+extension) and `.*.*` (two parts) are ordinary entries that raise nothing. (The first wording, "made only of wildcards", would have refused `?` as "matching every file".)
 
 | Situation                                                                 | Result                                                                                       |
 |---------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
@@ -129,9 +145,11 @@ whitespace in the column's values is trimmed.
 1. **Pre-flight** as today for the shared inputs and the report (SDD §6.1), plus: at least one folder; each folder a full path that exists; at least one file
    type, each a valid extension.
 2. **Load the index.** Read only the path column (no ID). Where possible, ask SQL only for rows under the chosen folders (a `LIKE '<folder>\%'` prefix per folder,
-   with `%`, `_` and `[` escaped), so tables that span many projects send only the relevant rows. Each path is **upper-cased and hashed to 128 bits**, and only
-   the hashes are kept in memory: about 16 bytes per row instead of about 200, so three million rows take roughly 50 MB. A 128-bit hash makes a false match
-   (anti-goal 1) practically impossible.
+   with `%`, `_` and `[` escaped), so tables that span many projects send only the relevant rows. Because values are trimmed before they are matched, the filter also
+   loads every row that **starts with a whitespace character**, which no folder prefix could match (a further `OR` clause); with more than 20 folders, or an empty folder
+   path, it is dropped and every row is loaded. Each path is trimmed, **upper-cased and hashed to 128 bits**, and only the hashes are kept in memory: measured at about
+   **48 MB per million rows** (the hashes plus the set that holds them; the first estimate of 16 bytes a row was too low), so three million rows take roughly 150 MB. A
+   128-bit hash makes a false match (anti-goal 1) practically impossible.
 3. **Walk the folders.** Folder listings run **concurrently**, up to a fixed limit (for example 16), because each listing over a network share is a round trip.
    Each listing returns the files' attributes, so hidden and system files are skipped without extra disk access, and each file is checked against the in-memory
    hashes as it is found — a microsecond lookup. Files are not batched across threads: the lookup is too cheap to be worth it; the parallelism is in listing.
@@ -146,9 +164,12 @@ either **indexed** or **unindexed**: *Total files* = *Indexed* + *Unindexed*. Th
 **listing a folder**. Such a folder is **Unverified**: its contents are not checked, and it is counted separately (*Unverified*, in folders), never inside *Total
 files*.
 
-Statistics on the Unindexed Files tab: **Total files** (found so far), **Indexed**, **Unindexed**, **Unverified** (folders), **Elapsed**, **Files/second**.
-**Remaining is hidden** on this tab — label and value — because the total is not known until the walk ends (the user's decision). The progress bar is **indeterminate**
-(marquee) while the run is under way and full when it ends. Status bar phases: `Loading the index...`, `Checking files...`, `Writing report...`, then the result.
+Statistics on the Unindexed Files tab: **Total files** (found so far), **Indexed**, **Unindexed**, **Unverified** (folders), **Elapsed**, **Files/second**. **Remaining is
+hidden** on this tab — label and value — because the total is not known until the walk ends (the user's decision). While the run is under way the progress bar shows a **moving
+block** of fixed width that crosses a sunken track and starts again, driven by the 250 ms refresh timer, and the bar is full when it ends. Classic.Avalonia's own indeterminate
+marquee was tried and set aside: it is blank for about 2.4 seconds of every 5-second cycle and cannot be restyled, and a growing fill would have read as a percentage of an
+unknown total. The statistics are laid out in two columns: **Total files**, **Indexed**, **Unindexed** and **Unverified** on the left, **Elapsed** and **Files/second** on the
+right. Status bar phases: `Loading the index...`, `Checking files...`, `Writing report...`, then the result.
 
 Only **one audit runs at a time**: while either direction runs, both tabs' Start buttons are disabled and every input is locked; switching tabs is allowed.
 
@@ -245,8 +266,8 @@ blacklist starts empty; a missing grouping choice is *Listed type*. The remember
 
 ## 4. Builder's calls (decided by Claude, not the user)
 
-- File types and Exclude are each edited in a single text box (entries separated by spaces or commas), with **Reset** on the whitelist only, rather than a
-  separate dialogue. Labels `File t_ypes:` and `E_xclude:` (Y and X are free on that tab).
+- File types and Exclude were first designed as single text boxes (entries separated by spaces or commas) with **Reset** on the whitelist only; during the build the user
+  chose read-only summaries with **Edit...** buttons opening the File Types dialogue (§3.1). Labels `File t_ypes:` and `E_xclude:` (Y and X are free on that tab).
 - *Group file types by* is a pair of radio buttons in the Unindexed tab's Report group (`Listed type`, `Found extension`); it is per direction, like the file
   name, so it does not appear on the Missing Files tab.
 - Tie-breaks for "most specific" beyond the part count (fewest wildcard characters, then alphabetical) are the builder's.
@@ -290,5 +311,5 @@ pre-flight additions, loading, walking, progress, stop), §7 (the unindexed repo
 - Its own plain-text report in the shared report location, named `FileAuditorUnindexedReport_<Audit Stage>.txt` (custom default
   `FileAuditorUnindexedReport.txt`), grouped by input folder, then file type, then path.
 - Built for millions of files and rows; loading the table's paths into memory is acceptable.
-- No up-front count: live counts, an indeterminate progress bar, **Remaining hidden**, **Files/second shown**.
+- No up-front count: live counts, an indeterminate-style progress bar (built as a moving block, §3.6), **Remaining hidden**, **Files/second shown**.
 - The version stays 1.0.0.
