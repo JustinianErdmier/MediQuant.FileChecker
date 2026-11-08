@@ -131,14 +131,14 @@ place milestone 4 must touch (above `IsTabbed`).
   - `sealed class IndexPathSet` — `void Add(string path)`, `bool Contains(string path)`, `int Count`; key = MD5 of the UTF-16 bytes of
     `path.Trim().ToUpperInvariant()` as `UInt128`, in a `HashSet<UInt128>`. Thread-safe for concurrent `Contains` after loading (single-threaded `Add`).
 
-- [ ] **Step 1:** `BuildPaths` and `PathQuery` (the existing `Build` stays for the missing direction).
-- [ ] **Step 2:** `ReadPathsAsync`.
-- [ ] **Step 3:** `IndexPathSet`, with an XML doc explaining the 128-bit choice (spec anti-goal 1).
-- [ ] **Step 4: Verify.** Clean build. Harness against LocalDB: a table with 1,000,000 paths under two roots plus 1,000 under a third → with the two roots as
+- [x] **Step 1:** `BuildPaths` and `PathQuery` (the existing `Build` stays for the missing direction).
+- [x] **Step 2:** `ReadPathsAsync`.
+- [x] **Step 3:** `IndexPathSet`, with an XML doc explaining the 128-bit choice (spec anti-goal 1).
+- [x] **Step 4: Verify.** Clean build. Harness against LocalDB: a table with 1,000,000 paths under two roots plus 1,000 under a third → with the two roots as
   folders the reader returns exactly the first million (prefix filter works, case-insensitive with a `CS` column collation too); a folder containing `_`, `%`, `[`
   or `|` matches only itself; `Contains("u:\x\a.pdf")` is true after `Add(@"U:\X\A.PDF ")`; report load time and `GC.GetTotalMemory` before/after (expect tens of
   MB). Drop the database.
-- [ ] **Step 5: Commit** — `feat(✨): load index paths as 128-bit hashes`.
+- [x] **Step 5: Commit** — `feat(✨): load index paths as 128-bit hashes`.
 
 ### Task 3: The folder walker
 

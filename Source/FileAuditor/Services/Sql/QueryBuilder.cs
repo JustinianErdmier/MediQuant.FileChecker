@@ -44,4 +44,84 @@ public static class QueryBuilder
                               $"SELECT {selectList} FROM {tableSql};",
                               hasId);
     }
+
+    /// <summary>The most folders the prefix filter is built for; more than this loads every row.</summary>
+    public const int MaxFilterFolders = 20;
+
+    private const char EscapeCharacter = '|';
+
+    /// <summary>Builds the statement that selects the path column, restricted to the rows under the given folders where that is possible.</summary>
+    /// <param name="table">The table name, either <c>table</c> or <c>schema.table</c>.</param>
+    /// <param name="pathColumn">The name of the column holding file paths.</param>
+    /// <param name="folders">
+    ///     The folders to check. For 1 to <see cref="MaxFilterFolders" /> folders the statement filters on a case-insensitive <c>LIKE</c> prefix per folder; for
+    ///     none, for more, or when any folder is blank or contains a control character (which cannot be put safely in a pattern), the filter is dropped and every
+    ///     row is selected. The filter does not match values with leading whitespace, which the in-memory set would otherwise trim.
+    /// </param>
+    /// <returns>The query, or <c>Query.InvalidIdentifier</c> when a name is malformed.</returns>
+    public static ErrorOr<PathQuery> BuildPaths(string table, string pathColumn, IReadOnlyList<string> folders)
+    {
+        ErrorOr<IReadOnlyList<string>> tableParts = SqlIdentifier.ParseMultipart(table, maxParts: 2);
+
+        if (tableParts.IsError)
+        {
+            return tableParts.Errors;
+        }
+
+        ErrorOr<IReadOnlyList<string>> pathParts = SqlIdentifier.ParseMultipart(pathColumn, maxParts: 1);
+
+        if (pathParts.IsError)
+        {
+            return pathParts.Errors;
+        }
+
+        string tableSql  = string.Join(separator: '.', tableParts.Value.Select(SqlIdentifier.Quote));
+        string columnSql = SqlIdentifier.Quote(pathParts.Value[index: 0]);
+        string sql       = $"SELECT {columnSql} AS [Path] FROM {tableSql}";
+
+        bool canFilter = folders.Count is >= 1 and <= MaxFilterFolders
+                         && folders.All(IsRepresentable);
+
+        if (!canFilter)
+        {
+            return new PathQuery($"{sql};", []);
+        }
+
+        List<KeyValuePair<string, string>> parameters = new(folders.Count);
+        List<string>                       clauses    = new(folders.Count);
+
+        for (int i = 0; i < folders.Count; i++)
+        {
+            string name = $"@p{i}";
+
+            parameters.Add(new KeyValuePair<string, string>(name, EscapePrefix(folders[i])));
+            clauses.Add($"{columnSql} COLLATE Latin1_General_100_CI_AS LIKE {name} ESCAPE '{EscapeCharacter}'");
+        }
+
+        return new PathQuery($"{sql} WHERE {string.Join(separator: " OR ", clauses)};", parameters);
+    }
+
+    private static bool IsRepresentable(string folder) => !string.IsNullOrWhiteSpace(folder) && !folder.Any(char.IsControl);
+
+    private static string EscapePrefix(string folder)
+    {
+        StringBuilder builder = new(folder.Length + 8);
+
+        foreach (char c in folder)
+        {
+            if (c is EscapeCharacter or '%' or '_' or '[')
+            {
+                builder.Append(EscapeCharacter);
+            }
+
+            builder.Append(c);
+        }
+
+        if (folder[^1] != '\\')
+        {
+            builder.Append('\\');
+        }
+
+        return builder.Append('%').ToString();
+    }
 }
