@@ -96,15 +96,15 @@ The user's request, verbatim in substance:
 **Files:** Modify `Views/Dialogues/FileTypesDialogueWindow.axaml(.cs)`, `ViewModels/Dialogues/FileTypesDialogueViewModel.cs`, `Views/Main/MainWindow.axaml`,
 `Views/Tabs/UnindexedFilesTabView.axaml`
 
-- [ ] **Step 1:** A `C_lear` button in the editor's button column (after Delete, before Reset), removing every entry; disabled when the list is empty. OK with an
+- [x] **Step 1:** A `C_lear` button in the editor's button column (after Delete, before Reset), removing every entry; disabled when the list is empty. OK with an
   empty list is allowed (an empty File types list is refused later, at Start, as today).
-- [ ] **Step 2:** Remove the tab control's fixed height. Size the window to the Missing Files tab's natural height (measure it with the app running — e.g. let the
+- [x] **Step 2:** Remove the tab control's fixed height. Size the window to the Missing Files tab's natural height (measure it with the app running — e.g. let the
   window size to content on the Missing tab once, read `Bounds`, then fix that height in XAML; keep `CanResize="False"`). Wrap the Unindexed Files tab's
   content in a `ScrollViewer` with vertical scrolling *Auto* and horizontal *Disabled*, so that tab scrolls inside the same window height.
-- [ ] **Step 3: Verify.** Clean build. The editors: Clear empties the list and disables itself; New re-enables it. The window: on the Missing tab no empty band
+- [x] **Step 3: Verify.** Clean build. The editors: Clear empties the list and disables itself; New re-enables it. The window: on the Missing tab no empty band
   below the Audit group and nothing clipped (custom location ticked and unticked); on the Unindexed tab a vertical scroll bar appears when needed, every control
   is reachable by scrolling, no horizontal scroll. Report the window size. Screenshot both tabs.
-- [ ] **Step 4: Commit** — `feat(✨): add Clear to the file-type editors and fit the window to the Missing Files tab`.
+- [x] **Step 4: Commit** — `feat(✨): add Clear to the file-type editors and fit the window to the Missing Files tab`.
 
 ### Task 4: Documentation sync and ledger
 

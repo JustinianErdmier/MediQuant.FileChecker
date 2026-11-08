@@ -1,6 +1,6 @@
 namespace FileAuditor.ViewModels.Dialogues;
 
-/// <summary>The content of the file types editor: one editable entry per line, with New, Delete and (for File types only) Reset.</summary>
+/// <summary>The content of the file types editor: one editable entry per line, with New, Delete, Clear and (for File types only) Reset.</summary>
 public sealed partial class FileTypesDialogueViewModel : ObservableObject
 {
     /// <summary>Initialises a new instance with placeholder content, for the XAML designer.</summary>
@@ -16,6 +16,8 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
     {
         Title    = title;
         CanReset = canReset;
+
+        Entries.CollectionChanged += (_, _) => ClearCommand.NotifyCanExecuteChanged();
 
         foreach (string entry in entries)
         {
@@ -91,6 +93,16 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
         Entries.Remove(item);
 
         SelectedEntry = Entries.Count == 0 ? null : Entries[Math.Min(index, Entries.Count - 1)];
+    }
+
+    private bool CanClear() => Entries.Count > 0;
+
+    [ RelayCommand(CanExecute = nameof(CanClear)) ]
+    private void Clear()
+    {
+        Entries.Clear();
+
+        SelectedEntry = null;
     }
 
     [ RelayCommand ]

@@ -65,6 +65,12 @@
                     MinHeight="23"
                     HorizontalContentAlignment="Center"
                     Command="{Binding DeleteCommand}" />
+            <Button x:Name="ClearButton"
+                    Content="C_lear"
+                    MinWidth="75"
+                    MinHeight="23"
+                    HorizontalContentAlignment="Center"
+                    Command="{Binding ClearCommand}" />
             <Button x:Name="ResetButton"
                     Content="_Reset"
                     MinWidth="75"
