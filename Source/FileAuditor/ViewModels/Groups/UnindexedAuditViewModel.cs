@@ -92,7 +92,7 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     public void Update(UnindexedProgress progress, TimeSpan elapsed, bool isFinished)
     {
         long    total  = progress.TotalFiles;
-        double? recent = _recentRate.Next(total, elapsed);
+        double? recent = _recentRate.Next(total, progress.ScanElapsed);
 
         TotalFiles     = total.ToString(format: "N0", CultureInfo.CurrentCulture);
         Indexed        = progress.Indexed.ToString(format: "N0", CultureInfo.CurrentCulture);

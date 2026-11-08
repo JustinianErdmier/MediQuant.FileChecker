@@ -67,6 +67,7 @@ public sealed class UnindexedAuditRunner
         }
 
         progress.Phase = "Checking files...";
+        progress.StartScan();
 
         FileTypeFilter filter = new(settings.FileTypes ?? FileTypeList.Defaults, settings.ExcludeTypes ?? []);
 

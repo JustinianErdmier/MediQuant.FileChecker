@@ -2,10 +2,12 @@ namespace FileAuditor.Services.Auditing;
 
 /// <summary>
 ///     The live statistics of a running unindexed-files audit. The runner updates the counters from many threads with <see cref="Interlocked" />; the UI polls them. The
-///     run's clock is not kept here: the caller times the whole run.
+///     whole run's clock is not kept here: the caller times it. Only the scan's clock is, because the rate of finding files must not count the index load.
 /// </summary>
 public sealed class UnindexedProgress
 {
+    private volatile Stopwatch? _scanClock;
+
     private long _indexed;
 
     private volatile string _phase = "";
@@ -13,6 +15,9 @@ public sealed class UnindexedProgress
     private long _unindexed;
 
     private long _unverified;
+
+    /// <summary>Gets the time spent scanning folders, which is the basis of the recent rate; zero until the scan begins, so the index load is not counted.</summary>
+    public TimeSpan ScanElapsed => _scanClock?.Elapsed ?? TimeSpan.Zero;
 
     /// <summary>Gets the number of files found that are in the index.</summary>
     public long Indexed => Interlocked.Read(ref _indexed);
@@ -33,6 +38,9 @@ public sealed class UnindexedProgress
 
     /// <summary>Gets the number of folders that could not be listed plus links not followed.</summary>
     public long Unverified => Interlocked.Read(ref _unverified);
+
+    /// <summary>Starts the scan clock. The runner calls it just before the folder walk begins, after the index is loaded.</summary>
+    public void StartScan() => _scanClock = Stopwatch.StartNew();
 
     /// <summary>Records one file that was checked against the index.</summary>
     /// <param name="indexed">Whether the file is in the index.</param>
