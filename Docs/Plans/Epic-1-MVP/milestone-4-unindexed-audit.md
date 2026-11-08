@@ -156,10 +156,10 @@ place milestone 4 must touch (above `IsTabbed`).
   - `sealed class FolderWalker` — `Task WalkAsync(IReadOnlyList<ScanFolder> folders, FileTypeFilter filter, Action<ScannedFile> onFile,
     Action<UnverifiedFolder> onUnverified, CancellationToken ct)`; `onFile` may be called concurrently.
 
-- [ ] **Step 1: Listing.** One non-recursive listing per folder (`FileSystemEnumerable` or `Directory.EnumerateFileSystemEntries` with `EnumerationOptions`:
+- [x] **Step 1: Listing.** One non-recursive listing per folder (`FileSystemEnumerable` or `Directory.EnumerateFileSystemEntries` with `EnumerationOptions`:
   `AttributesToSkip = Hidden | System`, `IgnoreInaccessible = false`, `ReturnSpecialDirectories = false`), so attributes come from the listing with no per-file
   call. Subfolders queue for listing when their input folder includes subfolders. At most 16 listings run at once.
-- [ ] **Step 2: Rules (spec §3.2).**
+- [x] **Step 2: Rules (spec §3.2).**
   - A listing that throws → `onUnverified` with the mapped reason; nothing beneath it is listed. Only that folder is reported, not each of its descendants.
   - Files for which `filter.Match` returns null are skipped (not counted anywhere).
   - Links (junctions, symbolic links, DFS) are listed like folders; a folder whose resolved target (`DirectoryInfo.ResolveLinkTarget(returnFinalTarget: true)`
@@ -167,13 +167,13 @@ place milestone 4 must touch (above `IsTabbed`).
   - Each file is reported once (dedupe by full path, ignoring case) under the **deepest** input folder whose scope covers it (the folder itself, plus its
     subfolders when ticked).
   - Cancellation stops new listings promptly and returns.
-- [ ] **Step 3:** XML docs on the scope and attribution rules.
-- [ ] **Step 4: Verify.** Clean build. Harness over a scratch tree: hidden and system files skipped; `.txt`/`.json` skipped with the defaults; with include
+- [x] **Step 3:** XML docs on the scope and attribution rules.
+- [x] **Step 4: Verify.** Clean build. Harness over a scratch tree: hidden and system files skipped; `.txt`/`.json` skipped with the defaults; with include
   `[.gz]` and exclude `[.tar.gz]`, `a.gz` is reported and `b.tar.gz` is not;
   a subfolder with a deny-list ACE (`icacls … /deny "%USERNAME%":(RX)`, removed afterwards) appears once as *Permission denied* and its
   siblings are walked; a `mklink /J` junction pointing back to an ancestor terminates and lists no file twice; inputs `A` (subfolders) and `A\B` (no subfolders):
   `A\B\x.pdf` is attributed to `A\B`, `A\B\C\y.pdf` to `A`, and nothing appears twice. Remove the ACE and junction, delete the tree.
-- [ ] **Step 5: Commit** — `feat(✨): walk folders concurrently for the unindexed audit`.
+- [x] **Step 5: Commit** — `feat(✨): walk folders concurrently for the unindexed audit`.
 
 ### Task 4: The unindexed audit runner and report
 

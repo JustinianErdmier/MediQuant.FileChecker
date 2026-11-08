@@ -7,6 +7,7 @@ global using System.Data;
 global using System.Diagnostics;
 global using System.Globalization;
 global using System.IO;
+global using System.IO.Enumeration;
 global using System.Linq;
 global using System.Reflection;
 global using System.Runtime.InteropServices;
