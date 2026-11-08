@@ -20,8 +20,8 @@ Decisions taken without the user, each with what it costs if wrong.
 | R2 | Pre-flight | The live ledger lived outside the repository during the run and was cleaned into this document by Task 5.                                                       | Writing the docs ledger between tasks would have added commits outside the task reviews, as in milestone 1.                                      | None.                                                                                                            |
 | R3 | 2          | An opened project whose report location is incomplete saves back to its own file without asking.                                                                | The project's file is already known, so the report location is not needed; spec §3.7's "incomplete" case applies only to a never-saved project.  | A user who blanked the Project folder still gets the old file updated.                                           |
 | R4 | 3          | Every close, including an operating-system logoff or shutdown close, waits on the save rule's prompts.                                                          | The spec says "every close".                                                                                                                     | A logoff with unsaved changes may be held by a prompt.                                                           |
-| R5 | Task 3    | A title-bar ✕ or Esc on the save question counts as No (remembered for the session), per the plan's Global Constraints.                                       | The plan says closing a dialogue is the declining answer.                                                                                        | A "never mind" at close leaves without saving.                                                                   |
-| R6 | Task 2    | Overwrite stays the default button on the existing-file prompt.                                                                                                 | It matches milestone 1's report-overwrite prompt.                                                                                               | Enter overwrites another project's file.                                                                         |
+| R5 | 3          | A title-bar ✕ or Esc on the save question counts as No (remembered for the session), per the plan's Global Constraints.                                       | The plan says closing a dialogue is the declining answer.                                                                                        | A "never mind" at close leaves without saving.                                                                   |
+| R6 | 2          | Overwrite stays the default button on the existing-file prompt.                                                                                                 | It matches milestone 1's report-overwrite prompt.                                                                                               | Enter overwrites another project's file.                                                                         |
 
 ## User decisions
 
@@ -66,6 +66,9 @@ Fixed in `8515420` (busy gate and load/probe/save-point fixes) and `eed820e` (no
 - **Still open, Task 3 minor:** `ConfirmUntickAsync` is fire-and-forget (matches the existing pattern).
 - **Still open, Task 4 note:** the *Open failed* detail for invalid JSON echoes the file's own content from the `System.Text.Json` message (for example `'not json' is an
   invalid JSON literal`); it comes from the `SettingsStore` Unreadable description (Task 2).
+- **Still open, fix-wave minor:** closing the window runs its save point without setting the busy flag, so during a slow `Save` on a network drive the
+  commands stay enabled briefly; a refused close (while busy) gives no feedback, and `LoadAsync`'s read is not time-bounded.
+
 ### Later / nice to have
 
 - Recent-projects list, command-line opening and file associations (spec non-goals).
@@ -92,16 +95,28 @@ Fixed in `8515420` (busy gate and load/probe/save-point fixes) and `eed820e` (no
 
 ## Commits
 
-`git log --oneline main..HEAD`, newest first (the Task 5 commit that records this list follows these):
+`git log --oneline main..HEAD`, newest first (the commit that closes this ledger follows these):
 
 ```
+25da644 docs(📝): sync the SDD with the final-review fixes
+eed820e fix(🐛): refuse non-project JSON and tidy settings saves
+8515420 fix(🐛): stop save points and project commands overlapping
+54acf57 docs(📝): sync the SDD with project settings and close the milestone 2 ledger
+ed1a230
 ed1a230 feat(✨): open and close projects from the File menu
 772b7ac feat(✨): add the save-project-settings checkbox and save on close
 f4a5f8f feat(✨): save settings per project beside the report
 93843cc feat(✨): add three-button dialogues and a project file picker
 9d522fc docs(📝): add the milestone 2 project settings design and plan
 ```
+25da644 docs(📝): sync the SDD with the final-review fixes
+eed820e fix(🐛): refuse non-project JSON and tidy settings saves
+8515420 fix(🐛): stop save points and project commands overlapping
+54acf57 docs(📝): sync the SDD with project settings and close the milestone 2 ledger
+ed1a230
 
 ## Final review
 
-Pending.
+The Opus whole-branch review of `ae6a1ca..54acf57` found 0 Critical, 2 Important and 14 Minor issues. The two Important ones were the overlap of Start, Open project,
+Close project and closing the window, and non-project JSON loading as defaults. One fix wave (`8515420`, `eed820e`, `25da644`) addressed both and the queued minors, and its
+Opus re-review found no Critical or Important issues; the minors it left are listed under *Still open* above. Rulings R5 and R6 were taken in that wave.
