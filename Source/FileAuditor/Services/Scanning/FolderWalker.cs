@@ -7,21 +7,18 @@ namespace FileAuditor.Services.Scanning;
 ///         Hidden and system files and folders are never listed (a skipped folder's contents go with it).
 ///     </para>
 ///     <para>
-///         <b>Links.</b> Every comparison is made in <i>final-path space</i>: each input's own final path is resolved once (a <c>subst</c> drive becomes its
-///         underlying folder, a mapped drive its UNC path, a junction its target), and a link's target is resolved the same way. A link whose target lies in a
-///         folder that an input with subfolders covers is not walked: the input's own visit lists it, so the direct visit wins. A link to an input that does not
-///         include subfolders is walked, but only for that input's subfolders, since its files are listed directly. A link whose target lies outside every input
-///         (including a link to an ancestor of an input) is walked, and the files found through it carry a <see cref="ScannedFile.CanonicalPath" />: their path with
-///         the link's prefix replaced by the resolved target, written in the entered form of an input when the target lies under that input's final path, so that
-///         the caller can match an index that holds either path. Folders are keyed for the loop guard by their final path, so a physical folder is listed once
-///         however it was reached, and a link loop ends at its first repeat. A link whose target cannot be resolved (a DFS link, for one) is an ordinary folder.
+///         <b>Links.</b> Links are never followed or checked. An input folder that is a junction or symbolic link, a junction or symbolic link met while walking, and
+///         a matching file that is a symbolic link are each reported once through the unverified callback as <see cref="CheckOutcome.UnverifiedLinkNotFollowed" />
+///         (a folder's path ends in <c>\</c>) and nothing beneath them is listed. Only an entry that has a link target (<see cref="FileSystemInfo.LinkTarget" />) is a
+///         link: any other reparse point (a DFS folder, a OneDrive placeholder, a deduplicated file) is an ordinary folder or file. With no link followed, every
+///         folder is reached by exactly one route, so no loop and no duplicate is possible.
 ///     </para>
 ///     <para>
 ///         <b>Attribution.</b> A file is reported once, under the deepest input folder whose scope covers the folder it sits in. The walk is a single
-///         traversal over the union of the inputs, not one walk per input: each folder is listed at most once, its owner is worked out from the inputs, and
+///         traversal over the union of the inputs, not one walk per input: each folder is listed once, its owner is worked out from the inputs, and
 ///         its subfolders are queued whenever any input that covers it includes subfolders. So with inputs <c>A</c> (with subfolders) and <c>A\B</c>
 ///         (without), <c>A\B\x.pdf</c> belongs to <c>A\B</c>, while <c>A\B\C\y.pdf</c> belongs to <c>A</c>, because <c>A\B</c> does not cover <c>C</c> but
-///         <c>A</c> does. Because every folder is listed once and the names in a folder are unique, no file can be reported twice.
+///         <c>A</c> does. An input nested in another is queued once, as an input, never again as a subfolder.
 ///     </para>
 ///     <para>
 ///         <b>Failures.</b> A folder that cannot be listed is reported once through the unverified callback and nothing beneath it is listed. Files
@@ -62,20 +59,40 @@ public sealed class FolderWalker
     private static async Task WalkAsyncCore(IReadOnlyList<ScanFolder> folders, FileTypeFilter filter, Action<ScannedFile> onFile,
                                             Action<UnverifiedFolder> onUnverified, CancellationToken ct)
     {
-        Root[] roots = BuildRoots(folders);
+        Root[] all = BuildRoots(folders);
 
-        if (roots.Length == 0 || ct.IsCancellationRequested)
+        if (all.Length == 0 || ct.IsCancellationRequested)
+        {
+            return;
+        }
+
+        // An input that is itself a link is not walked; it is reported and the other inputs go on.
+        var roots = new List<Root>();
+
+        foreach (Root root in all)
+        {
+            if (IsLink(new DirectoryInfo(root.Path)))
+            {
+                onUnverified(LinkNotFollowed(root.Path));
+            }
+            else
+            {
+                roots.Add(root);
+            }
+        }
+
+        if (roots.Count == 0)
         {
             return;
         }
 
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
-        var walk = new Walk(roots, filter, onFile, onUnverified, linked.Token);
+        var walk = new Walk(roots.ToArray(), all.Select(root => root.Path).ToHashSet(StringComparer.OrdinalIgnoreCase), filter, onFile, onUnverified, linked.Token);
 
         foreach (Root root in roots)
         {
-            walk.Enqueue(new Item(root.Path, Final: null, IsLink: false));
+            walk.Enqueue(root.Path);
         }
 
         // Dedicated threads: the listings block, and the thread pool would ramp up to 16 blocked threads slowly.
@@ -99,7 +116,7 @@ public sealed class FolderWalker
     {
         try
         {
-            foreach (Item folder in walk.Queue.GetConsumingEnumerable(walk.Token))
+            foreach (string folder in walk.Queue.GetConsumingEnumerable(walk.Token))
             {
                 try
                 {
@@ -136,7 +153,7 @@ public sealed class FolderWalker
             // The same folder listed twice (pre-flight refuses it) is one input; it includes subfolders if either entry does.
             byPath[normalised] = byPath.TryGetValue(normalised, out Root? existing)
                                      ? existing with { IncludeSubfolders = existing.IncludeSubfolders || folder.IncludeSubfolders }
-                                     : new Root(normalised, NormaliseFolder(FinalPath.Of(normalised) ?? normalised), folder.Path, folder.IncludeSubfolders);
+                                     : new Root(normalised, folder.Path, folder.IncludeSubfolders);
         }
 
         // Deepest first, so the first root that covers a folder is its owner.
@@ -153,27 +170,23 @@ public sealed class FolderWalker
         return Path.EndsInDirectorySeparator(full) ? full : full + Path.DirectorySeparatorChar;
     }
 
-    /// <summary>
-    ///     An input folder: its normalised path, its final path (the same unless the input is a link, a <c>subst</c> or a mapped drive), the path as entered, and its
-    ///     scope.
-    /// </summary>
-    private sealed record Root(string Path, string Final, string Entered, bool IncludeSubfolders);
-
-    /// <summary>
-    ///     A queued folder. <c>Final</c> is its final path when it is, or lies beneath, a walked link (null otherwise: the folder's final path follows from its
-    ///     input); <c>IsLink</c> is set for folders the listing flagged as reparse points, whose target is resolved when they are listed.
-    /// </summary>
-    private readonly record struct Item(string Path, string? Final, bool IsLink);
-
-    /// <summary>What the loop guard knows about a listed folder: whether its files were listed, its subfolders queued, and whether it was reported unverified.</summary>
-    private sealed class Listed
+    // Whether the entry is a junction or symbolic link (it has a link target); any other reparse point, or an entry that cannot be read, is not a link.
+    private static bool IsLink(FileSystemInfo info)
     {
-        public bool Files { get; set; }
-
-        public bool Descended { get; set; }
-
-        public bool Failed { get; set; }
+        try
+        {
+            return info.LinkTarget is not null;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
+
+    private static UnverifiedFolder LinkNotFollowed(string path) => new(path, CheckOutcome.UnverifiedLinkNotFollowed, ReasonText: null, SystemMessage: null);
+
+    /// <summary>An input folder: its normalised path, the path as entered, and its scope.</summary>
+    private sealed record Root(string Path, string Entered, bool IncludeSubfolders);
 
     private readonly record struct Entry(string Name, bool IsDirectory, bool IsLink);
 
@@ -181,19 +194,21 @@ public sealed class FolderWalker
     {
         private readonly Root[] _roots;
 
+        private readonly HashSet<string> _inputPaths;
+
         private readonly FileTypeFilter _filter;
 
         private readonly Action<ScannedFile> _onFile;
 
         private readonly Action<UnverifiedFolder> _onUnverified;
 
-        private readonly ConcurrentDictionary<string, Listed> _listed = new(StringComparer.OrdinalIgnoreCase);
-
         private int _pending;
 
-        public Walk(Root[] roots, FileTypeFilter filter, Action<ScannedFile> onFile, Action<UnverifiedFolder> onUnverified, CancellationToken token)
+        public Walk(Root[] roots, HashSet<string> inputPaths, FileTypeFilter filter, Action<ScannedFile> onFile, Action<UnverifiedFolder> onUnverified,
+                    CancellationToken token)
         {
             _roots        = roots;
+            _inputPaths   = inputPaths;
             _filter       = filter;
             _onFile       = onFile;
             _onUnverified = onUnverified;
@@ -202,10 +217,10 @@ public sealed class FolderWalker
 
         public CancellationToken Token { get; }
 
-        public BlockingCollection<Item> Queue { get; } = new();
+        public BlockingCollection<string> Queue { get; } = new();
 
         /// <summary>Queues a folder; the walk is over when every queued folder has finished.</summary>
-        public void Enqueue(Item folder)
+        public void Enqueue(string folder)
         {
             Interlocked.Increment(ref _pending);
 
@@ -221,27 +236,12 @@ public sealed class FolderWalker
             }
         }
 
-        public void List(Item item)
+        public void List(string folder)
         {
-            string folder = item.Path;
-
             if (Token.IsCancellationRequested)
             {
                 return;
             }
-
-            // The folder's final path when it is, or lies beneath, a walked link. A folder that an input with subfolders covers is not walked through a link: that
-            // input's own visit lists it and its subfolders, so the direct visit wins (this holds beneath a walked link as well, for an input nested in the target).
-            string? final = item.IsLink && ResolveTarget(folder) is { } target ? target : item.Final;
-
-            if (final is not null
-                && _roots.Any(root => root.IncludeSubfolders && CoversFinal(root, final)))
-            {
-                return;
-            }
-
-            // What remains of such a folder is an input without subfolders: its files are listed by its own visit, so this visit may only add its subfolders.
-            bool filesListedDirectly = final is not null && _roots.Any(root => root.Final.Equals(final, StringComparison.OrdinalIgnoreCase));
 
             Root? owner   = null;
             bool  descend = false;
@@ -266,43 +266,12 @@ public sealed class FolderWalker
                 return;
             }
 
-            // A folder is identified by its final path, which ends link loops and lists a physical folder once however it is reached: its files once, and its
-            // subfolders once. The check is made under the entry's lock, so a visit that needs only one of the two (an input without subfolders that is also
-            // reached through a link inside an input with subfolders, say) lists the folder again just for that, and nothing is reported twice.
-            string key   = final ?? owner.Final + folder[owner.Path.Length..];
-            Listed known = _listed.GetOrAdd(key, _ => new Listed());
-
-            bool listFiles;
-            bool listSubfolders;
-
-            lock (known)
-            {
-                listFiles      = !filesListedDirectly && !known.Files;
-                listSubfolders = descend              && !known.Descended;
-
-                if (!listFiles && !listSubfolders)
-                {
-                    return;
-                }
-
-                known.Files     |= listFiles;
-                known.Descended |= listSubfolders;
-            }
-
-            // The other form of the folder's path, written in an input's own form when the folder lies under that input's final path, as the index may hold it;
-            // null when it is the path the folder was reached by.
-            string  entered   = ToEnteredForm(key);
-            string? canonical = entered.Equals(folder, StringComparison.OrdinalIgnoreCase) ? null : entered;
-
             var entries = new List<Entry>();
 
             try
             {
                 // Only the enumeration is guarded: a failure in the filter or a callback is a bug, not an unreadable folder.
-                var listing = new FileSystemEnumerable<Entry>(folder,
-                                                             (ref FileSystemEntry e) => new Entry(e.FileName.ToString(), e.IsDirectory,
-                                                                                                (e.Attributes & FileAttributes.ReparsePoint) != 0),
-                                                             ListingOptions);
+                var listing = new FileSystemEnumerable<Entry>(folder, ToEntry, ListingOptions);
 
                 foreach (Entry listed in listing)
                 {
@@ -317,23 +286,6 @@ public sealed class FolderWalker
             }
             catch (Exception ex)
             {
-                // Nothing beneath a folder that failed is listed, now or through a later link to it, and it is reported unverified once however many
-                // visits (a first listing and an upgrade, say) fail.
-                bool alreadyReported;
-
-                lock (known)
-                {
-                    known.Files     = true;
-                    known.Descended = true;
-                    alreadyReported = known.Failed;
-                    known.Failed    = true;
-                }
-
-                if (alreadyReported)
-                {
-                    return;
-                }
-
                 MappedOutcome mapped = Win32ErrorMapper.Map(ex);
 
                 // A folder that vanished mid-run is not a "file missing" outcome; it is a folder that could not be checked.
@@ -344,85 +296,63 @@ public sealed class FolderWalker
                 return;
             }
 
-            var files   = new List<(string Name, FileTypePattern Type)>();
-            var folders = new List<Entry>();
-
-            foreach (Entry listed in entries)
+            foreach (Entry entry in entries)
             {
-                if (listed.IsDirectory)
+                if (entry.IsDirectory)
                 {
-                    folders.Add(listed);
-                }
-                else if (listFiles)
-                {
-                    FileTypePattern? type = _filter.Match(listed.Name);
-
-                    if (type is not null)
+                    if (descend)
                     {
-                        files.Add((listed.Name, type));
+                        Descend(folder, entry);
                     }
+
+                    continue;
+                }
+
+                FileTypePattern? type = _filter.Match(entry.Name);
+
+                if (type is null)
+                {
+                    continue;
+                }
+
+                // A file that is a link is reported, not checked.
+                if (entry.IsLink)
+                {
+                    _onUnverified(LinkNotFollowed(folder + entry.Name));
+                }
+                else
+                {
+                    _onFile(new ScannedFile(folder + entry.Name, owner.Entered, type));
                 }
             }
+        }
 
-            foreach ((string name, FileTypePattern type) in files)
-            {
-                _onFile(new ScannedFile(folder + name, owner.Entered, type, canonical is null ? null : canonical + name));
-            }
+        private void Descend(string folder, Entry sub)
+        {
+            string path = folder + sub.Name + Path.DirectorySeparatorChar;
 
-            if (!listSubfolders)
+            // An input is queued, or reported if it is a link, on its own: here it would be a second visit.
+            if (_inputPaths.Contains(path))
             {
                 return;
             }
 
-            foreach (Entry sub in folders)
+            if (sub.IsLink)
             {
-                string path = folder + sub.Name + Path.DirectorySeparatorChar;
-
-                Enqueue(new Item(path, final is null ? null : final + sub.Name + Path.DirectorySeparatorChar, sub.IsLink));
+                _onUnverified(LinkNotFollowed(path));
+            }
+            else
+            {
+                Enqueue(path);
             }
         }
+
+        // A reparse point is a link only when it has a link target; the check is made for reparse points alone, so ordinary entries cost nothing extra.
+        private static Entry ToEntry(ref FileSystemEntry e)
+            => new(e.FileName.ToString(), e.IsDirectory, (e.Attributes & FileAttributes.ReparsePoint) != 0 && IsLink(e.ToFileSystemInfo()));
 
         private static bool Covers(Root root, string folder)
             => root.Path.Equals(folder, StringComparison.OrdinalIgnoreCase)
                || (root.IncludeSubfolders && folder.StartsWith(root.Path, StringComparison.OrdinalIgnoreCase));
-
-        // Whether a folder, given by its final path, is the input's final folder or lies beneath it (the caller has checked that the input includes subfolders).
-        private static bool CoversFinal(Root root, string final) => final.StartsWith(root.Final, StringComparison.OrdinalIgnoreCase);
-
-        // A final path under an input's final path, rewritten in that input's entered form (the deepest such input, preferring one that is not itself a link,
-        // a subst or a mapped drive); any other final path is returned as it is.
-        private string ToEnteredForm(string final)
-        {
-            Root? best = null;
-
-            foreach (Root root in _roots)
-            {
-                if (final.StartsWith(root.Final, StringComparison.OrdinalIgnoreCase)
-                    && (best is null
-                        || root.Final.Length > best.Final.Length
-                        || (root.Final.Length == best.Final.Length && root.Path.Equals(root.Final, StringComparison.OrdinalIgnoreCase)
-                            && !best.Path.Equals(best.Final, StringComparison.OrdinalIgnoreCase))))
-                {
-                    best = root;
-                }
-            }
-
-            return best is null ? final : best.Path + final[best.Final.Length..];
-        }
-
-        // The normalised final path of a link's target, or null when the folder is not a link or its target cannot be resolved (then it is an ordinary folder).
-        private static string? ResolveTarget(string path)
-        {
-            try
-            {
-                FileSystemInfo? target = new DirectoryInfo(path).ResolveLinkTarget(true);
-
-                return target is null ? null : NormaliseFolder(FinalPath.Of(path) ?? target.FullName);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
     }
 }

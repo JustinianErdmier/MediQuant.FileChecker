@@ -12,6 +12,7 @@ public static class UnindexedReportBuilder
         CheckOutcome.UnverifiedPermissionDenied,
         CheckOutcome.UnverifiedNetworkUnreachable,
         CheckOutcome.UnverifiedPathTooLong,
+        CheckOutcome.UnverifiedLinkNotFollowed,
         CheckOutcome.UnverifiedOther
     ];
 
@@ -69,11 +70,6 @@ public static class UnindexedReportBuilder
         lines.Add(ReportFormat.Labelled(label: "Indexed:", ReportFormat.Count(report.Indexed)));
         lines.Add(ReportFormat.Labelled(label: "Unindexed:", ReportFormat.Count(report.Unindexed.Count)));
         lines.Add(ReportFormat.Labelled(label: "Unverified:", ReportFormat.Count(report.Unverified.Count)));
-
-        if (report.NotChecked > 0)
-        {
-            lines.Add(ReportFormat.Labelled(label: "Not checked:", $"{ReportFormat.Count(report.NotChecked)} (reached through links; the index could not be read for them)"));
-        }
     }
 
     private static void AddUnindexed(List<string> lines, UnindexedReport report)
@@ -140,14 +136,14 @@ public static class UnindexedReportBuilder
 
     private static void AddUnverified(List<string> lines, UnindexedReport report)
     {
-        string heading = $"Unverified Folders ({ReportFormat.Count(report.Unverified.Count)})";
+        string heading = $"Unverified ({ReportFormat.Count(report.Unverified.Count)})";
 
         lines.Add(heading);
         lines.Add(new string(c: '-', heading.Length));
 
         if (report.Unverified.Count == 0)
         {
-            lines.Add(item: "No unverified folders.");
+            lines.Add(item: "No unverified folders or links.");
 
             return;
         }
@@ -216,12 +212,13 @@ public static class UnindexedReportBuilder
         }
     }
 
-    // The report has five groups; every other reason (invalid characters, anything unforeseen) is an Other error that carries its own reason text.
+    // The report has six groups; every other reason (invalid characters, anything unforeseen) is an Other error that carries its own reason text.
     private static CheckOutcome GroupOf(UnverifiedFolder folder)
         => folder.Reason is CheckOutcome.UnverifiedDriveOrShareNotFound
                             or CheckOutcome.UnverifiedPermissionDenied
                             or CheckOutcome.UnverifiedNetworkUnreachable
                             or CheckOutcome.UnverifiedPathTooLong
+                            or CheckOutcome.UnverifiedLinkNotFollowed
                ? folder.Reason
                : CheckOutcome.UnverifiedOther;
 
@@ -240,6 +237,7 @@ public static class UnindexedReportBuilder
             CheckOutcome.UnverifiedPermissionDenied     => "Permission denied",
             CheckOutcome.UnverifiedNetworkUnreachable   => "Network location unreachable",
             CheckOutcome.UnverifiedPathTooLong          => "Path too long",
+            CheckOutcome.UnverifiedLinkNotFollowed      => "Link not followed",
             var _                                       => "Other errors"
         };
 }

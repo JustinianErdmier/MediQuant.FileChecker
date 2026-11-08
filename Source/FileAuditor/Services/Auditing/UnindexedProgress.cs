@@ -31,7 +31,7 @@ public sealed class UnindexedProgress
     /// <summary>Gets the number of files found that are not in the index.</summary>
     public long Unindexed => Interlocked.Read(ref _unindexed);
 
-    /// <summary>Gets the number of folders that could not be listed.</summary>
+    /// <summary>Gets the number of folders that could not be listed plus links not followed.</summary>
     public long Unverified => Interlocked.Read(ref _unverified);
 
     /// <summary>Records one file that was checked against the index.</summary>
@@ -48,6 +48,6 @@ public sealed class UnindexedProgress
         }
     }
 
-    /// <summary>Records one folder that could not be listed.</summary>
+    /// <summary>Records one folder that could not be listed, or one link that was not followed.</summary>
     public void RecordUnverified() => Interlocked.Increment(ref _unverified);
 }

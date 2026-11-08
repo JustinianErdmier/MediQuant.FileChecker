@@ -24,6 +24,8 @@ public enum CheckOutcome
     /// <summary>The path exceeds what the system can handle.</summary>
     UnverifiedPathTooLong,
 
+    /// <summary>The unindexed audit met a junction or symbolic link (a folder or a file) and did not follow or check it.</summary>
+    UnverifiedLinkNotFollowed,
     /// <summary>The path is malformed or contains illegal characters.</summary>
     UnverifiedInvalidCharacters,
 
