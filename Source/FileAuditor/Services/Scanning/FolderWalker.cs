@@ -74,7 +74,15 @@ public sealed class FolderWalker
                                                                      TaskScheduler.Default))
                                    .ToArray();
 
-        await Task.WhenAll(workers).ConfigureAwait(false);
+        try
+        {
+            await Task.WhenAll(workers).ConfigureAwait(false);
+        }
+        finally
+        {
+            // Every worker has finished by now (WhenAll waits for all of them, faulted or not).
+            walk.Queue.Dispose();
+        }
     }
 
     private static void RunWorker(Walk walk, CancellationTokenSource linked)
@@ -93,9 +101,10 @@ public sealed class FolderWalker
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (walk.Token.IsCancellationRequested)
         {
-            // Stopped by the caller, or because another worker failed (then that worker's exception is what the walk throws).
+            // Stopped by the caller, or because another worker failed (then that worker's exception is what the walk throws). An
+            // OperationCanceledException from a callback while the token is not cancelled is not a stop: it falls through to the next catch.
         }
         catch
         {
@@ -133,7 +142,14 @@ public sealed class FolderWalker
 
     private sealed record Root(string Path, string Entered, bool IncludeSubfolders);
 
-    private readonly record struct Item(string Path, bool IsLink);
+    /// <summary>A queued folder; <c>ResolveIdentity</c> is set for links and for the input folders, whose identity is their resolved target.</summary>
+    private readonly record struct Item(string Path, bool ResolveIdentity);
+
+    /// <summary>What the loop guard knows about a listed folder: whether its subfolders were queued, and whether a failure ended it.</summary>
+    private sealed class Listed(bool descended)
+    {
+        public bool Descended { get; set; } = descended;
+    }
 
     private readonly record struct Entry(string Name, bool IsDirectory, bool IsLink);
 
@@ -147,7 +163,7 @@ public sealed class FolderWalker
 
         private readonly Action<UnverifiedFolder> _onUnverified;
 
-        private readonly ConcurrentDictionary<string, byte> _listed = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, Listed> _listed = new(StringComparer.OrdinalIgnoreCase);
 
         private int _pending;
 
@@ -190,13 +206,6 @@ public sealed class FolderWalker
                 return;
             }
 
-            // A folder whose identity was listed already is skipped; this ends link loops. Only a link needs resolving, for any other folder the identity
-            // is its own path. The roots are resolved too, so an input that is itself a link is not listed again through its target.
-            if (!_listed.TryAdd(item.IsLink ? ResolveIdentity(folder) : folder, 0))
-            {
-                return;
-            }
-
             Root? owner   = null;
             bool  descend = false;
 
@@ -223,41 +232,59 @@ public sealed class FolderWalker
                 return;
             }
 
-            var files   = new List<(string Name, FileTypePattern Type)>();
-            var folders = new List<Entry>();
+            // A folder whose identity was listed already is not listed again; this ends link loops. Only a link or an input needs resolving, for any
+            // other folder the identity is its own path. If the earlier visit did not queue the subfolders but this one needs to (the folder is an input
+            // without subfolders and is also reached through a link inside an input with subfolders), this visit only queues them: the files were
+            // reported already. The check and the upgrade are made under the entry's lock, so exactly one visit queues the subfolders.
+            var    entry = new Listed(descend);
+            string key   = item.ResolveIdentity ? ResolveIdentity(folder) : folder;
+            Listed known = _listed.GetOrAdd(key, entry);
+
+            bool subfoldersOnly = false;
+
+            if (!ReferenceEquals(known, entry))
+            {
+                lock (known)
+                {
+                    if (!descend || known.Descended)
+                    {
+                        return;
+                    }
+
+                    known.Descended = true;
+                    subfoldersOnly  = true;
+                }
+            }
+
+            var entries = new List<Entry>();
 
             try
             {
+                // Only the enumeration is guarded: a failure in the filter or a callback is a bug, not an unreadable folder.
                 var listing = new FileSystemEnumerable<Entry>(folder,
-                                                             (ref FileSystemEntry entry) => new Entry(entry.FileName.ToString(), entry.IsDirectory,
-                                                                                                    (entry.Attributes & FileAttributes.ReparsePoint) != 0),
+                                                             (ref FileSystemEntry e) => new Entry(e.FileName.ToString(), e.IsDirectory,
+                                                                                                (e.Attributes & FileAttributes.ReparsePoint) != 0),
                                                              ListingOptions);
 
-                foreach (Entry entry in listing)
+                foreach (Entry listed in listing)
                 {
                     Token.ThrowIfCancellationRequested();
 
-                    if (entry.IsDirectory)
-                    {
-                        folders.Add(entry);
-
-                        continue;
-                    }
-
-                    FileTypePattern? type = _filter.Match(entry.Name);
-
-                    if (type is not null)
-                    {
-                        files.Add((entry.Name, type));
-                    }
+                    entries.Add(listed);
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (Token.IsCancellationRequested)
             {
                 throw;
             }
             catch (Exception ex)
             {
+                // Nothing beneath a folder that failed is listed, now or through a later link to it.
+                lock (known)
+                {
+                    known.Descended = true;
+                }
+
                 MappedOutcome mapped = Win32ErrorMapper.Map(ex);
 
                 // A folder that vanished mid-run is not a "file missing" outcome; it is a folder that could not be checked.
@@ -268,6 +295,25 @@ public sealed class FolderWalker
                 return;
             }
 
+            var files   = new List<(string Name, FileTypePattern Type)>();
+            var folders = new List<Entry>();
+
+            foreach (Entry listed in entries)
+            {
+                if (listed.IsDirectory)
+                {
+                    folders.Add(listed);
+                }
+                else if (!subfoldersOnly)
+                {
+                    FileTypePattern? type = _filter.Match(listed.Name);
+
+                    if (type is not null)
+                    {
+                        files.Add((listed.Name, type));
+                    }
+                }
+            }
             foreach ((string name, FileTypePattern type) in files)
             {
                 _onFile(new ScannedFile(folder + name, owner.Entered, type));
