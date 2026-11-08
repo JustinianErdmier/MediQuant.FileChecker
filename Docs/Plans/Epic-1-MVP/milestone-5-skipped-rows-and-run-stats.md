@@ -177,11 +177,11 @@ Added by the user on 2026-11-08, after Task 2 (approved description item 5).
 
 **Files:** Modify `Docs/Specs/1-file-auditor-master-design.md`, this plan (tick boxes), `MediQuant.FileAuditor.slnx`; Create `Docs/Ledgers/Epic-1-MVP/milestone-5-ledger.md`
 
-- [ ] **Step 1:** Amend the SDD: the skip rule and where it applies (§6, the checking order; the Unindexed audit unaffected); §5.4 statistics (Skipped, Checked excludes
+- [x] **Step 1:** Amend the SDD: the skip rule and where it applies (§6, the checking order; the Unindexed audit unaffected); §5.4 statistics (Skipped, Checked excludes
   skipped, the Files/second format with the recent rate, the Remaining algorithm and `Calculating...`, the three-column statistics on both tabs, both window diagrams, the
   new window height in §5 and §11); §5.4/§6.4 Stop per tab; §7 the report summary with `Skipped:` and the Not-checked arithmetic (and the sample report); §9 (`SkipMarker`,
   `RecentRate`, `RemainingEstimator`); §10 the builder's calls taken here.
-- [ ] **Step 2:** Write the ledger (rulings, user decisions, plan defects, outstanding items, incidents, not exercised, measurements, commits, final review "Pending.").
-- [ ] **Step 3: Verify** — clean build; Markdown prose ≤ 180 characters (PowerShell `[string].Length`); every file under `Docs/` is in the `.slnx`, this plan and the ledger in
+- [x] **Step 2:** Write the ledger (rulings, user decisions, plan defects, outstanding items, incidents, not exercised, measurements, commits, final review "Pending.").
+- [x] **Step 3: Verify** — clean build; Markdown prose ≤ 180 characters (PowerShell `[string].Length`); every file under `Docs/` is in the `.slnx`, this plan and the ledger in
   milestone order.
-- [ ] **Step 4: Commit** — `docs(📝): sync the SDD with skipped rows and the run statistics and close the milestone 5 ledger`.
+- [x] **Step 4: Commit** — `docs(📝): sync the SDD with skipped rows and the run statistics and close the milestone 5 ledger`.
