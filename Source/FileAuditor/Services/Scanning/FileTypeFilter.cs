@@ -3,9 +3,9 @@ namespace FileAuditor.Services.Scanning;
 /// <summary>Decides which file type entry, if any, a file name belongs to: the blacklist wins, and overlaps go to the most specific whitelist entry.</summary>
 public sealed class FileTypeFilter
 {
-    private readonly FileTypePattern[] _include;
-
     private readonly FileTypePattern[] _exclude;
+
+    private readonly FileTypePattern[] _include;
 
     /// <summary>Initialises a new instance; the patterns are compiled once.</summary>
     /// <param name="include">The normalised File types entries.</param>
@@ -18,6 +18,7 @@ public sealed class FileTypeFilter
                           .ThenBy(pattern => pattern.WildcardCount)
                           .ThenBy(pattern => pattern.Text, StringComparer.Ordinal)
                           .ToArray();
+
         _exclude = exclude.Select(entry => new FileTypePattern(entry))
                           .ToArray();
     }

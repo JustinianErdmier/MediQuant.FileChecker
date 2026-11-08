@@ -3,11 +3,11 @@ namespace FileAuditor.ViewModels.Groups;
 /// <summary>The Project Settings group: the save-with-the-report tick and a message saying where the project's settings go (SDD §5).</summary>
 public sealed partial class ProjectSettingsViewModel : ObservableObject
 {
-    private const string SameFolderMessage = "Saved as FileAuditorSettings.json in the same folder as the audit reports.";
-
     private const string DifferentFolderMessage = "Saved to the opened settings file, in a different folder from the audit reports.";
 
     private const string NotSavedMessage = "This project's settings are not being saved.";
+
+    private const string SameFolderMessage = "Saved as FileAuditorSettings.json in the same folder as the audit reports.";
 
     private readonly ProjectSettingsService _project;
 

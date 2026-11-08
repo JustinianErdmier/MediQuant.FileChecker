@@ -12,10 +12,10 @@ public sealed partial class ScanFolderItem : ObservableObject
         IncludeSubfolders = includeSubfolders;
     }
 
-    /// <summary>Gets the folder's full path.</summary>
-    public string Path { get; }
-
     /// <summary>Gets or sets a value indicating whether the folders beneath it are checked too.</summary>
     [ ObservableProperty ]
     public partial bool IncludeSubfolders { get; set; }
+
+    /// <summary>Gets the folder's full path.</summary>
+    public string Path { get; }
 }

@@ -1,13 +1,12 @@
 # Milestone 2 — Project Settings
 
-**Date:** 2026-11-06
-**Status:** Approved 2026-11-06
+**Date:** 2026-11-06 **Status:** Approved 2026-11-06
 
 ## 1. Intent
 
 Today File Auditor remembers one set of inputs per Windows user, in `%APPDATA%\MediQuant\FileAuditor\settings.json`. In practice the inputs belong to a **project**, not
-a person: every project has its own server, database, index table and report location, and a user moves between projects. This milestone makes the settings a
-**project file**, `FileAuditorSettings.json`, saved beside the project's report, so that it lives in the project's repository with the report and any teammate can open
+a person: every project has its own server, database, index table and report location, and a user moves between projects. This milestone makes the settings a **project file**,
+`FileAuditorSettings.json`, saved beside the project's report, so that it lives in the project's repository with the report and any teammate can open
 the same project. The per-user file goes away.
 
 The version stays at **1.0.0**: this milestone is part of the MVP epic.
@@ -43,12 +42,12 @@ the report* (§3.3) is ticked.
 
 A new first group, followed by a separator, then the existing items:
 
-| Item                  | Behaviour                                                                                                   |
-|-----------------------|-------------------------------------------------------------------------------------------------------------|
-| **Open project...**   | Runs the save logic for the current project (§3.4), then opens a file picker (§3.6) and loads the chosen file |
-| **Close project**     | Runs the save logic for the current project (§3.4), then resets the app as if it had just been launched (§3.6) |
-| *(separator)*         |                                                                                                             |
-| Start, Stop, View Report, *(separator)*, Exit | Unchanged                                                                             |
+| Item                                          | Behaviour                                                                                                      |
+|-----------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| **Open project...**                           | Runs the save logic for the current project (§3.4), then opens a file picker (§3.6) and loads the chosen file  |
+| **Close project**                             | Runs the save logic for the current project (§3.4), then resets the app as if it had just been launched (§3.6) |
+| *(separator)*                                 |                                                                                                                |
+| Start, Stop, View Report, *(separator)*, Exit | Unchanged                                                                                                      |
 
 Both new items are disabled while an audit is running, like every other input. Access keys are left to the builder (unique within the menu).
 
@@ -72,8 +71,8 @@ closed**, and on **Close project** (and *Open project...*, which closes the curr
 2. **Checkbox ticked** → save (§3.5), without asking.
 3. **Checkbox unticked and the user has already answered No** this session → do nothing.
 4. **Checkbox unticked and not yet answered** → ask *"Do you want to save this project's settings?"* with **Yes** and **No**:
-   - **Yes** saves (§3.5) and ticks the checkbox, so later saves happen without asking (the user's decision).
-   - **No** does not save, and the app remembers the answer: it does not ask again until *Close project* or a fresh launch.
+    - **Yes** saves (§3.5) and ticks the checkbox, so later saves happen without asking (the user's decision).
+    - **No** does not save, and the app remembers the answer: it does not ask again until *Close project* or a fresh launch.
 
 So the three states read: *ticked* — always save; *unticked* — ask at the next save point (*Yes* ticks the box again); *unticked and declined* — never ask, never
 save, for the rest of the session.
@@ -91,17 +90,17 @@ the user answers *Yes*.
   (`U:\Projects\<folder>\DE\Sample\` and `...\DE\Final\`), so each stage has its own settings file. That is intended (the user's decision): the two stages may use
   different databases.
 - **A project that has never been saved** (no file was opened, nothing saved yet) → saved in the report's folder.
-- **A project opened from a file** (or saved before in this session) → saved back to that file. If the report's folder no longer matches the folder the file is in
-  (for example, the stage was switched), the app asks: *"The report folder has changed.", a blank line, "This project's settings were opened from:", the file's path, a
-  blank line, "The report is now written to:", the report's folder, a blank line, "Where should the settings be saved?"* with **Report Folder**,
-  **Original File** and **Cancel**. *Report Folder* saves to the report's folder, and from then on that is the project's file; *Original File* saves back where it
+- **A project opened from a file** (or saved before in this session) → saved back to that file. If the report's folder no longer matches the folder the file is in (for example, the
+  stage was switched), the app asks: *"The report folder has changed.", a blank line, "This project's settings were opened from:", the file's path, a
+  blank line, "The report is now written to:", the report's folder, a blank line, "Where should the settings be saved?"* with **Report Folder**, **Original File** and **Cancel**.
+  *Report Folder* saves to the report's folder, and from then on that is the project's file; *Original File* saves back where it
   was opened from; *Cancel* backs out of the operation that triggered the save (§3.7).
 - **A different settings file is already there.** When the target is a `FileAuditorSettings.json` that is not the project's own file (a never-saved project, or
-  after choosing *Report Folder*), the app warns: *"A project settings file already exists in this folder: <path>. Do you want to overwrite it?"* with
-  **Overwrite**, **Skip Save** and **Cancel** (the user's decision):
-  - **Overwrite** saves over it, and it becomes the project's file; the operation goes ahead.
-  - **Skip Save** does not save this time; the operation goes ahead.
-  - **Cancel** backs out of the operation that triggered the save (§3.7).
+  after choosing *Report Folder*), the app warns: *"A project settings file already exists in this folder: <path>. Do you want to overwrite it?"* with **Overwrite**, **Skip Save**
+  and **Cancel** (the user's decision):
+    - **Overwrite** saves over it, and it becomes the project's file; the operation goes ahead.
+    - **Skip Save** does not save this time; the operation goes ahead.
+    - **Cancel** backs out of the operation that triggered the save (§3.7).
 - **Format:** the same JSON as today's settings record (`AppSettings`), written with the temp-file + `File.Move(overwrite: true)` pattern.
 
 ### 3.6 Opening and closing a project
@@ -109,10 +108,10 @@ the user answers *Yes*.
 - **Open project...** first runs the save logic (§3.4); *Cancel* there stops here. It then opens a file picker titled *Open Project*, filtered to JSON files, with
   `FileAuditorSettings.json` suggested. It starts in the report's *Location* when that is a full path to a folder that exists, otherwise in the user's profile
   folder (`%USERPROFILE%`).
-  - **Picker cancelled** → nothing changes: the current project stays open exactly as it was, remembered answers included.
-  - **File cannot be read** (invalid JSON, access denied, not a settings file) → an error dialogue, and the current project stays open unchanged.
-  - **File read** → the project is reset as for *Close project*, then the file's settings are loaded and it becomes the project's file. Fields are read with
-    today's rules (SDD §8): a missing field, a null string or an undefined enum value falls back to its default, field by field.
+    - **Picker cancelled** → nothing changes: the current project stays open exactly as it was, remembered answers included.
+    - **File cannot be read** (invalid JSON, access denied, not a settings file) → an error dialogue, and the current project stays open unchanged.
+    - **File read** → the project is reset as for *Close project*, then the file's settings are loaded and it becomes the project's file. Fields are read with
+      today's rules (SDD §8): a missing field, a null string or an undefined enum value falls back to its default, field by field.
 - **Close project** resets every input to its default, ticks the checkbox, forgets the "don't ask again" answer and the open file, and clears the Audit group's
   statistics and the last run's status (the status bar shows *Enter the required details*, SDD §5.5). It is equivalent to relaunching the app.
 
@@ -120,12 +119,12 @@ the user answers *Yes*.
 
 Every save point can be backed out of. *Cancel* (on the overwrite or folder-changed prompts, or on a failure) means:
 
-| Save point             | Cancel means                                                                 |
-|------------------------|------------------------------------------------------------------------------|
-| **Start**              | The audit does not start; the window is left as it was.                      |
-| **Closing the window** | The window stays open.                                                       |
-| **Close project**      | The project stays open, unchanged.                                           |
-| **Open project...**    | The picker is not shown; the current project stays open, unchanged.         |
+| Save point             | Cancel means                                                        |
+|------------------------|---------------------------------------------------------------------|
+| **Start**              | The audit does not start; the window is left as it was.             |
+| **Closing the window** | The window stays open.                                              |
+| **Close project**      | The project stays open, unchanged.                                  |
+| **Open project...**    | The picker is not shown; the current project stays open, unchanged. |
 
 A save **cannot be done** when the report's location is incomplete (no Project folder, or a custom Location that is not a full path), its folder does not exist,
 or the write fails (read-only, access denied, disconnected drive). The app never creates a folder just to save the settings. In each case it shows an error
@@ -148,8 +147,8 @@ already confirmed the folder exists and is writable, so a failure there is rare.
 
 ## 5. SDD sections to amend in this milestone
 
-§1 (comparison table and *Why the changes*), §2 (anti-goal "settings that leak between users"), §4 (Settings file row), §5.3 (checkbox), §5.6 (File menu), §5.8
-(command states for the new items), §6.1 step 4, §6.4 (closing the window), §8 (rewritten for project files), §9 (`SettingsStore` and any new service), and the
+§1 (comparison table and *Why the changes*), §2 (anti-goal "settings that leak between users"), §4 (Settings file row), §5.3 (checkbox), §5.6 (File menu), §5.8 (command states for
+the new items), §6.1 step 4, §6.4 (closing the window), §8 (rewritten for project files), §9 (`SettingsStore` and any new service), and the
 mock-up note in §5.
 
 ## 6. Decided by the user

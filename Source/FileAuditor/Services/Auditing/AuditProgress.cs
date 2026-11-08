@@ -29,12 +29,6 @@ public sealed class AuditProgress
     /// <summary>Gets the number of missing files found so far.</summary>
     public long Missing => Interlocked.Read(ref _missing);
 
-    /// <summary>Gets the number of rows processed so far: those checked plus those skipped.</summary>
-    public long Processed => Checked + Skipped;
-
-    /// <summary>Gets the number of rows skipped so far because their path value was a skip marker; they are not part of <see cref="Checked" />.</summary>
-    public long Skipped => Interlocked.Read(ref _skipped);
-
     /// <summary>Gets or sets the status-bar text for the current phase.</summary>
     public string Phase
     {
@@ -42,6 +36,12 @@ public sealed class AuditProgress
 
         set => _phase = value;
     }
+
+    /// <summary>Gets the number of rows processed so far: those checked plus those skipped.</summary>
+    public long Processed => Checked + Skipped;
+
+    /// <summary>Gets the number of rows skipped so far because their path value was a skip marker; they are not part of <see cref="Checked" />.</summary>
+    public long Skipped => Interlocked.Read(ref _skipped);
 
     /// <summary>Gets the table's row count; meaningful once <see cref="HasTotal" /> is <see langword="true" />.</summary>
     public long TotalFiles => Interlocked.Read(ref _total);

@@ -1,8 +1,8 @@
 namespace FileAuditor.ViewModels.Main;
 
 /// <summary>
-///     One run of an audit in one direction, as the main window drives it: the window times the run and refreshes the Audit group on a timer, and the run supplies the direction's
-///     progress, its runner and how its outcome reads. It keeps the per-direction code out of <see cref="MainWindowViewModel" />.
+///     One run of an audit in one direction, as the main window drives it: the window times the run and refreshes the Audit group on a timer, and the run supplies the
+///     direction's progress, its runner and how its outcome reads. It keeps the per-direction code out of <see cref="MainWindowViewModel" />.
 /// </summary>
 /// <param name="audit">The Audit group that shows this run.</param>
 public abstract class AuditRun(AuditStatusBase audit)
@@ -13,14 +13,14 @@ public abstract class AuditRun(AuditStatusBase audit)
     /// <summary>Gets the status-bar text for the phase the run is in.</summary>
     public abstract string Phase { get; }
 
-    /// <summary>Called once the Audit group has been reset and the run is about to start.</summary>
-    public virtual void Begin()
-    { }
-
     /// <summary>Refreshes the Audit group's statistics from the run's progress.</summary>
     /// <param name="elapsed">The time since the run started.</param>
     /// <param name="isFinished">Whether the run has ended.</param>
     public abstract void Update(TimeSpan elapsed, bool isFinished);
+
+    /// <summary>Called once the Audit group has been reset and the run is about to start.</summary>
+    public virtual void Begin()
+    { }
 
     /// <summary>Runs the audit off the UI thread, so its continuations never queue behind the dispatcher.</summary>
     /// <param name="ct">Stops the run.</param>

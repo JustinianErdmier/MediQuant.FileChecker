@@ -1,45 +1,45 @@
-namespace FileAuditor.ViewModels.Main;
+﻿namespace FileAuditor.ViewModels.Main;
 
 /// <summary>The main window: composes the group and tab view models and owns the Start, Stop, View Report, About and Exit commands.</summary>
 public sealed partial class MainWindowViewModel : ObservableObject
 {
     private const int ProbeDebounceMilliseconds = 300;
 
-    private const int RefreshMilliseconds = 250;
-
     private const int ProbeTimeoutMilliseconds = 2000;
 
+    private const int RefreshMilliseconds = 250;
+
     private readonly DialogueService _dialogues;
-
-    private readonly PreflightChecker _preflight;
-
-    private readonly AuditRunner _missingRunner = new();
-
-    private readonly UnindexedAuditRunner _unindexedRunner = new();
-
-    private readonly ProjectSettingsService _project;
 
     // Each direction's last run status (Completed, Stopped or Failed), shown in place of Ready until that direction runs again.
     private readonly Dictionary<AuditDirection, string?> _lastRunStatus = new();
 
-    private CancellationTokenSource? _auditCts;
+    private readonly AuditRunner _missingRunner = new();
 
-    // The direction whose audit is running, or null when none is.
-    private AuditDirection? _runningDirection;
+    private readonly PreflightChecker _preflight;
+
+    private readonly ProjectSettingsService _project;
+
+    private readonly UnindexedAuditRunner _unindexedRunner = new();
+
+    private CancellationTokenSource? _auditCts;
 
     private Task _auditTask = Task.CompletedTask;
 
-    private CancellationTokenSource? _probeCts;
-
-    private bool _reportExists;
+    // True while Start, Open project or Close project is executing, including while their prompts are open. Those commands and closing the window must not overlap, and the
+    // inputs must not be edited under them.
+    private bool _isBusy;
 
     // Set while the checkbox is being changed by the code rather than the user (reverting an untick, ticking after a Yes, resetting a project), so those changes do not
     // raise the untick warning.
     private bool _isRevertingTick;
 
-    // True while Start, Open project or Close project is executing, including while their prompts are open. Those commands and closing the window must not overlap, and the
-    // inputs must not be edited under them.
-    private bool _isBusy;
+    private CancellationTokenSource? _probeCts;
+
+    private bool _reportExists;
+
+    // The direction whose audit is running, or null when none is.
+    private AuditDirection? _runningDirection;
 
     /// <summary>Initialises a new instance with the default settings, for the XAML designer.</summary>
     public MainWindowViewModel()
@@ -68,8 +68,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MissingFiles    = new MissingFilesTabViewModel(ReportLocation);
         UnindexedFiles  = new UnindexedFilesTabViewModel(ReportLocation, dialogues);
 
-        Database.PropertyChanged            += OnInputChanged;
-        FileIndexTable.PropertyChanged      += OnInputChanged;
+        Database.PropertyChanged              += OnInputChanged;
+        FileIndexTable.PropertyChanged        += OnInputChanged;
         MissingFiles.PropertyChanged          += OnInputChanged;
         UnindexedFiles.PropertyChanged        += OnInputChanged;
         ReportLocation.PropertyChanged        += OnLocationChanged;
@@ -110,11 +110,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ ObservableProperty ]
     public partial int SelectedTabIndex { get; set; }
 
-    /// <summary>Gets the Unindexed Files tab.</summary>
-    public UnindexedFilesTabViewModel UnindexedFiles { get; }
-
     /// <summary>Gets the Audit group that drives the status bar: the running audit's while one runs, otherwise the selected tab's.</summary>
     public AuditStatusBase StatusAudit => AuditFor(_runningDirection ?? SelectedDirection);
+
+    /// <summary>Gets the Unindexed Files tab.</summary>
+    public UnindexedFilesTabViewModel UnindexedFiles { get; }
 
     // Maps the selected tab to its direction; the tabs are in the order of the XAML.
     private AuditDirection SelectedDirection
@@ -137,9 +137,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public void RefreshReportState() => _ = ProbeReportAsync();
 
     /// <summary>
-    ///     Called whenever the window is asked to close. With an audit running the user is asked first, and on Yes the run is stopped and its report written. The project's
-    ///     settings are then saved or offered for saving under the same rule as Start. While Start, Open project or Close project is in progress (before any audit is running)
-    ///     the close is refused, so two save points never run at once; the user can close once that command's prompt has been answered.
+    ///     Called whenever the window is asked to close. With an audit running the user is asked first, and on Yes the run is stopped and its report written. The project's settings
+    ///     are then saved or offered for saving under the same rule as Start. While Start, Open project or Close project is in progress (before any audit is running) the close is
+    ///     refused, so two save points never run at once; the user can close once that command's prompt has been answered.
     /// </summary>
     /// <returns><see langword="true" /> when the window may close.</returns>
     public async Task<bool> ConfirmCloseAsync()
@@ -235,14 +235,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         const string message = "If you untick this box, this project's settings will no longer be saved automatically. You will be asked whether to save them instead.\n\n"
                                + "Do you want to untick it?";
 
-        if (await _dialogues.ConfirmAsync(message, "_Untick"))
+        if (await _dialogues.ConfirmAsync(message, confirmText: "_Untick"))
         {
             _project.UntickConfirmed = true;
 
             return;
         }
 
-        SetSaveProjectSettings(true);
+        SetSaveProjectSettings(value: true);
     }
 
     private void SetSaveProjectSettings(bool value)
@@ -273,7 +273,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             // Back on the UI thread; a newer probe, a changed path or a changed tab makes this answer stale.
             if (cts.IsCancellationRequested
                 || report != SelectedReport
-                || path != report.Current)
+                || path   != report.Current)
             {
                 return;
             }
@@ -308,7 +308,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         foreach (AuditDirection direction in Enum.GetValues<AuditDirection>())
         {
-            AuditFor(direction).StatusMessage = _lastRunStatus.GetValueOrDefault(direction) ?? (CanStartFor(direction) ? "Ready" : "Enter the required details");
+            AuditFor(direction)
+                .StatusMessage = _lastRunStatus.GetValueOrDefault(direction) ?? (CanStartFor(direction) ? "Ready" : "Enter the required details");
         }
     }
 
@@ -339,7 +340,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
            && !string.IsNullOrWhiteSpace(Database.Database)
            && !string.IsNullOrWhiteSpace(FileIndexTable.Table)
            && !string.IsNullOrWhiteSpace(FileIndexTable.PathColumn)
-           && ReportFor(direction).Current.IsComplete;
+           && ReportFor(direction)
+              .Current.IsComplete;
 
     private bool CanStop() => IsRunning;
 
@@ -350,9 +352,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ RelayCommand(CanExecute = nameof(CanStart)) ]
     private async Task StartAsync()
     {
-        AuditDirection direction = SelectedDirection;
-        AppSettings settings     = Snapshot();
-        ReportPath? reportPath   = await _preflight.RunAsync(settings, direction);
+        AuditDirection direction  = SelectedDirection;
+        AppSettings    settings   = Snapshot();
+        ReportPath?    reportPath = await _preflight.RunAsync(settings, direction);
 
         if (reportPath is null)
         {
@@ -368,7 +370,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         if (savePoint.TickCheckbox)
         {
-            SetSaveProjectSettings(true);
+            SetSaveProjectSettings(value: true);
         }
 
         AuditRequest request = new(settings, reportPath);
@@ -451,16 +453,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    private static void Refresh(AuditRun run, Stopwatch clock, bool isFinished)
-    {
-        run.Update(clock.Elapsed, isFinished);
-
-        if (!isFinished)
-        {
-            run.Audit.StatusMessage = run.Phase;
-        }
-    }
-
     [ RelayCommand(CanExecute = nameof(CanStop)) ]
     private void Stop() => _auditCts?.Cancel();
 
@@ -481,8 +473,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
             await _dialogues.ShowErrorAsync($"The report could not be opened:\n{PathText.Breakable(path)}\n\n{ex.Message}");
         }
     }
-
-    private static bool CanOpenHelpTopics() => !string.IsNullOrEmpty(HelpLinks.UserGuideUrl);
 
     [ RelayCommand(CanExecute = nameof(CanOpenHelpTopics)) ]
     private async Task HelpTopicsAsync()
@@ -525,8 +515,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        string startFolder = await ResolvePickerStartFolderAsync();
-        ProjectFilePick? pick = await _dialogues.PickProjectFileAsync(startFolder);
+        string           startFolder = await ResolvePickerStartFolderAsync();
+        ProjectFilePick? pick        = await _dialogues.PickProjectFileAsync(startFolder);
 
         if (pick is null)
         {
@@ -539,8 +529,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             AbandonOpen(savePoint);
 
-            await _dialogues.ShowErrorAsync(
-                $"The project could not be opened:\n{PathText.Breakable(pick.Name)}\n\nOnly files on a local or network drive can be opened.");
+            await _dialogues.ShowErrorAsync($"The project could not be opened:\n{PathText.Breakable(pick.Name)}\n\nOnly files on a local or network drive can be opened.");
 
             return;
         }
@@ -578,14 +567,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         if (savePoint.TickCheckbox)
         {
-            SetSaveProjectSettings(true);
+            SetSaveProjectSettings(value: true);
         }
     }
 
     // The folder probe runs off the UI thread, since the report folder may be on a slow or disconnected drive, and is abandoned after two seconds.
     private async Task<string> ResolvePickerStartFolderAsync()
     {
-        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string     profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         ReportPath current = ReportLocation.ResolveFolder();
 
         if (!current.IsComplete
@@ -609,7 +598,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         LoadAll(AppSettings.Default);
 
         _project.Reset();
-        SetSaveProjectSettings(true);
+        SetSaveProjectSettings(value: true);
 
         _lastRunStatus.Clear();
 
@@ -628,6 +617,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [ RelayCommand ]
     private void Exit() => ExitRequested?.Invoke(this, EventArgs.Empty);
+
+    private static void Refresh(AuditRun run, Stopwatch clock, bool isFinished)
+    {
+        run.Update(clock.Elapsed, isFinished);
+
+        if (!isFinished)
+        {
+            run.Audit.StatusMessage = run.Phase;
+        }
+    }
+
+    private static bool CanOpenHelpTopics() => !string.IsNullOrEmpty(HelpLinks.UserGuideUrl);
 
     /// <summary>Raised when the user asks for the About box.</summary>
     public event EventHandler? AboutRequested;

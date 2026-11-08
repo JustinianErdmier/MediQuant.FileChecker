@@ -53,7 +53,7 @@ public partial class FileTypesDialogueWindow : ClassicWindow
         Dispatcher.UIThread.Post(() =>
                                  {
                                      TextBox? box = EntriesList.ContainerFromItem(item)
-                                                              ?.GetVisualDescendants()
+                                                               ?.GetVisualDescendants()
                                                                .OfType<TextBox>()
                                                                .FirstOrDefault();
 

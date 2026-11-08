@@ -108,11 +108,11 @@ public sealed class SettingsStore
             ProjectFolder = settings.ProjectFolder ?? defaults.ProjectFolder,
             ProjectStage = Enum.IsDefined(settings.ProjectStage) ? settings.ProjectStage : defaults.ProjectStage,
             AuditStage = Enum.IsDefined(settings.AuditStage) ? settings.AuditStage : defaults.AuditStage,
-            CustomLocation = settings.CustomLocation ?? defaults.CustomLocation,
+            CustomLocation = settings.CustomLocation               ?? defaults.CustomLocation,
             MissingCustomFileName = settings.MissingCustomFileName ?? defaults.MissingCustomFileName,
             ScanFolders = NormaliseFolders(settings.ScanFolders),
             FileTypes = NormaliseTypes(settings.FileTypes, defaults.FileTypes!),
-            ExcludeTypes = NormaliseTypes(settings.ExcludeTypes, fallback: []),
+            ExcludeTypes = NormaliseTypes(settings.ExcludeTypes, []),
             UnindexedCustomFileName = settings.UnindexedCustomFileName ?? defaults.UnindexedCustomFileName
         };
     }
@@ -121,7 +121,8 @@ public sealed class SettingsStore
     private static ScanFolder[] NormaliseFolders(ScanFolder[]? folders)
         => folders?.Where(folder => folder?.Path is not null)
                   .ToArray()
-           ?? [];
+           ??
+           [];
 
     // A null list takes the fallback (a copy, never the shared default array). A null element is dropped. Each valid entry is normalised; an invalid one is kept as
     // written (trimmed), so that the tab shows it and the pre-flight names it when Start is pressed (spec §4), instead of the file silently losing it.
@@ -129,7 +130,10 @@ public sealed class SettingsStore
     {
         if (types is null)
         {
-            return [ ..fallback ];
+            return
+            [
+                .. fallback
+            ];
         }
 
         SortedSet<string> kept = new(StringComparer.Ordinal);

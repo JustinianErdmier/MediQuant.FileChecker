@@ -3,13 +3,13 @@ namespace FileAuditor.Services.Reporting;
 /// <summary>The formatting rules both plain-text reports share (SDD §7): label padding, invariant counts, local timestamps, one-line values and the common header lines.</summary>
 public static class ReportFormat
 {
+    private const int LabelWidth = 17;
+
     /// <summary>The gap between the columns of an Other errors line.</summary>
     public const string ColumnGap = "   ";
 
     /// <summary>The line ending of every report.</summary>
     public const string NewLine = "\r\n";
-
-    private const int LabelWidth = 17;
 
     /// <summary>Joins the lines into the report text.</summary>
     /// <param name="lines">The report's lines.</param>

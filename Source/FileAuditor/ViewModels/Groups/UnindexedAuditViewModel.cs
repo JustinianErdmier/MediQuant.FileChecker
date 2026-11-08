@@ -3,10 +3,10 @@ namespace FileAuditor.ViewModels.Groups;
 /// <summary>The Audit group of the Unindexed Files tab: read-only run statistics as display strings, blank before the first run. It has no Remaining time.</summary>
 public sealed partial class UnindexedAuditViewModel : AuditStatusBase
 {
+    private const double MarqueeStep = 5;
+
     // The marquee block is MarqueeWidth of 100 units wide and moves MarqueeStep units on each refresh, so with four refreshes a second it crosses in four seconds.
     private const double MarqueeWidth = 20;
-
-    private const double MarqueeStep = 5;
 
     private readonly RecentRate _recentRate = new();
 
@@ -17,8 +17,8 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     public partial string Elapsed { get; set; } = "";
 
     /// <summary>
-    ///     Gets or sets the files found per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up
-    ///     has passed by the recent figure in parentheses; blank until a full second has elapsed. The recent figure is timed from the start of the scan.
+    ///     Gets or sets the files found per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up has passed by
+    ///     the recent figure in parentheses; blank until a full second has elapsed. The recent figure is timed from the start of the scan.
     /// </summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = "";
@@ -31,13 +31,13 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     [ ObservableProperty ]
     public partial bool IsRunning { get; set; }
 
-    /// <summary>Gets or sets the width, in star units, of the gap before the moving block.</summary>
-    [ ObservableProperty ]
-    public partial GridLength MarqueeBefore { get; set; } = new(value: 0, GridUnitType.Star);
-
     /// <summary>Gets or sets the width, in star units, of the gap after the moving block.</summary>
     [ ObservableProperty ]
     public partial GridLength MarqueeAfter { get; set; } = new(100 - MarqueeWidth, GridUnitType.Star);
+
+    /// <summary>Gets or sets the width, in star units, of the gap before the moving block.</summary>
+    [ ObservableProperty ]
+    public partial GridLength MarqueeBefore { get; set; } = new(value: 0, GridUnitType.Star);
 
     /// <summary>Gets the width, in star units, of the moving block.</summary>
     public GridLength MarqueeBlock { get; } = new(MarqueeWidth, GridUnitType.Star);

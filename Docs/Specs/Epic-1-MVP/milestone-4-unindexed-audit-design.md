@@ -1,7 +1,7 @@
 # Milestone 4 — Unindexed Files Audit
 
-**Date:** 2026-11-08
-**Status:** Approved 2026-11-08; §3.3 and §3.7 amended the same day with the user's whitelist, blacklist and wildcard decisions; §3.2, §3.5, §3.6 and §3.7 amended with the
+**Date:** 2026-11-08 **Status:** Approved 2026-11-08; §3.3 and §3.7 amended the same day with the user's whitelist, blacklist and wildcard decisions; §3.2, §3.5, §3.6 and §3.7
+amended with the
 user's links decision (links are refused: skipped and reported, never followed or checked)
 
 > **Amended during the build (2026-11-08).** §3.1 now records the layout the user settled on while the tab was being built; §3.3 defines what "matches every file" means; §3.5
@@ -47,10 +47,10 @@ The version stays **1.0.0** (MVP epic).
 Milestone 3's tab control gains a second tab, **Unindexed Files**. Top to bottom:
 
 1. **Folders to Check** group:
-   - a list of folders, one per row, each with an **Include subfolders** checkbox in a column at the row's left, **ticked by default** (the user's decision);
-   - **Add...** opens a folder picker and appends the folder; **Remove** removes the selected row; both buttons sit to the right of the list;
-   - **File types:** a read-only one-line summary of the extension whitelist (§3.3) with an **Edit...** button;
-   - **Exclude:** the same for the extension blacklist (§3.3), empty by default.
+    - a list of folders, one per row, each with an **Include subfolders** checkbox in a column at the row's left, **ticked by default** (the user's decision);
+    - **Add...** opens a folder picker and appends the folder; **Remove** removes the selected row; both buttons sit to the right of the list;
+    - **File types:** a read-only one-line summary of the extension whitelist (§3.3) with an **Edit...** button;
+    - **Exclude:** the same for the extension blacklist (§3.3), empty by default.
 
    Each **Edit...** opens the **File Types dialogue**: one entry per row, as in Windows' environment-variable editor, with **New**, **Edit** and **Delete**, **Reset** (restoring
    the built-in list) in the File types dialogue only, and **OK** and **Cancel**. OK checks the entries and keeps the dialogue open on an invalid one; Cancel discards every
@@ -77,8 +77,8 @@ row, so no ID).
   never checked (the user's decision).
 - A file reached through two input folders (one folder inside another) is checked and reported **once**, under the deepest input folder that contains it.
 - **Links are not followed** (the user's decision, amended 2026-11-08 after three review rounds kept finding edge cases in following them). It replaces the earlier final-path,
-  canonical-path and second-query design, which followed links, and it refuses links outright: a junction or symbolic link is **skipped, reported and never checked**. An
-  **input folder** that is a link is not walked (the run goes on with the other inputs; if all are links it completes with no files); a **folder** met in the walk is not entered;
+  canonical-path and second-query design, which followed links, and it refuses links outright: a junction or symbolic link is **skipped, reported and never checked**. An **input
+  folder** that is a link is not walked (the run goes on with the other inputs; if all are links it completes with no files); a **folder** met in the walk is not entered;
   a **file** that is a symbolic link and matches the file types is not checked, so it is in neither *Total files*, *Indexed* nor *Unindexed*. Each is reported once under
   *Unverified*, in the group *Link not followed*, and counts towards *Unverified*. Only an entry with a **link target** is a link: any other reparse point (a DFS namespace
   folder, a OneDrive placeholder, a deduplicated file) is ordinary. An entry whose link target cannot be read is reported under *Other errors* (`Could not tell whether this is a
@@ -111,14 +111,14 @@ Two editable lists of extension patterns, both saved in the project file (the us
 2. An entry with *k* parts matches when the name has at least *k* parts after the stem and its **last *k* parts** match the entry's parts one for one, each part
    compared with its wildcards, ignoring case.
 
-| Entry      | `Backup.zip` | `Backup.zip.01` | `Backup.zip.001` | `Backup.zip.001.bak` | `scan.tar.gz` | `x.gz` |
-|------------|--------------|-----------------|------------------|----------------------|---------------|--------|
-| `.zip.001` | no           | no              | **yes**          | no                   | —             | —      |
-| `zip.*`    | no           | **yes**         | **yes**          | no                   | —             | —      |
-| `zip.0??`  | no           | no              | **yes**          | no                   | —             | —      |
+| Entry      | `Backup.zip` | `Backup.zip.01` | `Backup.zip.001` | `Backup.zip.001.bak` | `scan.tar.gz` | `x.gz`  |
+|------------|--------------|-----------------|------------------|----------------------|---------------|---------|
+| `.zip.001` | no           | no              | **yes**          | no                   | —             | —       |
+| `zip.*`    | no           | **yes**         | **yes**          | no                   | —             | —       |
+| `zip.0??`  | no           | no              | **yes**          | no                   | —             | —       |
 | `.gz`      | —            | —               | —                | —                    | **yes**       | **yes** |
-| `.tar.gz`  | —            | —               | —                | —                    | **yes**       | no     |
-| `.nii.gz`  | —            | —               | —                | —                    | no            | no     |
+| `.tar.gz`  | —            | —               | —                | —                    | **yes**       | no      |
+| `.nii.gz`  | —            | —               | —                | —                    | no            | no      |
 | `*`        | **yes**      | **yes**         | **yes**          | **yes**              | **yes**       | **yes** |
 
 **Most specific entry.** When a file matches more than one whitelist entry (`zip.*` and `zip.001`; `.gz` and `.tar.gz`), it belongs to the **most specific**: the
@@ -129,17 +129,17 @@ are the builder's).
 made only of wildcards, and it contains at least one `*` and at most one `?`. So `*`, `*.*` (the same as `*`), `?*` and `**` are wildcard-only, while `?` (every one-character
 extension) and `.*.*` (two parts) are ordinary entries that raise nothing. (The first wording, "made only of wildcards", would have refused `?` as "matching every file".)
 
-| Situation                                                                 | Result                                                                                       |
-|---------------------------------------------------------------------------|----------------------------------------------------------------------------------------------|
-| The blacklist has a wildcard-only entry                                   | **Error**: it would exclude everything, so the audit cannot run.                             |
-| The whitelist is empty                                                    | **Error** (no file would be checked).                                                        |
-| The whitelist has a wildcard-only entry **and other entries**             | **Warning** (Continue / Cancel): the wildcard makes the other entries redundant.             |
+| Situation                                                                  | Result                                                                                      |
+|----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| The blacklist has a wildcard-only entry                                    | **Error**: it would exclude everything, so the audit cannot run.                            |
+| The whitelist is empty                                                     | **Error** (no file would be checked).                                                       |
+| The whitelist has a wildcard-only entry **and other entries**              | **Warning** (Continue / Cancel): the wildcard makes the other entries redundant.            |
 | The whitelist has a wildcard-only entry **and** the blacklist is not empty | **Warning** (Continue / Cancel): every file will be checked *except* the blacklisted types. |
-| The same entry (after normalising) is in both lists                       | **Warning** (Continue / Cancel): the blacklist wins, so that type is not checked.            |
-| A wildcard-only whitelist entry alone, with an empty blacklist            | Accepted without a warning.                                                                  |
+| The same entry (after normalising) is in both lists                        | **Warning** (Continue / Cancel): the blacklist wins, so that type is not checked.           |
+| A wildcard-only whitelist entry alone, with an empty blacklist             | Accepted without a warning.                                                                 |
 
-Overlapping **patterns** (whitelist `zip.*`, blacklist `zip.000`) are ordinary use and raise nothing; only identical entries warn. Each warning, once answered
-*Continue*, is not asked again until *Close project* or a fresh launch, like the remembered answer to the save prompt (the user's decision). *Cancel* stops the
+Overlapping **patterns** (whitelist `zip.*`, blacklist `zip.000`) are ordinary use and raise nothing; only identical entries warn. Each warning, once answered *Continue*, is not
+asked again until *Close project* or a fresh launch, like the remembered answer to the save prompt (the user's decision). *Cancel* stops the
 Start.
 
 ### 3.4 Matching a file to the index
@@ -169,8 +169,8 @@ The user agreed the index may be loaded fully into memory (as hashes); the build
 ### 3.6 Progress
 
 **What is counted.** A *file* is a file of a listed type, not hidden or system, found by the walk. Each is checked the moment it is found, so every file found is
-either **indexed** or **unindexed**: *Total files* = *Indexed* + *Unindexed*. The audit never opens a file, so a single file cannot fail; what can fail is
-**listing a folder**. Such a folder is **Unverified**: its contents are not checked, and it is counted separately (*Unverified*), never inside *Total files*. A link that
+either **indexed** or **unindexed**: *Total files* = *Indexed* + *Unindexed*. The audit never opens a file, so a single file cannot fail; what can fail is **listing a folder**.
+Such a folder is **Unverified**: its contents are not checked, and it is counted separately (*Unverified*), never inside *Total files*. A link that
 is not followed (§3.2) is counted as Unverified too.
 
 Statistics on the Unindexed Files tab: **Total files** (found so far), **Indexed**, **Unindexed**, **Unverified** (folders and links), **Elapsed**, **Files/second**. **Remaining is
@@ -186,8 +186,8 @@ While a run is under way, **Stop** (button, menu and Esc) and the **status bar**
 hides a run (see milestone 3 §3.3–§3.4, which this extends).
 
 **Stop** during *Loading the index...* writes no report (as Stop during today's count). After that, **Stop** stops the walk and writes the report as
-`Stopped by user`; the counts reflect what was found and checked (there is no *Not checked* line, since the total is unknown). Closing the window mid-run behaves as today
-(SDD §6.4).
+`Stopped by user`; the counts reflect what was found and checked (there is no *Not checked* line, since the total is unknown). Closing the window mid-run behaves as today (SDD
+§6.4).
 
 ### 3.7 The report
 
@@ -254,11 +254,11 @@ U:\Projects\D12345\Images\2020\   I/O error   The semaphore timeout period has e
   Every folder that has unindexed files gets its group, even when only one folder was chosen; groups with none are omitted. `No unindexed files.` when there are
   none.
 - **Which file-type groups** (the user's decision, an option in the tab's Report group, saved in the project file):
-  - **Listed type** (default): one group per whitelist entry as entered, after normalising — `[.zip.* (12)]`, `[.pdf (2)]`.
-  - **Found extension**: one group per real extension found — the file name's last *k* parts, lower case, where *k* is the matching entry's part count —
-    `[.zip.001 (5)]`, `[.zip.002 (7)]`.
-  - Either way, a file that matches several whitelist entries is grouped through the **most specific** one (§3.3): under *Found extension* that entry's part count
-    decides how many parts make up the extension.
+    - **Listed type** (default): one group per whitelist entry as entered, after normalising — `[.zip.* (12)]`, `[.pdf (2)]`.
+    - **Found extension**: one group per real extension found — the file name's last *k* parts, lower case, where *k* is the matching entry's part count —
+      `[.zip.001 (5)]`, `[.zip.002 (7)]`.
+    - Either way, a file that matches several whitelist entries is grouped through the **most specific** one (§3.3): under *Found extension* that entry's part count
+      decides how many parts make up the extension.
 - The header lists `File types:` and `Exclude:` (each sorted, space-separated; `Exclude:` reads `(none)` when empty) and `Grouped by:` (`Listed type` or
   `Found extension`).
 - **Unverified** lists the folders that could not be listed and the links that were not followed (a folder's path ends in `\`; a file link is a plain path), grouped by the

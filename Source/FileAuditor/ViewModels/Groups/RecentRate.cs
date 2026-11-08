@@ -7,14 +7,14 @@ namespace FileAuditor.ViewModels.Groups;
 public sealed class RecentRate
 {
     /// <summary>
-    ///     The averaging time constant in seconds. Thirty seconds is long enough to smooth the second-to-second noise of a network share and short enough to follow a
-    ///     real change in speed within a minute.
+    ///     The averaging time constant in seconds. Thirty seconds is long enough to smooth the second-to-second noise of a network share and short enough to follow a real change in
+    ///     speed within a minute.
     /// </summary>
     public const double TimeConstantSeconds = 30;
 
     /// <summary>
-    ///     The warm-up in seconds. A rate taken over the first few seconds is dominated by connection set-up and cache warming, so none is reported until this
-    ///     much time has passed; the average then starts from the warm-up's second half.
+    ///     The warm-up in seconds. A rate taken over the first few seconds is dominated by connection set-up and cache warming, so none is reported until this much time has passed;
+    ///     the average then starts from the warm-up's second half.
     /// </summary>
     public const double WarmUpSeconds = 5;
 
@@ -32,17 +32,6 @@ public sealed class RecentRate
 
     /// <summary>Gets the rate from the latest <see cref="Next" /> call, or <see langword="null" /> during the warm-up.</summary>
     public double? Value { get; private set; }
-
-    /// <summary>Formats the Files/second text: the whole-run average, then the recent rate in parentheses, each a whole number with thousands separators.</summary>
-    /// <param name="wholeRun">The whole-run average, in items per second.</param>
-    /// <param name="recent">The recent rate, or <see langword="null" /> to show the whole-run average alone.</param>
-    /// <returns>The text, such as <c>54,112 (60,001)</c> or <c>54,112</c>.</returns>
-    public static string Format(double wholeRun, double? recent)
-    {
-        string whole = wholeRun.ToString(format: "N0", CultureInfo.CurrentCulture);
-
-        return recent is null ? whole : $"{whole} ({recent.Value.ToString(format: "N0", CultureInfo.CurrentCulture)})";
-    }
 
     /// <summary>Forgets every sample, so the next run starts its own warm-up.</summary>
     public void Reset()
@@ -67,7 +56,8 @@ public sealed class RecentRate
         if (!_seeded)
         {
             // The first sample in the warm-up's second half anchors the seed, so the slow start-up ramp does not drag it down.
-            if (!_hasAnchor && seconds >= WarmUpSeconds / 2)
+            if (!_hasAnchor
+                && seconds >= WarmUpSeconds / 2)
             {
                 _hasAnchor     = true;
                 _anchorCount   = count;
@@ -101,5 +91,16 @@ public sealed class RecentRate
         _previousSeconds = seconds;
 
         return Value;
+    }
+
+    /// <summary>Formats the Files/second text: the whole-run average, then the recent rate in parentheses, each a whole number with thousands separators.</summary>
+    /// <param name="wholeRun">The whole-run average, in items per second.</param>
+    /// <param name="recent">The recent rate, or <see langword="null" /> to show the whole-run average alone.</param>
+    /// <returns>The text, such as <c>54,112 (60,001)</c> or <c>54,112</c>.</returns>
+    public static string Format(double wholeRun, double? recent)
+    {
+        string whole = wholeRun.ToString(format: "N0", CultureInfo.CurrentCulture);
+
+        return recent is null ? whole : $"{whole} ({recent.Value.ToString(format: "N0", CultureInfo.CurrentCulture)})";
     }
 }

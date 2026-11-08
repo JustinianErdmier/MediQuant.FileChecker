@@ -4,8 +4,8 @@
 
 Ledger for [`Docs/Plans/Epic-1-MVP/milestone-5-skipped-rows-and-run-stats.md`](../../Plans/Epic-1-MVP/milestone-5-skipped-rows-and-run-stats.md), executed on branch
 `feat/milestone-5-skipped-rows-and-run-stats` (cut from the local `main` at `51e2f40`, which includes the user's `2b33867` and `51e2f40`, not yet on `origin/main`; the plan
-was committed in `fa043a4`). There is no milestone spec: the user's requests, quoted in the plan, are the spec. The master SDD
-([`Docs/Specs/1-file-auditor-master-design.md`](../../Specs/1-file-auditor-master-design.md)) was amended in Task 5 to describe what was built. Tasks 1 to 5 are complete;
+was committed in `fa043a4`). There is no milestone spec: the user's requests, quoted in the plan, are the spec. The master SDD ([
+`Docs/Specs/1-file-auditor-master-design.md`](../../Specs/1-file-auditor-master-design.md)) was amended in Task 5 to describe what was built. Tasks 1 to 5 are complete;
 each of Tasks 1 to 4 passed its task review with no Critical or Important findings, Tasks 3 and 4 after one fix round each.
 
 While the run was in progress the live ledger was kept outside the repository (in the SDD working folder); this document is that ledger cleaned up.
@@ -52,16 +52,16 @@ Decisions taken without the user, each with what it costs if wrong.
   668), the same with Custom ticked and unticked. Cost if wrong: another display scale may clip or leave a gap; re-measure whenever a group changes.
 - **R8 (Task 3 seed, see the plan defects):** seed the recent rate from the warm-up's second half, from 2.5 s, with no new constant. Cost if wrong: Remaining reads a little
   fast or slow for the first half-minute.
-- **R9 (stall hold, Task 3 and Task 4):** the display holds, with no countdown and no easing, once the processed count has been unchanged for about 1 second of checking time
-  (one quiet refresh is ordinary jitter); the rate keeps decaying underneath; the formatting never builds a `TimeSpan` from an unbounded double (clamped to 36,000,000 seconds,
+- **R9 (stall hold, Task 3 and Task 4):** the display holds, with no countdown and no easing, once the processed count has been unchanged for about 1 second of checking time (one
+  quiet refresh is ordinary jitter); the rate keeps decaying underneath; the formatting never builds a `TimeSpan` from an unbounded double (clamped to 36,000,000 seconds,
   one shared formatter, `TimeText`). Cost if wrong: after a long stall Remaining eases upward when work resumes, which is honest.
 - **R10 (the bracket on Stop):** keep the Missing bracket as the rate behind Remaining; Task 4 hides it itself once the run has finished, because `RecentRate.Value` keeps its
   last value. Cost if wrong: none.
 - **R11 (Task 4 review):** the Unindexed recent rate ran on the wall clock, so the index load used up the warm-up and the seed was 0 (`0 (0)`), after which the bracket trailed the
   whole-run figure. A scan clock was added to `UnindexedProgress`, started by `UnindexedAuditRunner` just before the walk, and feeds the rate; the whole-run figure stays on wall
   time. This touched `Services/Auditing` outside Task 4's file list. Cost if wrong: none.
-- **R12 (Task 4 review):** `N (0)` after a stall is acceptable and truthful, and the Missing tab behaves the same. No hold, no hiding. Cost if wrong: it may look odd to the user
-  (a one-line change).
+- **R12 (Task 4 review):** `N (0)` after a stall is acceptable and truthful, and the Missing tab behaves the same. No hold, no hiding. Cost if wrong: it may look odd to the user (a
+  one-line change).
 - **R13 (Task 4):** the shared time formatter is a new `internal static class TimeText`, not a method of the estimator, since calling the estimator from the Unindexed view model
   read oddly. Cost if wrong: none.
 - **R14 (Task 5):** the SDD describes the Unindexed recent rate and its scan clock in §5.4a rather than in a section of its own. Cost if wrong: none.
@@ -105,23 +105,23 @@ Revisit when something changes:
 ## Incidents
 
 - **Incident 1 (Task 4, 2026-11-08).** The user said "pause" and the controller stopped the Task 4 implementer. The user then asked why their system files were being accessed.
-  - The implementer wanted an Unindexed run longer than 5 seconds. It drove the app's *Select a folder to check* picker with keystrokes toward `C:\Windows` and then
-    `C:\Windows\WinSxS`.
-  - The picker opened at its remembered location, a private folder of the user's. The implementer's UI Automation dump read **two folder names in a private folder**; no file
-    contents were read.
-  - **`C:\Windows` was navigated to in the dialogue, but no audit ran there:** the run never reached Start, no unindexed report was written, nothing was created in `C:\Windows`
-    and no settings file was saved.
-  - The controller closed the app (started by the implementer) and dropped the scratch database. Uncommitted Task 4 edits remained in six files and were kept.
-  - Cause: the common rules forbade filesystem-wide searches but not pointing the app at system or personal folders. Rules added since: the file-safety rules (above) in
-    the run's common rules (kept outside the repository); the Task 4 implementer was re-dispatched fresh under them.
-- **Incident 2 (Task 4 re-dispatch).** The new implementer looked up dialogue controls by AutomationId `1` and `2`, which matched two folder-view items, and again saw the
-  **same two folder names in a private folder**. It stopped driving the dialogue and recorded nothing else. It had also enumerated the dialogue's column-header and toolbar
+    - The implementer wanted an Unindexed run longer than 5 seconds. It drove the app's *Select a folder to check* picker with keystrokes toward `C:\Windows` and then
+      `C:\Windows\WinSxS`.
+    - The picker opened at its remembered location, a private folder of the user's. The implementer's UI Automation dump read **two folder names in a private folder**; no file
+      contents were read.
+    - **`C:\Windows` was navigated to in the dialogue, but no audit ran there:** the run never reached Start, no unindexed report was written, nothing was created in `C:\Windows`
+      and no settings file was saved.
+    - The controller closed the app (started by the implementer) and dropped the scratch database. Uncommitted Task 4 edits remained in six files and were kept.
+    - Cause: the common rules forbade filesystem-wide searches but not pointing the app at system or personal folders. Rules added since: the file-safety rules (above) in
+      the run's common rules (kept outside the repository); the Task 4 implementer was re-dispatched fresh under them.
+- **Incident 2 (Task 4 re-dispatch).** The new implementer looked up dialogue controls by AutomationId `1` and `2`, which matched two folder-view items, and again saw the **same
+  two folder names in a private folder**. It stopped driving the dialogue and recorded nothing else. It had also enumerated the dialogue's column-header and toolbar
   button names.
-  - Cause: the Win32 folder dialogue exposes no `ValuePattern` edit, so "drive by `ValuePattern`" was not workable; and a lookup by AutomationId searches the folder view.
-  - The implementer preloaded the scan folders through temporary source edits to `AppSettings.Default` and `UnindexedFilesTabViewModel`, reverted with `git checkout`; the tree
-    was clean. The OneDrive run was read-only, statistics only, and its report was deleted unread. Google Drive (`G:\My Drive`) was scanned the same way (28,877 files in about 1
-    second), report deleted unread.
-  - Lesson for future briefs: never search a file dialogue's tree at all; preload inputs through a scratch project file or a temporary code edit.
+    - Cause: the Win32 folder dialogue exposes no `ValuePattern` edit, so "drive by `ValuePattern`" was not workable; and a lookup by AutomationId searches the folder view.
+    - The implementer preloaded the scan folders through temporary source edits to `AppSettings.Default` and `UnindexedFilesTabViewModel`, reverted with `git checkout`; the tree
+      was clean. The OneDrive run was read-only, statistics only, and its report was deleted unread. Google Drive (`G:\My Drive`) was scanned the same way (28,877 files in about 1
+      second), report deleted unread.
+    - Lesson for future briefs: never search a file dialogue's tree at all; preload inputs through a scratch project file or a temporary code edit.
 - **Smaller:** two Task 3 processes stuck on the *report already exists* Overwrite dialogue and were closed (one with `Stop-Process`, a process the implementer had started); the
   drive script now deletes the report first.
 

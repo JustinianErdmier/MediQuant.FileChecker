@@ -22,29 +22,34 @@ namespace FileAuditor.Models.Settings;
 /// <param name="ExcludeTypes">The Exclude blacklist, normalised; <see langword="null" /> in a file means none.</param>
 /// <param name="GroupByFoundExtension">Whether the unindexed report groups files by the extension found rather than the listed type.</param>
 /// <param name="UnindexedCustomFileName">The custom report file name of the unindexed-files audit, used when <paramref name="UseCustomReportLocation" /> is set.</param>
-public sealed record AppSettings(string       Server                  = "",
-                                 string       Database                = "",
-                                 string       Table                   = "",
-                                 string       PathColumn              = "",
-                                 string       IdColumn                = "",
-                                 bool         ReportEmptyFiles        = true,
-                                 string       ProjectFolder           = "",
-                                 ProjectStage ProjectStage            = ProjectStage.Final,
-                                 AuditStage   AuditStage              = AuditStage.Interim,
-                                 bool         UseCustomReportLocation = false,
-                                 string       CustomLocation          = "",
-                                 string       MissingCustomFileName   = "FileAuditorMissingReport.txt",
-                                 ScanFolder[]? ScanFolders            = null,
-                                 string[]?    FileTypes               = null,
-                                 string[]?    ExcludeTypes            = null,
-                                 bool         GroupByFoundExtension   = false,
-                                 string       UnindexedCustomFileName = "FileAuditorUnindexedReport.txt")
+public sealed record AppSettings(string        Server                  = "",
+                                 string        Database                = "",
+                                 string        Table                   = "",
+                                 string        PathColumn              = "",
+                                 string        IdColumn                = "",
+                                 bool          ReportEmptyFiles        = true,
+                                 string        ProjectFolder           = "",
+                                 ProjectStage  ProjectStage            = ProjectStage.Final,
+                                 AuditStage    AuditStage              = AuditStage.Interim,
+                                 bool          UseCustomReportLocation = false,
+                                 string        CustomLocation          = "",
+                                 string        MissingCustomFileName   = "FileAuditorMissingReport.txt",
+                                 ScanFolder[]? ScanFolders             = null,
+                                 string[]?     FileTypes               = null,
+                                 string[]?     ExcludeTypes            = null,
+                                 bool          GroupByFoundExtension   = false,
+                                 string        UnindexedCustomFileName = "FileAuditorUnindexedReport.txt")
 {
     /// <summary>Gets the default settings: the settings a new or closed project starts from.</summary>
     public static AppSettings Default { get; } = new()
     {
-        ScanFolders  = [],
-        FileTypes    = [..FileTypeList.Defaults],
-        ExcludeTypes = []
+        ScanFolders =
+            [],
+        FileTypes =
+        [
+            .. FileTypeList.Defaults
+        ],
+        ExcludeTypes =
+            []
     };
 }

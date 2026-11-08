@@ -3,6 +3,11 @@ namespace FileAuditor.Services.Sql;
 /// <summary>Builds the audit statements from the table and column names entered by the user.</summary>
 public static class QueryBuilder
 {
+    private const char EscapeCharacter = '|';
+
+    /// <summary>The most folders the prefix filter is built for; more than this loads every row.</summary>
+    public const int MaxFilterFolders = 20;
+
     /// <summary>Builds the count and select statements, quoting every identifier part.</summary>
     /// <param name="table">The table name, either <c>table</c> or <c>schema.table</c>.</param>
     /// <param name="pathColumn">The name of the column holding file paths.</param>
@@ -45,18 +50,13 @@ public static class QueryBuilder
                               hasId);
     }
 
-    /// <summary>The most folders the prefix filter is built for; more than this loads every row.</summary>
-    public const int MaxFilterFolders = 20;
-
-    private const char EscapeCharacter = '|';
-
     /// <summary>Builds the statement that selects the path column, restricted to the rows under the given folders where that is possible.</summary>
     /// <param name="table">The table name, either <c>table</c> or <c>schema.table</c>.</param>
     /// <param name="pathColumn">The name of the column holding file paths.</param>
     /// <param name="folders">
-    ///     The folders to check. For 1 to <see cref="MaxFilterFolders" /> folders the statement filters on a case-insensitive <c>LIKE</c> prefix per folder; for
-    ///     none, for more, or when any folder is empty (which has no prefix to match), the filter is dropped and every row is selected. The filter also selects
-    ///     every row that starts with a whitespace character, so that <see cref="IndexPathSet" /> can trim it as the spec requires.
+    ///     The folders to check. For 1 to <see cref="MaxFilterFolders" /> folders the statement filters on a case-insensitive <c>LIKE</c> prefix per folder; for none,
+    ///     for more, or when any folder is empty (which has no prefix to match), the filter is dropped and every row is selected. The filter also selects every row that starts with a
+    ///     whitespace character, so that <see cref="IndexPathSet" /> can trim it as the spec requires.
     /// </param>
     /// <returns>The query, or <c>Query.InvalidIdentifier</c> when a name is malformed.</returns>
     public static ErrorOr<PathQuery> BuildPaths(string table, string pathColumn, IReadOnlyList<string> folders)
@@ -100,7 +100,7 @@ public static class QueryBuilder
 
         // Values with leading whitespace would miss every prefix above, yet the index set trims them, so load them all (LTRIM only strips spaces before SQL 2022).
         clauses.Add($"{columnSql} COLLATE Latin1_General_100_BIN2 LIKE @pw");
-        parameters.Add(new KeyValuePair<string, string>("@pw", WhitespacePattern()));
+        parameters.Add(new KeyValuePair<string, string>(key: "@pw", WhitespacePattern()));
 
         return new PathQuery($"{sql} WHERE {string.Join(separator: " OR ", clauses)};", parameters);
     }
@@ -112,11 +112,19 @@ public static class QueryBuilder
     {
         (int First, int Last)[] ranges =
         [
-            (0x0009, 0x000D), (0x0020, 0x0020), (0x0085, 0x0085), (0x00A0, 0x00A0), (0x1680, 0x1680), (0x2000, 0x200A), (0x2028, 0x2029), (0x202F, 0x202F),
-            (0x205F, 0x205F), (0x3000, 0x3000)
+            (0x0009, 0x000D),
+            (0x0020, 0x0020),
+            (0x0085, 0x0085),
+            (0x00A0, 0x00A0),
+            (0x1680, 0x1680),
+            (0x2000, 0x200A),
+            (0x2028, 0x2029),
+            (0x202F, 0x202F),
+            (0x205F, 0x205F),
+            (0x3000, 0x3000)
         ];
 
-        StringBuilder builder = new("[");
+        StringBuilder builder = new(value: "[");
 
         foreach ((int first, int last) in ranges)
         {
@@ -124,11 +132,13 @@ public static class QueryBuilder
 
             if (last > first)
             {
-                builder.Append('-').Append((char)last);
+                builder.Append(value: '-')
+                       .Append((char)last);
             }
         }
 
-        return builder.Append("]%").ToString();
+        return builder.Append(value: "]%")
+                      .ToString();
     }
 
     private static string EscapePrefix(string folder)
@@ -147,9 +157,10 @@ public static class QueryBuilder
 
         if (folder[^1] != '\\')
         {
-            builder.Append('\\');
+            builder.Append(value: '\\');
         }
 
-        return builder.Append('%').ToString();
+        return builder.Append(value: '%')
+                      .ToString();
     }
 }

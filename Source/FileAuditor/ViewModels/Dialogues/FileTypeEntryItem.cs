@@ -5,10 +5,7 @@ public sealed partial class FileTypeEntryItem : ObservableObject
 {
     /// <summary>Initialises a new instance.</summary>
     /// <param name="text">The entry's text.</param>
-    public FileTypeEntryItem(string text)
-    {
-        Text = text;
-    }
+    public FileTypeEntryItem(string text) => Text = text;
 
     /// <summary>Gets or sets the entry's text.</summary>
     [ ObservableProperty ]

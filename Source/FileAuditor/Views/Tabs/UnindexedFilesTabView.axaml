@@ -42,7 +42,8 @@
                                  ScrollViewer.VerticalScrollBarVisibility="Visible">
                             <ListBox.Styles>
                                 <Style Selector="ListBoxItem">
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="HorizontalContentAlignment"
+                                            Value="Stretch" />
                                 </Style>
                             </ListBox.Styles>
                             <ListBox.ItemTemplate>

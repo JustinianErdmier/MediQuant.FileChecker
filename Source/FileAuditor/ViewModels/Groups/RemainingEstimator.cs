@@ -1,33 +1,33 @@
 namespace FileAuditor.ViewModels.Groups;
 
 /// <summary>
-///     Turns the audit's progress samples into the Remaining text: an estimate from the <see cref="RecentRate" /> that the display eases toward while counting
-///     down one second per second, so it neither holds still nor jumps. Not a view model: it has no view.
+///     Turns the audit's progress samples into the Remaining text: an estimate from the <see cref="RecentRate" /> that the display eases toward while counting down one second
+///     per second, so it neither holds still nor jumps. Not a view model: it has no view.
 /// </summary>
 public sealed class RemainingEstimator
 {
-    /// <summary>The placeholder shown until there is a rate to estimate from.</summary>
-    public const string CalculatingText = "Calculating...";
-
-    /// <summary>
-    ///     The easing time constant in seconds. Three seconds moves the display most of the way to a new estimate within a few refreshes' worth of seconds, yet
-    ///     smooths the estimate's own wobble enough that the digits read as a clock.
-    /// </summary>
-    public const double EasingSeconds = 3;
-
     private const string Finished = "00:00:00";
 
     // How long, in seconds of checking time, the processed count must stand still before the display holds. One refresh is 250 ms, and a single quiet refresh is
     // ordinary jitter on a slow share, not a stall.
     private const double StallHoldSeconds = 1;
 
+    /// <summary>The placeholder shown until there is a rate to estimate from.</summary>
+    public const string CalculatingText = "Calculating...";
+
+    /// <summary>
+    ///     The easing time constant in seconds. Three seconds moves the display most of the way to a new estimate within a few refreshes' worth of seconds, yet smooths the
+    ///     estimate's own wobble enough that the digits read as a clock.
+    /// </summary>
+    public const double EasingSeconds = 3;
+
     private readonly RecentRate _rate = new();
 
     private double _changedSeconds;
 
-    private double _lastSeconds;
-
     private long _lastProcessed = -1;
+
+    private double _lastSeconds;
 
     private double? _shown;
 
@@ -91,7 +91,8 @@ public sealed class RemainingEstimator
 
         // A stalled run has no progress to extrapolate from: once the count has stood still for a second, hold the display where it is (the rate keeps decaying
         // underneath) rather than count down to zero.
-        if (_shown is not null && seconds - _changedSeconds >= StallHoldSeconds)
+        if (_shown is not null
+            && seconds - _changedSeconds >= StallHoldSeconds)
         {
             return TimeText.Format(_shown.Value);
         }

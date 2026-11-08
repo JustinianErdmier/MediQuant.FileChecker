@@ -31,20 +31,20 @@ code conventions bind every task. House rules: [`CLAUDE.md`](../../../CLAUDE.md)
 - Settings file name: exactly `FileAuditorSettings.json`. Version stays `1.0.0`. Nothing is ever written beside the executable, and nothing is read from or written to
   `%APPDATA%` any more.
 - Exact UI copy, used verbatim:
-  - Menu: `O_pen project...`, `_Close project` (new first group of *File*, then a separator, then the existing items).
-  - Checkbox (last row of the Report group): `Save project settings _with the report`.
-  - Untick warning (warning icon), buttons `_Untick` / `Cancel`: `If you untick this box, this project's settings will no longer be saved automatically. You will be
+    - Menu: `O_pen project...`, `_Close project` (new first group of *File*, then a separator, then the existing items).
+    - Checkbox (last row of the Report group): `Save project settings _with the report`.
+    - Untick warning (warning icon), buttons `_Untick` / `Cancel`: `If you untick this box, this project's settings will no longer be saved automatically. You will be
     asked whether to save them instead.\n\nDo you want to untick it?`
-  - Save prompt (question icon), buttons `_Yes` / `_No`: `Do you want to save this project's settings?`
-  - Folder changed (question icon), buttons `_Report Folder` / `_Original File` / `Cancel`: `The report folder has changed.\n\nThis project's settings were opened
+    - Save prompt (question icon), buttons `_Yes` / `_No`: `Do you want to save this project's settings?`
+    - Folder changed (question icon), buttons `_Report Folder` / `_Original File` / `Cancel`: `The report folder has changed.\n\nThis project's settings were opened
     from:\n{file}\n\nThe report is now written to:\n{folder}\n\nWhere should the settings be saved?`
-  - Existing file (warning icon), buttons `_Overwrite` / `_Skip Save` / `Cancel`: `A project settings file already exists in this folder:\n{path}\n\nDo you want to
+    - Existing file (warning icon), buttons `_Overwrite` / `_Skip Save` / `Cancel`: `A project settings file already exists in this folder:\n{path}\n\nDo you want to
     overwrite it?`
-  - Cannot save (error icon), buttons `_Skip Save` / `Cancel`: `This project's settings cannot be saved:\n{path}\n\n{reason}`, where `{reason}` is
-    `The report location is incomplete.`, `The folder does not exist.` or the write error's message.
-  - Open failed (error icon), button `OK`: `The project could not be opened:\n{path}\n\n{detail}`.
-  - Picker title `Open Project`; filters `File Auditor project (FileAuditorSettings.json)` then `JSON files (*.json)`.
-  - Every path in dialogue text goes through `PathText.Breakable`.
+    - Cannot save (error icon), buttons `_Skip Save` / `Cancel`: `This project's settings cannot be saved:\n{path}\n\n{reason}`, where `{reason}` is
+      `The report location is incomplete.`, `The folder does not exist.` or the write error's message.
+    - Open failed (error icon), button `OK`: `The project could not be opened:\n{path}\n\n{detail}`.
+    - Picker title `Open Project`; filters `File Auditor project (FileAuditorSettings.json)` then `JSON files (*.json)`.
+    - Every path in dialogue text goes through `PathText.Breakable`.
 - Closing a question or warning dialogue with its title-bar ✕ counts as its last button (*Cancel*, or *No* for the Yes/No prompt).
 - All CLAUDE.md and SDD §12 conventions apply. Commit each task automatically, `type(emoji): subject` + the `Co-Authored-By` trailer, staging only the task's files.
 
@@ -72,11 +72,11 @@ code conventions bind every task. House rules: [`CLAUDE.md`](../../../CLAUDE.md)
 **Interfaces:**
 
 - Produces:
-  - `enum DialogueChoice { Primary, Secondary, Tertiary }`.
-  - `MessageDialogueViewModel(string Message, DialogueIcon Icon, string PrimaryText, string? SecondaryText, string? TertiaryText = null)`, plus `bool HasTertiary`.
-  - `DialogueService.ChooseAsync(string message, DialogueIcon icon, string primaryText, string secondaryText, string? tertiaryText = null) : Task<DialogueChoice>`.
-  - `DialogueService.PickProjectFileAsync(string startFolder) : Task<string?>` — the chosen file's local path, or `null` when cancelled.
-  - The existing `ShowErrorAsync`, `ConfirmAsync` and `AskYesNoAsync` keep their signatures and behaviour.
+    - `enum DialogueChoice { Primary, Secondary, Tertiary }`.
+    - `MessageDialogueViewModel(string Message, DialogueIcon Icon, string PrimaryText, string? SecondaryText, string? TertiaryText = null)`, plus `bool HasTertiary`.
+    - `DialogueService.ChooseAsync(string message, DialogueIcon icon, string primaryText, string secondaryText, string? tertiaryText = null) : Task<DialogueChoice>`.
+    - `DialogueService.PickProjectFileAsync(string startFolder) : Task<string?>` — the chosen file's local path, or `null` when cancelled.
+    - The existing `ShowErrorAsync`, `ConfirmAsync` and `AskYesNoAsync` keep their signatures and behaviour.
 
 - [x] **Step 1: Add the third button.** Buttons sit in order Primary, Secondary, Tertiary along the bottom right; Primary is `IsDefault`; the last visible button is
   `IsCancel`. The window closes with a `DialogueChoice`; the title-bar ✕ yields the last visible button's choice (`Secondary` for two buttons, `Tertiary` for three,
@@ -100,20 +100,20 @@ code conventions bind every task. House rules: [`CLAUDE.md`](../../../CLAUDE.md)
 
 - Consumes: Task 1's `DialogueService.ChooseAsync`, `DialogueChoice`.
 - Produces:
-  - `SettingsStore` (parameterless only): `const string FileName = "FileAuditorSettings.json"`; `ErrorOr<AppSettings> Load(string filePath)`;
-    `ErrorOr<Success> Save(AppSettings settings, string filePath)`. A missing file is now `SettingsErrors.Unreadable` (opening a file that is not there is a failure);
-    `Save` never creates a folder (`DirectoryNotFoundException` → `Unwritable`). `Normalise` and the temp-file + move are kept.
-  - `sealed record SavePointResult(bool Proceed, bool TickCheckbox)` with `static SavePointResult Go`, `GoAndTick`, `Cancel`.
-  - `ProjectSettingsService(SettingsStore store, DialogueService dialogues)`:
-    - `string? FilePath { get; }` — the project's file, `null` until opened or first saved.
-    - `bool UntickConfirmed { get; set; }` — the untick warning was confirmed this session.
-    - `void Reset()` — forgets the file, the baseline (back to `AppSettings.Default`) and both remembered answers.
-    - `void MarkLoaded(string filePath, AppSettings settings)` — after a successful open: the file and the baseline.
-    - `bool IsChanged(AppSettings current)` — `current != baseline` (record equality).
-    - `Task<SavePointResult> RunSavePointAsync(AppSettings current, ReportPath report, bool saveTicked)` — the whole rule.
+    - `SettingsStore` (parameterless only): `const string FileName = "FileAuditorSettings.json"`; `ErrorOr<AppSettings> Load(string filePath)`;
+      `ErrorOr<Success> Save(AppSettings settings, string filePath)`. A missing file is now `SettingsErrors.Unreadable` (opening a file that is not there is a failure);
+      `Save` never creates a folder (`DirectoryNotFoundException` → `Unwritable`). `Normalise` and the temp-file + move are kept.
+    - `sealed record SavePointResult(bool Proceed, bool TickCheckbox)` with `static SavePointResult Go`, `GoAndTick`, `Cancel`.
+    - `ProjectSettingsService(SettingsStore store, DialogueService dialogues)`:
+        - `string? FilePath { get; }` — the project's file, `null` until opened or first saved.
+        - `bool UntickConfirmed { get; set; }` — the untick warning was confirmed this session.
+        - `void Reset()` — forgets the file, the baseline (back to `AppSettings.Default`) and both remembered answers.
+        - `void MarkLoaded(string filePath, AppSettings settings)` — after a successful open: the file and the baseline.
+        - `bool IsChanged(AppSettings current)` — `current != baseline` (record equality).
+        - `Task<SavePointResult> RunSavePointAsync(AppSettings current, ReportPath report, bool saveTicked)` — the whole rule.
 
-- [x] **Step 1: Rework `SettingsStore`** to the per-path API above; remove the `%APPDATA%` path and the path-holding constructor. Update the `SettingsErrors` XML docs
-  (no longer "use the defaults").
+- [x] **Step 1: Rework `SettingsStore`** to the per-path API above; remove the `%APPDATA%` path and the path-holding constructor. Update the `SettingsErrors` XML docs (no longer
+  "use the defaults").
 - [x] **Step 2: Start-up with defaults.** `App` no longer loads or saves settings: build `ProjectSettingsService` and pass it to `MainWindowViewModel`, which starts from
   `AppSettings.Default`; delete the `desktop.Exit` save. New constructor: `MainWindowViewModel(DialogueService dialogues, ProjectSettingsService project)`; the designer
   constructor builds both from `new DialogueService(() => null)` and `new SettingsStore()`.
@@ -175,12 +175,12 @@ code conventions bind every task. House rules: [`CLAUDE.md`](../../../CLAUDE.md)
   `ConfirmCloseAsync`: if running, the existing stop-and-exit prompt first (No → `false`; Yes → cancel the run and await it); then
   `RunSavePointAsync(Snapshot(), Report.Current, Report.SaveProjectSettings)` — `Cancel` → `false`, otherwise `true`. *File → Exit* and Alt+F4 go through the same path.
 - [x] **Step 5: Verify.** Clean build. In the running app:
-  - Untick → warning; *Cancel* keeps it ticked; untick again → *Untick* → unticked; tick and untick again → no warning.
-  - With the box unticked, change a field and close → save prompt; *No* → closes, no file. Relaunch, untick (warning again: new session), change a field, Start →
-    prompt; *Yes* → saves and the box is ticked.
-  - Launch and close untouched → no prompt, no file. Change a field and close with the box ticked and a custom location whose folder does not exist → *cannot be saved*
-    error; *Cancel* keeps the window open; *Skip Save* closes.
-  - Make the saved project file read-only, change a field, close → *cannot be saved* error with the write error's message. Remove the read-only attribute afterwards.
+    - Untick → warning; *Cancel* keeps it ticked; untick again → *Untick* → unticked; tick and untick again → no warning.
+    - With the box unticked, change a field and close → save prompt; *No* → closes, no file. Relaunch, untick (warning again: new session), change a field, Start →
+      prompt; *Yes* → saves and the box is ticked.
+    - Launch and close untouched → no prompt, no file. Change a field and close with the box ticked and a custom location whose folder does not exist → *cannot be saved*
+      error; *Cancel* keeps the window open; *Skip Save* closes.
+    - Make the saved project file read-only, change a field, close → *cannot be saved* error with the write error's message. Remove the read-only attribute afterwards.
 - [x] **Step 6: Commit** — `feat(✨): add the save-project-settings checkbox and save on close`.
 
 ### Task 4: Open project and Close project
@@ -202,11 +202,11 @@ code conventions bind every task. House rules: [`CLAUDE.md`](../../../CLAUDE.md)
   dialogue, stop); `ResetProject()`; load the settings into the groups; `project.MarkLoaded(path, Snapshot())` — the baseline is the snapshot after loading, so a
   normalised file does not read as changed.
 - [x] **Step 4: Verify.** Clean build. In the running app:
-  - *Open project...* with no valid location starts in the user's folder; with the Task 2 scratch location it starts there. Cancel the picker → nothing changes.
-  - Open a valid file → the fields load, the box is ticked; close the window without changes → no prompt.
-  - Open a file containing `not json` → *Open failed* error; the current project is unchanged.
-  - Opened project: switch the Project Stage (built location) or change the custom location, then Start/close → *folder changed* prompt; check all three buttons.
-  - *Close project* with unsaved changes and the box ticked → saves, then the window is at defaults and the status bar reads *Enter the required details*.
+    - *Open project...* with no valid location starts in the user's folder; with the Task 2 scratch location it starts there. Cancel the picker → nothing changes.
+    - Open a valid file → the fields load, the box is ticked; close the window without changes → no prompt.
+    - Open a file containing `not json` → *Open failed* error; the current project is unchanged.
+    - Opened project: switch the Project Stage (built location) or change the custom location, then Start/close → *folder changed* prompt; check all three buttons.
+    - *Close project* with unsaved changes and the box ticked → saves, then the window is at defaults and the status bar reads *Enter the required details*.
 - [x] **Step 5: Commit** — `feat(✨): open and close projects from the File menu`.
 
 ### Task 5: Documentation sync and ledger

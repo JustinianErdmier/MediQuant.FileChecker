@@ -1,9 +1,6 @@
 namespace FileAuditor.Services.Auditing;
 
-/// <summary>
-///     Runs one unindexed-files audit: loads the index paths as hashes, walks the folders checking each file as it is found, then writes the report (milestone 4
-///     spec §3.5).
-/// </summary>
+/// <summary>Runs one unindexed-files audit: loads the index paths as hashes, walks the folders checking each file as it is found, then writes the report (milestone 4 spec §3.5).</summary>
 public sealed class UnindexedAuditRunner
 {
     private readonly IndexTableReader _reader = new();
@@ -25,17 +22,27 @@ public sealed class UnindexedAuditRunner
 
         // Each folder is made canonical once, and the same list goes to the index query and to the walk, so both see the same prefixes whatever the user typed
         // (`U:/A/./B`, a trailing separator, other letter case). The report still names each folder as it was entered.
-        ScanFolder[] folders = (settings.ScanFolders ?? []).Select(folder => folder with { Path = FolderWalker.NormaliseFolder(folder.Path) })
-                                                           .ToArray();
+        ScanFolder[] folders = (settings.ScanFolders
+                                ??
+                                []).Select(folder => folder with
+                                   {
+                                       Path = FolderWalker.NormaliseFolder(folder.Path)
+                                   })
+                                   .ToArray();
 
         Dictionary<string, string> entered = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (ScanFolder folder in settings.ScanFolders ?? [])
+        foreach (ScanFolder folder in settings.ScanFolders
+                                      ??
+                                      [])
         {
             entered.TryAdd(FolderWalker.NormaliseFolder(folder.Path), folder.Path);
         }
 
-        ErrorOr<PathQuery> built = QueryBuilder.BuildPaths(settings.Table, settings.PathColumn, folders.Select(folder => folder.Path).ToArray());
+        ErrorOr<PathQuery> built = QueryBuilder.BuildPaths(settings.Table,
+                                                           settings.PathColumn,
+                                                           folders.Select(folder => folder.Path)
+                                                                  .ToArray());
 
         if (built.IsError)
         {
@@ -69,7 +76,10 @@ public sealed class UnindexedAuditRunner
         progress.Phase = "Checking files...";
         progress.StartScan();
 
-        FileTypeFilter filter = new(settings.FileTypes ?? FileTypeList.Defaults, settings.ExcludeTypes ?? []);
+        FileTypeFilter filter = new(settings.FileTypes ?? FileTypeList.Defaults,
+                                    settings.ExcludeTypes
+                                    ??
+                                    []);
 
         ConcurrentBag<ScannedFile> unindexed =
             [];
@@ -82,7 +92,10 @@ public sealed class UnindexedAuditRunner
                                 filter,
                                 walked =>
                                 {
-                                    ScannedFile file = walked with { InputFolder = entered.GetValueOrDefault(walked.InputFolder, walked.InputFolder) };
+                                    ScannedFile file = walked with
+                                    {
+                                        InputFolder = entered.GetValueOrDefault(walked.InputFolder, walked.InputFolder)
+                                    };
 
                                     if (paths.Contains(file.Path))
                                     {

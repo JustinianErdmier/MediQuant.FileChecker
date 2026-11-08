@@ -1,6 +1,21 @@
 <style>
-  pre.rpt { font-family: Consolas, "Courier New", monospace; font-size: 12px; line-height: 1.35; background: #fff; color: #000; border: 1px solid #999; padding: 10px 12px; margin: 0; overflow-x: auto; white-space: pre; }
-  .note { font-size: 13px; margin-top: 8px; }
+    pre.rpt {
+        background:  #ffffff;
+        border:      1px solid #999999;
+        color:       #000000;
+        font-family: Consolas, "Courier New", monospace;
+        font-size:   12px;
+        line-height: 1.35;
+        margin:      0;
+        overflow-x:  auto;
+        padding:     10px 12px;
+        white-space: pre;
+    }
+
+    .note {
+        font-size:  13px;
+        margin-top: 8px;
+    }
 </style>
 
 <h2>Unindexed report — grouped by input folder, then file type, then path</h2>
@@ -8,9 +23,9 @@
 
 <div class="split">
 
-<div class="mockup">
-<div class="mockup-header">A · Folder → file type → path (your instinct)</div>
-<div class="mockup-body">
+    <div class="mockup">
+        <div class="mockup-header">A · Folder → file type → path (your instinct)</div>
+        <div class="mockup-body">
 <pre class="rpt">File Auditor Unindexed Report
 =============================
 
@@ -65,12 +80,12 @@ U:\Projects\D12345\Images\Restricted\
 [Other errors (2)]
 U:\Projects\D12345\Images\2020\a.tif   I/O error   The semaphore timeout period has expired.
 U:\Projects\D12345\Images\2020\b.tif   I/O error   The semaphore timeout period has expired.</pre>
-</div>
-</div>
+        </div>
+    </div>
 
-<div class="mockup">
-<div class="mockup-header">B · Folder → path, with a file-type tally per folder</div>
-<div class="mockup-body">
+    <div class="mockup">
+        <div class="mockup-header">B · Folder → path, with a file-type tally per folder</div>
+        <div class="mockup-body">
 <pre class="rpt">...header and Summary as in A...
 
 Unindexed Files (20)
@@ -94,9 +109,11 @@ U:\Projects\D12345\Scans\IMG_0043.jpg
 Unverified (3)
 --------------
 ...as in A...</pre>
-</div>
-</div>
+        </div>
+    </div>
 
 </div>
 
-<p class="note"><strong>A</strong> separates each file type, so you can act on "all the unindexed TIFFs" at once. <strong>B</strong> keeps each folder in plain path order (files from the same subfolder stay together, whatever their type) and just counts the types. Both always print the folder group, even when there is only one input folder. Unverified lists folders that could not be read (whole subtree skipped) and individual files that could not be read.</p>
+<p class="note"><strong>A</strong> separates each file type, so you can act on "all the unindexed TIFFs" at once. <strong>B</strong> keeps each folder in plain path order (files
+                                   from the same subfolder stay together, whatever their type) and just counts the types. Both always print the folder group, even when there is
+                                   only one input folder. Unverified lists folders that could not be read (whole subtree skipped) and individual files that could not be read.</p>

@@ -60,8 +60,8 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
     /// <summary>Shows the Open Project file picker.</summary>
     /// <param name="startFolder">The folder to start in; ignored when it does not exist.</param>
     /// <returns>
-    ///     <see langword="null" /> when the picker was cancelled; otherwise the chosen file, whose <see cref="ProjectFilePick.LocalPath" /> is <see langword="null" />
-    ///     when it is not a file on a local or network drive.
+    ///     <see langword="null" /> when the picker was cancelled; otherwise the chosen file, whose <see cref="ProjectFilePick.LocalPath" /> is <see langword="null" /> when it is not
+    ///     a file on a local or network drive.
     /// </returns>
     public async Task<ProjectFilePick?> PickProjectFileAsync(string startFolder)
     {
@@ -74,17 +74,33 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
 
         IReadOnlyList<IStorageFile> files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open Project",
-            AllowMultiple = false,
+            Title                  = "Open Project",
+            AllowMultiple          = false,
             SuggestedStartLocation = await owner.StorageProvider.TryGetFolderFromPathAsync(startFolder),
             FileTypeFilter =
             [
-                new FilePickerFileType("File Auditor project (FileAuditorSettings.json)") { Patterns = [ "FileAuditorSettings.json" ] },
-                new FilePickerFileType("JSON files (*.json)") { Patterns = [ "*.json" ] }
+                new FilePickerFileType(name: "File Auditor project (FileAuditorSettings.json)")
+                {
+                    Patterns =
+                    [
+                        "FileAuditorSettings.json"
+                    ]
+                },
+                new FilePickerFileType(name: "JSON files (*.json)")
+                {
+                    Patterns =
+                    [
+                        "*.json"
+                    ]
+                }
             ]
         });
 
-        return files.Count == 0 ? null : new ProjectFilePick(files[0].Name, files[0].TryGetLocalPath());
+        return files.Count == 0
+                   ? null
+                   : new ProjectFilePick(files[index: 0].Name,
+                                         files[index: 0]
+                                             .TryGetLocalPath());
     }
 
     private async Task<DialogueChoice> ShowAsync(MessageDialogueViewModel viewModel)

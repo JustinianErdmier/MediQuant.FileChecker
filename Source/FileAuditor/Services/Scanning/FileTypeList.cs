@@ -36,15 +36,12 @@ public static class FileTypeList
     /// <returns>The entries as typed, without empty ones.</returns>
     public static string[] Split(string text)
         => text.Split(separator: ',')
-               .SelectMany(part => part.Split(separator: (char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+               .SelectMany(part => part.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                .ToArray();
 
     /// <summary>Parses the text of a file types box: entries separated by white space or commas.</summary>
     /// <param name="text">The text typed.</param>
-    /// <returns>
-    ///     The normalised entries (lower case, one leading dot, no duplicates, sorted), or a validation error naming the first invalid entry as typed. Empty text is an
-    ///     empty list.
-    /// </returns>
+    /// <returns>The normalised entries (lower case, one leading dot, no duplicates, sorted), or a validation error naming the first invalid entry as typed. Empty text is an empty list.</returns>
     public static ErrorOr<string[]> Parse(string text)
     {
         SortedSet<string> entries = new(StringComparer.Ordinal);
@@ -87,9 +84,10 @@ public static class FileTypeList
             entry = entry[1..];
         }
 
-        if (entry.Length == 0
+        if (entry.Length                   == 0
             || entry.IndexOfAny(Forbidden) >= 0
-            || entry.Split('.').Any(part => part.Length == 0))
+            || entry.Split(separator: '.')
+                    .Any(part => part.Length == 0))
         {
             return null;
         }

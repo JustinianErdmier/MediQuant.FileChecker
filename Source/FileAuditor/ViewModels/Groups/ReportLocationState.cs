@@ -1,8 +1,8 @@
 namespace FileAuditor.ViewModels.Groups;
 
 /// <summary>
-///     The Report group's values that every audit direction shares: the project folder, the two stage choices, the custom-location flag and text, and the save-settings tick
-///     (SDD §5.3). One instance is owned by the main window and every direction's <see cref="ReportViewModel" /> reads it, so the tabs cannot drift apart.
+///     The Report group's values that every audit direction shares: the project folder, the two stage choices, the custom-location flag and text, and the save-settings tick (SDD
+///     §5.3). One instance is owned by the main window and every direction's <see cref="ReportViewModel" /> reads it, so the tabs cannot drift apart.
 /// </summary>
 public sealed partial class ReportLocationState : ObservableObject
 {
@@ -67,8 +67,8 @@ public sealed partial class ReportLocationState : ObservableObject
         };
 
     /// <summary>
-    ///     Resolves the report folder from the shared values alone, which is what decides where the project's settings file goes (SDD §8.3). The result has no file name, so
-    ///     it is the same whichever tab is selected.
+    ///     Resolves the report folder from the shared values alone, which is what decides where the project's settings file goes (SDD §8.3). The result has no file name, so it is
+    ///     the same whichever tab is selected.
     /// </summary>
     /// <returns>The report folder: complete once the project folder is filled in (built) or the custom location is (custom).</returns>
     public ReportPath ResolveFolder() => ReportPathResolver.ResolveFolder(ApplyTo(AppSettings.Default));

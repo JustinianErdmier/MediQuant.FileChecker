@@ -9,9 +9,8 @@ public static class ReportPathResolver
 
     /// <summary>
     ///     Resolves the report path for an audit direction. Built:
-    ///     <c>U:\Projects\&lt;Project Folder&gt;\DE\&lt;Project Stage&gt;\FileAuditor&lt;Missing|Unindexed&gt;Report_&lt;Audit Stage&gt;.txt</c>,
-    ///     complete once the project folder is filled in.
-    ///     Custom: the typed location and file name, complete once both are filled in.
+    ///     <c>U:\Projects\&lt;Project Folder&gt;\DE\&lt;Project Stage&gt;\FileAuditor&lt;Missing|Unindexed&gt;Report_&lt;Audit Stage&gt;.txt</c>, complete once the project folder is
+    ///     filled in. Custom: the typed location and file name, complete once both are filled in.
     /// </summary>
     /// <param name="settings">The current settings.</param>
     /// <param name="direction">The audit direction the report belongs to.</param>
@@ -34,8 +33,8 @@ public static class ReportPathResolver
     }
 
     /// <summary>
-    ///     Resolves the report folder alone, without a direction: the project file's folder follows the shared location, never a tab's file name (SDD §8.3). Built: the
-    ///     built folder, complete once the project folder is filled in. Custom: the typed location, complete once it is not empty.
+    ///     Resolves the report folder alone, without a direction: the project file's folder follows the shared location, never a tab's file name (SDD §8.3). Built: the built folder,
+    ///     complete once the project folder is filled in. Custom: the typed location, complete once it is not empty.
     /// </summary>
     /// <param name="settings">The current settings.</param>
     /// <returns>A path whose <see cref="ReportPath.FileName" /> is empty; only its folder, completeness and custom flag mean anything.</returns>
@@ -56,10 +55,7 @@ public static class ReportPathResolver
         };
     }
 
-    /// <summary>
-    ///     Determines whether a project folder is a single, valid folder name: not empty, not rooted, no separators, not <c>.</c> or <c>..</c>, no invalid
-    ///     characters.
-    /// </summary>
+    /// <summary>Determines whether a project folder is a single, valid folder name: not empty, not rooted, no separators, not <c>.</c> or <c>..</c>, no invalid characters.</summary>
     /// <param name="folder">The trimmed project folder.</param>
     /// <returns><see langword="true" /> when it can safely be combined into the built report path.</returns>
     public static bool IsSingleFolderName(string folder)

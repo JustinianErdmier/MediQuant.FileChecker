@@ -19,12 +19,6 @@ public sealed record MessageDialogueViewModel(string Message, DialogueIcon Icon,
     /// <summary>Gets a value indicating whether the third button is shown.</summary>
     public bool HasTertiary => TertiaryText is not null;
 
-    /// <summary>Gets a value indicating whether the second button is the last visible one, and so the escape button.</summary>
-    public bool SecondaryIsCancel => HasSecondary && !HasTertiary;
-
-    /// <summary>Gets a value indicating whether the primary button is the only visible one, and so the escape button.</summary>
-    public bool PrimaryIsCancel => !HasSecondary;
-
     /// <summary>Gets a value indicating whether to show the error icon.</summary>
     public bool IsError => Icon == DialogueIcon.Error;
 
@@ -33,4 +27,10 @@ public sealed record MessageDialogueViewModel(string Message, DialogueIcon Icon,
 
     /// <summary>Gets a value indicating whether to show the warning icon.</summary>
     public bool IsWarning => Icon == DialogueIcon.Warning;
+
+    /// <summary>Gets a value indicating whether the primary button is the only visible one, and so the escape button.</summary>
+    public bool PrimaryIsCancel => !HasSecondary;
+
+    /// <summary>Gets a value indicating whether the second button is the last visible one, and so the escape button.</summary>
+    public bool SecondaryIsCancel => HasSecondary && !HasTertiary;
 }

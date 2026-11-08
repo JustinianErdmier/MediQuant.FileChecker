@@ -1,9 +1,6 @@
 namespace FileAuditor.ViewModels.Groups;
 
-/// <summary>
-///     One audit direction's Report group: the shared location values come from <see cref="ReportLocationState" />, and only the file name belongs to the direction
-///     (SDD §5.3).
-/// </summary>
+/// <summary>One audit direction's Report group: the shared location values come from <see cref="ReportLocationState" />, and only the file name belongs to the direction (SDD §5.3).</summary>
 public sealed partial class ReportViewModel : ObservableObject
 {
     // The custom file name for this view model's own direction. Only ApplyTo and Load map it to the direction's settings property.
@@ -37,6 +34,10 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <summary>Gets the audit direction whose report this group describes.</summary>
     public AuditDirection Direction { get; }
 
+    /// <summary>Gets or sets the text of the File name box: a read-only preview when built, the typed name when custom.</summary>
+    [ ObservableProperty ]
+    public partial string FileName { get; set; } = "";
+
     /// <summary>Gets or sets a value indicating whether the unindexed report groups files by the found extension, not the listed type. Unindexed direction only.</summary>
     [ ObservableProperty ]
     [ NotifyPropertyChangedFor(nameof(GroupByListedType)) ]
@@ -53,10 +54,6 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <summary>Gets a value indicating whether this is the Unindexed direction's group, which has the Group file types by option.</summary>
     public bool IsUnindexed => Direction == AuditDirection.Unindexed;
 
-    /// <summary>Gets or sets the text of the File name box: a read-only preview when built, the typed name when custom.</summary>
-    [ ObservableProperty ]
-    public partial string FileName { get; set; } = "";
-
     /// <summary>Gets or sets the text of the Location box: a read-only preview when built, the typed folder when custom.</summary>
     [ ObservableProperty ]
     public partial string Location { get; set; } = "";
@@ -64,19 +61,22 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <summary>Gets the location values shared with every direction.</summary>
     public ReportLocationState Shared { get; }
 
-    /// <summary>
-    ///     Copies this direction's own inputs (its custom file name, and for Unindexed the grouping choice) into the given settings.
-    /// </summary>
+    /// <summary>Copies this direction's own inputs (its custom file name, and for Unindexed the grouping choice) into the given settings.</summary>
     /// <param name="settings">The settings to start from.</param>
     /// <returns>A copy of <paramref name="settings" /> carrying this direction's inputs.</returns>
     public AppSettings ApplyTo(AppSettings settings)
         => Direction == AuditDirection.Missing
-            ? settings with { MissingCustomFileName = _customFileName }
-            : settings with { UnindexedCustomFileName = _customFileName, GroupByFoundExtension = GroupByFoundExtension };
+               ? settings with
+               {
+                   MissingCustomFileName = _customFileName
+               }
+               : settings with
+               {
+                   UnindexedCustomFileName = _customFileName,
+                   GroupByFoundExtension = GroupByFoundExtension
+               };
 
-    /// <summary>
-    ///     Sets this direction's own inputs from the given settings, then refreshes from the shared state.
-    /// </summary>
+    /// <summary>Sets this direction's own inputs from the given settings, then refreshes from the shared state.</summary>
     /// <param name="settings">The settings to load.</param>
     public void Load(AppSettings settings)
     {

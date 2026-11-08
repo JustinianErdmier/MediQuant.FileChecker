@@ -14,9 +14,8 @@ public sealed partial class AuditViewModel : AuditStatusBase
     public partial string Elapsed { get; set; } = "";
 
     /// <summary>
-    ///     Gets or sets the files checked per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up
-    ///     has passed by the recent figure in parentheses; blank until a full second has elapsed. The recent figure is the rate behind Remaining, which counts skipped rows
-    ///     as well as checked ones.
+    ///     Gets or sets the files checked per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up has passed
+    ///     by the recent figure in parentheses; blank until a full second has elapsed. The recent figure is the rate behind Remaining, which counts skipped rows as well as checked ones.
     /// </summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = "";
@@ -69,10 +68,10 @@ public sealed partial class AuditViewModel : AuditStatusBase
     public void Update(AuditProgress progress, TimeSpan elapsed, bool isFinished)
     {
         // Checked and Skipped are each read once, so that everything shown from this refresh agrees: Checked + Skipped never exceeds Total.
-        long   done    = progress.Checked;
-        long   skipped = progress.Skipped;
-        long   handled = done + skipped;
-        long   total   = Math.Max(progress.TotalFiles, handled);
+        long done    = progress.Checked;
+        long skipped = progress.Skipped;
+        long handled = done + skipped;
+        long total   = Math.Max(progress.TotalFiles, handled);
 
         // The displayed rate is over the whole run, the span the Elapsed box shows; Remaining uses the recent checking-time rate, which excludes the counting phase.
         double wholeRunSeconds = elapsed.TotalSeconds;

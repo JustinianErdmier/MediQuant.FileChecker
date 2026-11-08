@@ -5,7 +5,7 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
 {
     /// <summary>Initialises a new instance with placeholder content, for the XAML designer.</summary>
     public FileTypesDialogueViewModel()
-        : this("Edit File Types", FileTypeList.Defaults, canReset: true)
+        : this(title: "Edit File Types", FileTypeList.Defaults, canReset: true)
     { }
 
     /// <summary>Initialises a new instance.</summary>
@@ -29,7 +29,8 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
     public bool CanReset { get; }
 
     /// <summary>Gets the entries, one per line.</summary>
-    public ObservableCollection<FileTypeEntryItem> Entries { get; } = [];
+    public ObservableCollection<FileTypeEntryItem> Entries { get; } =
+        [];
 
     /// <summary>Gets or sets the selected line.</summary>
     [ ObservableProperty ]
@@ -56,7 +57,8 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
     /// <returns>The normalised entries, or the first entry that is not valid.</returns>
     public ErrorOr<string[]> Validate()
     {
-        List<string> entries = [];
+        List<string> entries =
+            [];
 
         foreach (FileTypeEntryItem entry in Entries)
         {

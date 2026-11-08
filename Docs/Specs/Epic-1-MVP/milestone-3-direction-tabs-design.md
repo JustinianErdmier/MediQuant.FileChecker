@@ -1,7 +1,6 @@
 # Milestone 3 — Direction Tabs
 
-**Date:** 2026-11-08
-**Status:** Approved 2026-11-08
+**Date:** 2026-11-08 **Status:** Approved 2026-11-08
 
 ## 1. Intent
 
@@ -42,9 +41,9 @@ Top to bottom:
 3. **File Index Table** group: **Table**, **Path column**, **ID column** (Optional), shared by both directions. The *Report empty (zero-byte) files as missing*
    checkbox moves out of this group (it applies to the missing-files direction only).
 4. A **tab control**. In this milestone it has one tab, **Missing Files**; milestone 4 adds **Unindexed Files**. The Missing Files tab holds, top to bottom:
-   - an **Options** group with *Report empty (zero-byte) files as missing* (unchanged behaviour and default);
-   - the complete **Report** group (§3.2);
-   - the **Audit** group (statistics, progress bar, View Report / Start / Stop), unchanged.
+    - an **Options** group with *Report empty (zero-byte) files as missing* (unchanged behaviour and default);
+    - the complete **Report** group (§3.2);
+    - the **Audit** group (statistics, progress bar, View Report / Start / Stop), unchanged.
 5. Status bar (§3.4).
 
 The window stays fixed-size and grows in height to fit. Tab names: **Missing Files**, **Unindexed Files**.
@@ -54,20 +53,20 @@ The window stays fixed-size and grows in height to fit. Tab names: **Missing Fil
 Each tab shows a complete Report group, never split apart (the user's decision). All of its values are **the same on every tab** — change one on one tab and the
 other tab shows the change — except the **file name**, which belongs to the tab's direction:
 
-| Report group item                                      | Shared or per tab |
-|--------------------------------------------------------|-------------------|
-| *Use a custom report location and file name*           | Shared            |
-| Project folder, Project Stage, Audit Stage             | Shared            |
-| Location (built preview or custom)                     | Shared            |
-| File name                                              | **Per tab**       |
-| *Save project settings with the report*                | Shared            |
+| Report group item                            | Shared or per tab |
+|----------------------------------------------|-------------------|
+| *Use a custom report location and file name* | Shared            |
+| Project folder, Project Stage, Audit Stage   | Shared            |
+| Location (built preview or custom)           | Shared            |
+| File name                                    | **Per tab**       |
+| *Save project settings with the report*      | Shared            |
 
 Report names (the user's decision):
 
-| Direction       | Built name                                     | Custom default                    |
-|-----------------|------------------------------------------------|-----------------------------------|
-| Missing files   | `FileAuditorMissingReport_<Audit Stage>.txt`   | `FileAuditorMissingReport.txt`    |
-| Unindexed files | `FileAuditorUnindexedReport_<Audit Stage>.txt` | `FileAuditorUnindexedReport.txt`  |
+| Direction       | Built name                                     | Custom default                   |
+|-----------------|------------------------------------------------|----------------------------------|
+| Missing files   | `FileAuditorMissingReport_<Audit Stage>.txt`   | `FileAuditorMissingReport.txt`   |
+| Unindexed files | `FileAuditorUnindexedReport_<Audit Stage>.txt` | `FileAuditorUnindexedReport.txt` |
 
 The missing-files report's title line becomes `File Auditor Missing Report` (underlined to match). Nothing else in its body changes.
 
@@ -84,8 +83,8 @@ is an **empty string for now**; the user will fill it in once the article exists
 
 ### 3.4 Status bar
 
-One status bar for the window. **While an audit runs**, it shows that run's phase and percentage, whichever tab is selected, so switching tabs never hides a run.
-**Otherwise** it shows the selected tab's last result, or its idle text (`Ready` / `Enter the required details`, computed from that tab's Start). Each tab keeps
+One status bar for the window. **While an audit runs**, it shows that run's phase and percentage, whichever tab is selected, so switching tabs never hides a run. **Otherwise** it
+shows the selected tab's last result, or its idle text (`Ready` / `Enter the required details`, computed from that tab's Start). Each tab keeps
 its own last result.
 
 ### 3.5 The project file

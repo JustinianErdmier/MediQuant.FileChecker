@@ -3,31 +3,29 @@ namespace FileAuditor.Services.Scanning;
 /// <summary>
 ///     Walks the input folders of the unindexed-files audit and reports every file whose name belongs to a chosen file type (milestone 4 spec §3.2).
 ///     <para>
-///         <b>Scope.</b> An input folder covers its own files and, when <see cref="ScanFolder.IncludeSubfolders" /> is set, every folder beneath it.
-///         Hidden and system files and folders are never listed (a skipped folder's contents go with it).
+///         <b>Scope.</b> An input folder covers its own files and, when <see cref="ScanFolder.IncludeSubfolders" /> is set, every folder beneath it. Hidden and system files and
+///         folders are never listed (a skipped folder's contents go with it).
 ///     </para>
 ///     <para>
-///         <b>Links.</b> Links are never followed or checked. An input folder that is a junction or symbolic link, a junction or symbolic link met while walking, and
-///         a matching file that is a symbolic link are each reported once through the unverified callback as <see cref="CheckOutcome.UnverifiedLinkNotFollowed" />
-///         (a folder's path ends in <c>\</c>) and nothing beneath them is listed. Only an entry that has a link target (<see cref="FileSystemInfo.LinkTarget" />) is a
-///         link: any other reparse point (a DFS folder, a OneDrive placeholder, a deduplicated file) is an ordinary folder or file. With no link followed, every
-///         folder is reached by exactly one route, so no loop and no duplicate is possible.
+///         <b>Links.</b> Links are never followed or checked. An input folder that is a junction or symbolic link, a junction or symbolic link met while walking, and a matching
+///         file that is a symbolic link are each reported once through the unverified callback as <see cref="CheckOutcome.UnverifiedLinkNotFollowed" /> (a folder's path ends in
+///         <c>\</c>) and nothing beneath them is listed. Only an entry that has a link target (<see cref="FileSystemInfo.LinkTarget" />) is a link: any other reparse point (a DFS
+///         folder, a OneDrive placeholder, a deduplicated file) is an ordinary folder or file. With no link followed, every folder is reached by exactly one route, so no loop and no
+///         duplicate is possible.
 ///     </para>
 ///     <para>
-///         <b>Attribution.</b> A file is reported once, under the deepest input folder whose scope covers the folder it sits in. The walk is a single
-///         traversal over the union of the inputs, not one walk per input: each folder is listed once, its owner is worked out from the inputs, and
-///         its subfolders are queued whenever any input that covers it includes subfolders. So with inputs <c>A</c> (with subfolders) and <c>A\B</c>
-///         (without), <c>A\B\x.pdf</c> belongs to <c>A\B</c>, while <c>A\B\C\y.pdf</c> belongs to <c>A</c>, because <c>A\B</c> does not cover <c>C</c> but
-///         <c>A</c> does. An input nested in another is queued once, as an input, never again as a subfolder.
+///         <b>Attribution.</b> A file is reported once, under the deepest input folder whose scope covers the folder it sits in. The walk is a single traversal over the union of
+///         the inputs, not one walk per input: each folder is listed once, its owner is worked out from the inputs, and its subfolders are queued whenever any input that covers it
+///         includes subfolders. So with inputs <c>A</c> (with subfolders) and <c>A\B</c> (without), <c>A\B\x.pdf</c> belongs to <c>A\B</c>, while <c>A\B\C\y.pdf</c> belongs to
+///         <c>A</c>, because <c>A\B</c> does not cover <c>C</c> but <c>A</c> does. An input nested in another is queued once, as an input, never again as a subfolder.
 ///     </para>
 ///     <para>
-///         <b>Failures.</b> A folder that cannot be listed is reported once through the unverified callback and nothing beneath it is listed. Files
-///         from a listing that fails part-way are not reported, so a folder is either wholly checked or wholly unverified.
+///         <b>Failures.</b> A folder that cannot be listed is reported once through the unverified callback and nothing beneath it is listed. Files from a listing that fails
+///         part-way are not reported, so a folder is either wholly checked or wholly unverified.
 ///     </para>
 ///     <para>
-///         <b>Cancellation.</b> <see cref="WalkAsync" /> does not throw when the token is cancelled: it stops starting listings, abandons the ones in progress
-///         (their files are not reported) and returns once every worker has noticed. The caller must check the token afterwards to tell a stopped walk from a
-///         finished one.
+///         <b>Cancellation.</b> <see cref="WalkAsync" /> does not throw when the token is cancelled: it stops starting listings, abandons the ones in progress (their files are not
+///         reported) and returns once every worker has noticed. The caller must check the token afterwards to tell a stopped walk from a finished one.
 ///     </para>
 /// </summary>
 public sealed class FolderWalker
@@ -48,29 +46,46 @@ public sealed class FolderWalker
     /// <param name="filter">Decides which files are reported, and under which file type.</param>
     /// <param name="onFile">Called for each file found; may be called concurrently from several threads.</param>
     /// <param name="onUnverified">
-    ///     Called for each folder that could not be listed, each link that was not followed (a folder or a file) and each entry whose link status could not be read;
-    ///     may be called concurrently from several threads.
+    ///     Called for each folder that could not be listed, each link that was not followed (a folder or a file) and each entry whose link status could not be
+    ///     read; may be called concurrently from several threads.
     /// </param>
     /// <param name="ct">Stops the walk promptly; see the cancellation note on the type.</param>
     /// <returns>A task that completes when no folder is queued or being listed, or the walk was stopped.</returns>
-    public Task WalkAsync(IReadOnlyList<ScanFolder> folders, FileTypeFilter filter, Action<ScannedFile> onFile, Action<UnverifiedFolder> onUnverified,
-                          CancellationToken ct)
+    public Task WalkAsync(IReadOnlyList<ScanFolder> folders,
+                          FileTypeFilter            filter,
+                          Action<ScannedFile>       onFile,
+                          Action<UnverifiedFolder>  onUnverified,
+                          CancellationToken         ct)
     {
         return Task.Run(() => WalkAsyncCore(folders, filter, onFile, onUnverified, ct), CancellationToken.None);
     }
 
-    private static async Task WalkAsyncCore(IReadOnlyList<ScanFolder> folders, FileTypeFilter filter, Action<ScannedFile> onFile,
-                                            Action<UnverifiedFolder> onUnverified, CancellationToken ct)
+    /// <summary>Makes an input folder's path canonical: a full path with exactly one trailing separator, as the walk and the index query both use it.</summary>
+    /// <param name="path">The folder's path as entered.</param>
+    /// <returns>The full path with a trailing directory separator.</returns>
+    public static string NormaliseFolder(string path)
+    {
+        string full = Path.GetFullPath(path);
+
+        return Path.EndsInDirectorySeparator(full) ? full : full + Path.DirectorySeparatorChar;
+    }
+
+    private static async Task WalkAsyncCore(IReadOnlyList<ScanFolder> folders,
+                                            FileTypeFilter            filter,
+                                            Action<ScannedFile>       onFile,
+                                            Action<UnverifiedFolder>  onUnverified,
+                                            CancellationToken         ct)
     {
         Root[] all = BuildRoots(folders);
 
-        if (all.Length == 0 || ct.IsCancellationRequested)
+        if (all.Length == 0
+            || ct.IsCancellationRequested)
         {
             return;
         }
 
         // An input that is itself a link is not walked; it is reported and the other inputs go on.
-        var roots = new List<Root>();
+        List<Root> roots = new();
 
         foreach (Root root in all)
         {
@@ -107,9 +122,15 @@ public sealed class FolderWalker
             return;
         }
 
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
-        var walk = new Walk(roots.ToArray(), all.Select(root => root.Path).ToHashSet(StringComparer.OrdinalIgnoreCase), filter, onFile, onUnverified, linked.Token);
+        Walk walk = new(roots.ToArray(),
+                        all.Select(root => root.Path)
+                           .ToHashSet(StringComparer.OrdinalIgnoreCase),
+                        filter,
+                        onFile,
+                        onUnverified,
+                        linked.Token);
 
         foreach (Root root in roots)
         {
@@ -117,14 +138,17 @@ public sealed class FolderWalker
         }
 
         // Dedicated threads: the listings block, and the thread pool would ramp up to 16 blocked threads slowly.
-        Task[] workers = Enumerable.Range(0, MaxConcurrentListings)
-                                   .Select(_ => Task.Factory.StartNew(() => RunWorker(walk, linked), CancellationToken.None, TaskCreationOptions.LongRunning,
-                                                                     TaskScheduler.Default))
+        Task[] workers = Enumerable.Range(start: 0, MaxConcurrentListings)
+                                   .Select(_ => Task.Factory.StartNew(() => RunWorker(walk, linked),
+                                                                      CancellationToken.None,
+                                                                      TaskCreationOptions.LongRunning,
+                                                                      TaskScheduler.Default))
                                    .ToArray();
 
         try
         {
-            await Task.WhenAll(workers).ConfigureAwait(false);
+            await Task.WhenAll(workers)
+                      .ConfigureAwait(continueOnCapturedContext: false);
         }
         finally
         {
@@ -165,7 +189,7 @@ public sealed class FolderWalker
 
     private static Root[] BuildRoots(IReadOnlyList<ScanFolder> folders)
     {
-        var byPath = new Dictionary<string, Root>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, Root> byPath = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (ScanFolder folder in folders)
         {
@@ -173,22 +197,16 @@ public sealed class FolderWalker
 
             // The same folder listed twice (pre-flight refuses it) is one input; it includes subfolders if either entry does.
             byPath[normalised] = byPath.TryGetValue(normalised, out Root? existing)
-                                     ? existing with { IncludeSubfolders = existing.IncludeSubfolders || folder.IncludeSubfolders }
+                                     ? existing with
+                                     {
+                                         IncludeSubfolders = existing.IncludeSubfolders || folder.IncludeSubfolders
+                                     }
                                      : new Root(normalised, folder.Path, folder.IncludeSubfolders);
         }
 
         // Deepest first, so the first root that covers a folder is its owner.
-        return byPath.Values.OrderByDescending(root => root.Path.Length).ToArray();
-    }
-
-    /// <summary>Makes an input folder's path canonical: a full path with exactly one trailing separator, as the walk and the index query both use it.</summary>
-    /// <param name="path">The folder's path as entered.</param>
-    /// <returns>The full path with a trailing directory separator.</returns>
-    public static string NormaliseFolder(string path)
-    {
-        string full = Path.GetFullPath(path);
-
-        return Path.EndsInDirectorySeparator(full) ? full : full + Path.DirectorySeparatorChar;
+        return byPath.Values.OrderByDescending(root => root.Path.Length)
+                     .ToArray();
     }
 
     // Whether the entry is a junction or symbolic link (it has a link target). Any other reparse point is an ordinary entry, but an entry whose link target cannot
@@ -215,7 +233,8 @@ public sealed class FolderWalker
     {
         try
         {
-            return File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint);
+            return File.GetAttributes(path)
+                       .HasFlag(FileAttributes.ReparsePoint);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
@@ -224,18 +243,11 @@ public sealed class FolderWalker
     }
 
     private static UnverifiedFolder Unclassifiable(string path, string? message)
-        => new(path, CheckOutcome.UnverifiedOther, "Could not tell whether this is a link", message);
-
-    private enum LinkState
-    {
-        Ordinary,
-
-        Link,
-
-        Unknown
-    }
+        => new(path, CheckOutcome.UnverifiedOther, ReasonText: "Could not tell whether this is a link", message);
 
     private static UnverifiedFolder LinkNotFollowed(string path) => new(path, CheckOutcome.UnverifiedLinkNotFollowed, ReasonText: null, SystemMessage: null);
+
+    private enum LinkState { Ordinary, Link, Unknown }
 
     /// <summary>An input folder: its normalised path, the path as entered, and its scope.</summary>
     private sealed record Root(string Path, string Entered, bool IncludeSubfolders);
@@ -244,20 +256,24 @@ public sealed class FolderWalker
 
     private sealed class Walk
     {
-        private readonly Root[] _roots;
+        private readonly FileTypeFilter _filter;
 
         private readonly HashSet<string> _inputPaths;
-
-        private readonly FileTypeFilter _filter;
 
         private readonly Action<ScannedFile> _onFile;
 
         private readonly Action<UnverifiedFolder> _onUnverified;
 
+        private readonly Root[] _roots;
+
         private int _pending;
 
-        public Walk(Root[] roots, HashSet<string> inputPaths, FileTypeFilter filter, Action<ScannedFile> onFile, Action<UnverifiedFolder> onUnverified,
-                    CancellationToken token)
+        public Walk(Root[]                   roots,
+                    HashSet<string>          inputPaths,
+                    FileTypeFilter           filter,
+                    Action<ScannedFile>      onFile,
+                    Action<UnverifiedFolder> onUnverified,
+                    CancellationToken        token)
         {
             _roots        = roots;
             _inputPaths   = inputPaths;
@@ -267,9 +283,9 @@ public sealed class FolderWalker
             Token         = token;
         }
 
-        public CancellationToken Token { get; }
-
         public BlockingCollection<string> Queue { get; } = new();
+
+        public CancellationToken Token { get; }
 
         /// <summary>Queues a folder; the walk is over when every queued folder has finished.</summary>
         public void Enqueue(string folder)
@@ -318,12 +334,12 @@ public sealed class FolderWalker
                 return;
             }
 
-            var entries = new List<Entry>();
+            List<Entry> entries = new();
 
             try
             {
                 // Only the enumeration is guarded: a failure in the filter or a callback is a bug, not an unreadable folder.
-                var listing = new FileSystemEnumerable<Entry>(folder, ToEntry, ListingOptions);
+                FileSystemEnumerable<Entry> listing = new(folder, ToEntry, ListingOptions);
 
                 foreach (Entry listed in listing)
                 {
@@ -342,7 +358,7 @@ public sealed class FolderWalker
 
                 // A folder that vanished mid-run is not a "file missing" outcome; it is a folder that could not be checked.
                 _onUnverified(mapped.Outcome == CheckOutcome.MissingDoesNotExist
-                                  ? new UnverifiedFolder(folder, CheckOutcome.UnverifiedOther, "Folder not found", ex.Message)
+                                  ? new UnverifiedFolder(folder, CheckOutcome.UnverifiedOther, ReasonText: "Folder not found", ex.Message)
                                   : new UnverifiedFolder(folder, mapped.Outcome, mapped.Reason, mapped.SystemMessage));
 
                 return;
