@@ -506,10 +506,8 @@ SELECT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filter>;   -- 
   **starts with a whitespace character**, because the values are trimmed before they are matched (§6.5.3) and such a row would miss every prefix. With no folder, more than 20
   folders, or an empty folder path, the filter is dropped and every row is loaded. Each folder is made canonical once (a full path with one trailing separator) and the same
   list goes to the filter and to the walk, so the filter loads exactly the rows whose prefixes the walk reports under, whatever form the folder was typed in (`U:/A/./B`, other
-  letter case, a trailing separator). So the filter never changes the result, with one exception that the run handles itself: a file reached through a link that leads outside
-  every input (§6.5.3) may be indexed under its target path, which no input's prefix covers. Such files are held back during the walk, and once it ends a second query, filtered
-  by the folders that cover their canonical paths, loads the rows needed to decide them. That query fills a **second index set**, with the same cost per row (about 48 MB per
-  million rows) but only for the rows under those folders, held until the run ends; with no outside link there is no second set.
+  letter case, a trailing separator). So the filter never changes the result. There is one index set only: links are never followed (§6.5.3), so no file is matched by any path
+  but its own.
 - **Hashes.** Each path is trimmed, upper-cased (invariant culture) and hashed to **128 bits** (MD5 of its UTF-16 bytes: an in-box algorithm chosen for speed and even spread, not
   security); only the hashes are kept, in a set. `NULL` values are skipped. A 128-bit hash makes a false match, which would hide an unindexed file (anti-goal), practically
   impossible. Memory is about **48 MB per million rows**, measured (one million rows loaded in 1.6 seconds on a local SQL Server), so three million rows take roughly 150 MB.
@@ -530,20 +528,15 @@ Status `Checking files...`.
   only when a File types entry matches it and no Exclude entry does.
 - **Nested inputs.** A file reached through two input folders (one inside another) is checked and reported **once**, under the deepest input folder whose scope covers its
   folder. With inputs `A` (with subfolders) and `A\B` (without), `A\B\x.pdf` is reported under `A\B` and `A\B\C\y.pdf` under `A`.
-- **Links.** Comparisons are made in **final-path space**: each input's own final path is resolved once (a `subst` drive becomes its underlying folder, a mapped drive its UNC
-  path, a junction its target) and a link's target is resolved the same way, so an input given as `S:\...` still matches a junction whose target Windows reports as the underlying
-  folder. A link whose target lies in a folder that **an input with subfolders covers** is **not walked**: that input's own visit lists it, so the direct visit wins and
-  attribution does not depend on timing. A link to an input that does **not** include subfolders is walked, but only for that input's subfolders; its files are listed by the
-  input's own visit and not again. A link whose target lies **outside every input**, including a link to an **ancestor of an input**, is walked (DFS namespaces on file shares
-  appear as links, and skipping them would silently drop content); the files found through it are reported by the path they were reached through, and each also carries its
-  **canonical path**, the link's prefix replaced by the resolved target, written in an input's entered form when the target lies under that input's final path and otherwise
-  as the final path. A file counts as indexed when the index holds either path. Where a walked link reaches an input, that input's own scope still wins: its folders are not
-  listed twice. Folders are keyed by their final path for the loop guard, so a folder's files and its subfolders are each listed once however many links reach it, and a link loop
-  ends at its first repeat. A link whose target cannot be resolved (a DFS link, for one) is an ordinary folder. Which link path a file reached through two outside links is
-  reported under is whichever is listed first.
+- **Links are not followed** (the user's decision, after three rounds of review found edge cases in following them). Every junction or symbolic link met is skipped, reported and
+  never checked: an **input folder** that is a link (it is not walked, and the run goes on with the other inputs; if every input is a link the run completes with no files), a
+  **folder** met during the walk (its target's files are not counted unless the target is walked directly as an input), and a **file** that is a symbolic link and matches the file types (it
+  is in neither *Total files*, *Indexed* nor *Unindexed*). Each is reported once under *Unverified* in the group *Link not followed* (§7.1) and counts towards *Unverified*. Only an
+  entry that **has a link target** is a link; any other reparse point (a DFS namespace folder, a OneDrive placeholder, a deduplicated file) is an ordinary folder or file. With no
+  link followed, every folder is reached by one route, so no loop and no duplicate is possible; an input nested inside another is queued once, as an input.
 - **Unverified folders.** A folder that cannot be listed (permission denied, share unreachable, path too long, any other I/O failure; a folder deleted mid-run is *Other errors*)
-  is reported once as **unverified** and nothing beneath it is walked. Its contents are not checked, so it is counted separately (*Unverified*, in folders), never in *Total
-  files*. A listing that fails part-way reports none of that folder's files, so a folder is either wholly checked or wholly unverified.
+  is reported once as **unverified** and nothing beneath it is walked. Its contents are not checked, so it is counted separately (*Unverified*), never in *Total files*. A listing
+  that fails part-way reports none of that folder's files, so a folder is either wholly checked or wholly unverified.
 
 #### 6.5.4 Progress, stop and failure
 
@@ -551,12 +544,10 @@ Status `Checking files...`.
   times a second. There is no up-front count, no percentage and no *Remaining* (§5.4a).
 - **Stop** while the index is loading: no report is written and the status bar reads `Stopped`. After that, Stop (button, menu and Esc) stops starting new listings, abandons the
   ones in progress (their files are not reported) and writes the report with `Result: Stopped by user`; the counts are what was found and checked, and there is no *Not checked*
-  line, since the total is unknown. Files held back for the second index query (§6.5.2) are not checked if Stop arrives before it ends, so they are in neither count. A Stop that
-  arrives after the walk has finished but before the run reads its stop request produces a *Stopped by user* report for a complete walk; this is cosmetic.
-- **SQL failure** while loading the index at the start (connection, bad table or column): an error dialogue, and no report, since nothing has been walked. A failure in the
-  **second query** (§6.5.2), after the walk, writes the report with `Result: Failed — <message>` and everything already decided; the files held back for it are in neither
-  total, and the Summary adds `Not checked:` with their count and the words `(reached through links; the index could not be read for them)`. The same line appears when a Stop
-  lands before that query ends. **Report write failure:** an error dialogue.
+  line, since the total is unknown. A Stop that arrives after the walk has finished but before the run reads its stop request produces a *Stopped by user* report for a
+  complete walk; this is cosmetic.
+- **SQL failure** while loading the index (connection, bad table or column): an error dialogue, and no report, since nothing has been walked. **Report write failure:** an error
+  dialogue.
 - **Closing the window mid-run** asks the question of §6.4; *Yes* stops the run as above (no report if the index was still loading) and exits.
 
 ## 7. The report
@@ -679,8 +670,8 @@ Unindexed Files (20)
   U:\Projects\D12345\Scans\IMG_0041.jpg
   ...
 
-Unverified Folders (3)
-----------------------
+Unverified (3)
+--------------
 [Permission denied (2)]
 U:\Projects\D12345\Images\Restricted\
 U:\Projects\D12345\Images\Restricted2\
@@ -700,13 +691,14 @@ U:\Projects\D12345\Images\2020\   I/O error   The semaphore timeout period has e
 - **Header.** `Folders:` lists each input folder on its own line, `(with subfolders)` where ticked (`(none)` when the list is empty). `File types:` and `Exclude:` are each sorted
   and space-separated, and `Exclude:` reads `(none)` when empty. `Grouped by:` reads `Listed type` or `Found extension`. The Project folder and stage lines are omitted when a
   custom location is used. There is no ID column line.
-- **Summary.** `Total files:` is the files found and checked, so Total files = Indexed + Unindexed. `Unverified:` counts folders, not files. A *Stopped by user* report has
-  `Result: Stopped by user` and no `Not checked:` line, since the total is unknown, except the one line of files reached through links that were held back (§6.5.4), printed only
-  when there are some. A run that fails while loading the index at the start writes no report (§6.5.4).
-- **Unverified Folders** lists the folders that could not be listed (the path ends in `\`; their contents were not checked) in groups ordered as in §6.3: *Drive or share not
-  found*, *Permission denied*, *Network location unreachable*, *Path too long*, *Other errors*. *Other errors* shows the reason and the system message in aligned columns and also
-  holds a folder whose path is malformed or any failure not listed above (reason text, no system message). A folder is listed once, and nothing beneath it is. `No unverified
-  folders.` when there are none.
+- **Summary.** `Total files:` is the files found and checked, so Total files = Indexed + Unindexed. `Unverified:` counts the folders that could not be listed plus the links
+  that were not followed, not files checked. A *Stopped by user* report has `Result: Stopped by user`. A run that fails while loading the index at the start writes no report
+  (§6.5.4).
+- **Unverified** lists the folders that could not be listed and the links that were not followed, in groups ordered as in §6.3 with *Link not followed* before *Other errors*:
+  *Drive or share not found*, *Permission denied*, *Network location unreachable*, *Path too long*, *Link not followed*, *Other errors*. A folder path ends in `\`; a file link is
+  a plain path. *Link not followed* lists every junction or symbolic link that was skipped (§6.5.3): an input folder, a folder met in the walk, or a matching file. *Other errors*
+  shows the reason and the system message in aligned columns and also holds a folder whose path is malformed or any failure not listed above (reason text, no system message).
+  An item is listed once, and nothing beneath a folder is. `No unverified folders or links.` when there are none.
 
 ## 8. Settings
 
@@ -859,7 +851,7 @@ shared file server, and nothing under `%APPDATA%`.
   or contains a path separator or a character Windows forbids in file names other than `*` and `?`; `.txt` and `.json` are not default file types, so the app's own reports and
   project files are never reported; hidden and system folders are skipped with their contents; a file under two input folders is reported once, under the deepest; the path column
   is trimmed before hashing; the SQL prefix filter is an optimisation with a fallback to every row (§6.5.2); hashing is an in-box algorithm (MD5), so no package was added;
-  *Indexed* replaces *Checked* in the statistics (every file found is checked at once); links are followed with a loop guard; Stop and the status bar follow the running audit
+  *Indexed* replaces *Checked* in the statistics (every file found is checked at once); links are never followed, only reported; Stop and the status bar follow the running audit
   rather than the selected tab; Stop while the index loads writes no report; equal custom file names on the two tabs are refused; up to 16 folder listings run at once and the
   statistics refresh four times a second; a duplicate folder is not added to the list and, when it reaches Start by a hand-edited file, is refused; what "matches every file" means
   is defined in §6.5.1.

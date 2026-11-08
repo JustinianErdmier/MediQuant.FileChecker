@@ -23,7 +23,7 @@ Decisions taken without the user, each with what it costs if wrong.
 | R5  | 1          | The commit trailer is `Claude Sonnet 5.5`, as the session's attribution reminder says, not the `Claude Opus 5.5` of the common rules.                                         | The session attribution takes precedence.                                                                                 | Cosmetic (two commits, `cc33399` and `24b0b3e`, carry the Sonnet trailer).                     |
 | R6  | 2          | The SQL prefix filter falls back to loading every row only for no folder, more than 20 folders, or an empty folder path. `\|`, `%`, `_` and `[` are escaped, not a reason to fall back. | The escaping represents them exactly, so the optimisation stays on wherever it is safe.                                   | None; verified with folders containing each character.                                         |
 | R7  | 3          | One traversal over the union of the input folders (each folder listed once, its owner worked out from the inputs) instead of one walk per input.                                | A file under nested inputs can then never be reported twice, and no folder is listed twice.                               | None; verified with nested inputs in both orders.                                              |
-| R8  | 3, final review | A link whose target lies inside the scope of any input folder is not walked: the direct visit wins, so attribution is deterministic. A link whose target lies outside every input is walked, its files carry a canonical path (the link prefix replaced by the target), a file counts as indexed when the index holds either path, and folders are keyed by canonical path. This replaces the first-wins ruling. | The final review showed that first-wins reported indexed files as unindexed (index rows hold the real path); the controller superseded the ruling (`4efa941`). | Index rows that hold a link path into an in-scope folder no longer match (such files are reported unindexed under their real path). A file reached through two outside links is reported under whichever is listed first. |
+| R8  | 3, final review | A link whose target lies inside the scope of any input folder is not walked: the direct visit wins, so attribution is deterministic. A link whose target lies outside every input is walked, its files carry a canonical path (the link prefix replaced by the target), a file counts as indexed when the index holds either path, and folders are keyed by canonical path. This replaces the first-wins ruling. | The final review showed that first-wins reported indexed files as unindexed (index rows hold the real path); the controller superseded the ruling (`4efa941`). | Index rows that hold a link path into an in-scope folder no longer match (such files are reported unindexed under their real path). A file reached through two outside links is reported under whichever is listed first. **Superseded by the user's link decision (see User decisions): links are no longer followed, so this ruling no longer applies.** |
 | R9  | 3          | Content reachable through links to a folder and to its descendant (`L1`→`M`, `L2`→`M\N`) may be listed twice, under different link paths. Superseded by R8.        | The plan's loop-guard key was the resolved target for links and the full path otherwise.                                  | None now: the guard is keyed by canonical path, so a physical folder is listed once.           |
 | R10 | 4          | Unverified folders with *Invalid characters* (or any other unlisted reason) go under *Other errors* with their reason text and no system message.                              | Spec §3.7 has five groups.                                                                                                | None.                                                                                          |
 | R11 | 4          | A Stop that arrives after the walk finished but before the token is read writes a *Stopped by user* report for a complete walk.                                                | The runner tells a stop from completion by the token afterwards.                                                          | Cosmetic.                                                                                      |
@@ -37,8 +37,8 @@ Decisions taken without the user, each with what it costs if wrong.
 | R19 | 5          | While a run is under way the progress bar is a timer-driven fixed-width block on a sunken track, not `IsIndeterminate`.                                                        | The theme's marquee is blank for about 2.4 s of each 5 s cycle and its transform cannot be restyled.                      | A custom visual instead of the theme's. SDD §5.4a and spec §3.6 are reworded.                  |
 | R20 | final review | A hand-edited project file's invalid File types or Exclude entries are kept as written (trimmed), shown in the tab's summary and named by the pre-flight at Start, instead of being dropped when the file loads. | Spec §4 says an invalid entry is a pre-flight error naming it; dropping it on load made that unreachable (the controller's ruling, `4efa941`). | The tab can show an entry the editor would refuse; the user must fix it before Start.          |
 | R21 | final review | The HTML mock-ups are frozen as historical references and are not refreshed for milestone 4's layout; the SDD §5 and the XAML are the contract.                    | The controller's ruling; the layout changed repeatedly during the build and the mock-ups no longer match it.              | The mock-ups mislead anyone who reads them as the target; the SDD says they do not.            |
-| R22 | fix wave 2 | Every link and scope comparison is made in final-path space: each input's own final path is resolved once (GetFinalPathNameByHandle), a link's target the same way, and a target under an input's final path is written back in that input's entered form for `CanonicalPath`. Loop-guard keys are final paths (not the entered form), so inputs given on a `subst` drive, a link and a nested input of another form all share one key. A link into an input without subfolders is walked for its subfolders only. | The controller's ruling (`1774980`); `ResolveLinkTarget` returns final paths, so `U:\` inputs never matched.              | A mapped drive was reasoned about, not exercised (no network mapping made): its UNC final path is handled like the `subst` case, but a DFS link still stays an ordinary folder. Two roots with the same final path are attributed to whichever lists first. |
-| R23 | fix wave 2 | A SQL failure in the second, outside-link index query writes the report as `Failed` with everything already decided, instead of discarding the walk; held-back files are in neither total and the Summary gains a `Not checked:` line (also after a Stop before that query ends). | The controller's ruling (`1774980`): throwing away a long walk for a late failure was worse than a partial report.        | The report is partial, but says so (`Result: Failed`, the `Not checked:` line).                |
+| R22 | fix wave 2 | Every link and scope comparison is made in final-path space: each input's own final path is resolved once (GetFinalPathNameByHandle), a link's target the same way, and a target under an input's final path is written back in that input's entered form for `CanonicalPath`. Loop-guard keys are final paths (not the entered form), so inputs given on a `subst` drive, a link and a nested input of another form all share one key. A link into an input without subfolders is walked for its subfolders only. | The controller's ruling (`1774980`); `ResolveLinkTarget` returns final paths, so `U:\` inputs never matched.              | A mapped drive was reasoned about, not exercised (no network mapping made): its UNC final path is handled like the `subst` case, but a DFS link still stays an ordinary folder. Two roots with the same final path are attributed to whichever lists first. **Superseded by the user's link decision (see User decisions): links are no longer followed, so this ruling no longer applies.** |
+| R23 | fix wave 2 | A SQL failure in the second, outside-link index query writes the report as `Failed` with everything already decided, instead of discarding the walk; held-back files are in neither total and the Summary gains a `Not checked:` line (also after a Stop before that query ends). | The controller's ruling (`1774980`): throwing away a long walk for a late failure was worse than a partial report.        | The report is partial, but says so (`Result: Failed`, the `Not checked:` line). **Superseded by the user's link decision (see User decisions): links are no longer followed, so this ruling no longer applies.** |
 
 ## User decisions
 
@@ -69,6 +69,11 @@ Taken by the user, not rulings.
 - Ticking *Use a custom report location and file name* **hides** the project folder and stage options instead of disabling them (on both tabs).
 - *Unverified* goes back to the first statistics column.
 - The Database and File Index Table groups sit side by side, each vertical inside: **a trial the user may reverse**.
+
+**Links (2026-11-08, after the third link review round):** links are refused: skipped and reported, never followed or checked. A junction or symbolic link that is an input folder,
+a folder met in the walk or a matching file is reported under *Unverified* in the group *Link not followed* (a folder path ends in `\`), counts towards *Unverified*, and is
+in neither *Total files*, *Indexed* nor *Unindexed*. Pre-flight accepts a link as an input; the run goes on with the other inputs. Only an entry with a link target is a link:
+other reparse points (DFS folders, OneDrive placeholders, deduplicated files) are ordinary. This **supersedes R8, R9, R22 and R23** and the link rulings of both fix waves.
 
 ## Plan defects
 
@@ -105,6 +110,10 @@ Implementation defects, all fixed in a review round before the task was accepted
   two double blank lines (N4) and the documentation of the second index set and of links to an ancestor of an input. An invalid hand-edited element holding a space or comma (N5)
   was traced from load through the summary round-trip to the snapshot, and opening and closing such a file gives no save prompt; no code change was needed.
 
+- **Link handling, simplified after three review rounds (the final review, fix wave 2 and a third round):** each round found new edge cases in following links (final paths,
+  canonical paths, a second index query, a target-based loop guard). The user decided to stop following them, then to refuse them outright; the model was
+  removed (`FinalPath`, `CanonicalPath`, the held-back files and second query, the `Not checked:` Summary line, the `Listed` state machine) in the commits that follow the
+  final-review fixes.
 ## Outstanding items
 
 ### Final review wave (this milestone)
@@ -119,8 +128,7 @@ call, per-pattern dot scans, the forwarding wrappers in `ReportBuilder`, and doc
   copy); `ReportViewModel` lost a space after `=`; the baseline JSON is re-serialised on every call (cache it if per-keystroke change tracking appears); per-pattern dot scans
   (only if profiling shows a need).
 - **Task 2:** `stackalloc char[StackLimit]` zero-fills 2 KB on every hash (use `stackalloc char[trimmed.Length]`).
-- **Task 3:** an upgrade re-listing through a link can report the same physical folder unverified twice, or unverified after its files were reported (transient failures only); a
-  link whose target is an input root could defer to the root's own visit for deterministic attribution; a missing blank line in `FolderWalker.cs` near line 316.
+- **Task 3:** superseded by the link decision (no link guard remains); a missing blank line in `FolderWalker.cs` near line 316 went with the rewrite.
 - **Task 4:** two XML summary lines over 180 characters (`UnindexedAuditRunner.cs:3`, `UnindexedReportBuilder.cs:3`); a blank line lost between `AddHeader` and `AddSummary` in
   `ReportBuilder`; forwarding wrappers in `ReportBuilder`; the Summary numbers come from two sources (document that progress is fresh per run); local declaration alignment in
   `UnindexedAuditRunner`.
@@ -160,8 +168,8 @@ call, per-pattern dot scans, the forwarding wrappers in `ReportBuilder`, and doc
 
 - **Stop during the walk, in the UI:** 300,000 files finish in under a second, so UI polling could not hit it. It was exercised at service level (a Stop 25 ms into the walk gave
   a *Stopped by user* report with partial counts). Stop during *Loading the index...* was exercised in the UI, with a stalled load.
-- **Cold network shares, DFS links and large remote tables:** the walk was measured on a local SSD against LocalDB; behaviour over a real share, and at three million rows or
-  more, is extrapolated, not measured.
+- **Cold network shares and large remote tables:** the walk was measured on a local SSD against LocalDB; behaviour over a real share, and at three million rows or
+  more, is extrapolated, not measured. Mapped drives no longer matter for links, since none is followed.
 - **F5, Ctrl+R and Esc** through the menu hot keys: injected keystrokes do not trigger them under UI Automation (as in milestone 3). The XAML is unchanged, and the menu items
   enable and disable with the buttons. Worth a manual check, Esc as Stop especially.
 - **View Report on the Unindexed tab** was opened once, in the Task 5 round 0; after the layout rework only its enabled state was checked.
@@ -169,8 +177,8 @@ call, per-pattern dot scans, the forwarding wrappers in `ReportBuilder`, and doc
 - **Case-sensitive column collations** in a real project database: covered at service level (a case-sensitive column collation on LocalDB), not on a project's own table.
 - **The final layout** was measured with UI Automation and screenshots, but has not been reviewed by the user at their screen size.
 
-- **Links outside every input** (the second, filtered index query for files indexed under their target path) were exercised at service level against LocalDB with one target
-  folder, in forward-slash and `.\` input forms and with a hand-edited project file opened in the app; not with more than 20 target folders (which loads every row) or at scale.
+- **Links** are no longer followed (the user's decision), so the outside-link second query and the mapped-drive and `subst` final-path handling no longer exist to be exercised. The
+  not-followed rule was exercised at service level against LocalDB (see the link-simplification report in the SDD working folder) and once in the app.
 
 ## Measurements
 

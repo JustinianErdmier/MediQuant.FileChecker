@@ -1,7 +1,8 @@
 # Milestone 4 — Unindexed Files Audit
 
 **Date:** 2026-11-08
-**Status:** Approved 2026-11-08; §3.3 and §3.7 amended the same day with the user's whitelist, blacklist and wildcard decisions
+**Status:** Approved 2026-11-08; §3.3 and §3.7 amended the same day with the user's whitelist, blacklist and wildcard decisions; §3.2, §3.5, §3.6 and §3.7 amended with the
+user's links decision (links are refused: skipped and reported, never followed or checked)
 
 > **Amended during the build (2026-11-08).** §3.1 now records the layout the user settled on while the tab was being built; §3.3 defines what "matches every file" means; §3.5
 > adds the whitespace-led rows to the index load and corrects the memory figure; §3.6 describes the moving block that replaced the indeterminate bar; §4 notes the File Types
@@ -75,13 +76,12 @@ row, so no ID).
   name is not matched by the whitelist, or is matched by the blacklist (§3.3). "Configuration files" are covered by the lists: an extension that is not listed is
   never checked (the user's decision).
 - A file reached through two input folders (one folder inside another) is checked and reported **once**, under the deepest input folder that contains it.
-- **Links.** A junction or symbolic link to a folder is resolved to its target, and every comparison is made in final-path space (each input's own final path is resolved
-  once, so an input on a `subst` or mapped drive still matches a link's target). A link whose target lies in a folder that **an input with subfolders covers** is **not
-  walked**: that input's own visit lists the files, so the direct visit always wins. A link to an input **without** subfolders is walked for that input's subfolders only. A link
-  whose target lies **outside every input** (including a link to an ancestor of an input) is walked (DFS namespaces on file shares appear as links, and skipping them would
-  silently drop content); files are reported by the path they were reached through, and are indexed when the index holds that path **or** the canonical path (the link's prefix
-  replaced by its target, in an input's entered form when the target lies under that input). To prevent loops, a folder's files and subfolders are each listed once per run,
-  keyed by its final path; its contents were already checked, so nothing is lost. A link whose target cannot be resolved (DFS) is an ordinary folder.
+- **Links are not followed** (the user's decision, amended 2026-11-08 after three review rounds kept finding edge cases in following them; it replaces the earlier
+  final-path, canonical-path and second-query design, and then tightened to refuse links outright). A junction or symbolic link is **skipped, reported and never checked**: an
+  **input folder** that is a link is not walked (the run goes on with the other inputs; if all are links it completes with no files); a **folder** met in the walk is not
+  entered; a **file** that is a symbolic link and matches the file types is not checked, so it is in neither *Total files*, *Indexed* nor *Unindexed*. Each is reported once under
+  *Unverified*, in the group *Link not followed*, and counts towards *Unverified*. Only an entry with a **link target** is a link: any other reparse point (a DFS namespace
+  folder, a OneDrive placeholder, a deduplicated file) is ordinary. With no link followed there is no loop or duplicate to guard against; an input nested in another is queued once.
 
 ### 3.3 File types: whitelist and blacklist
 
@@ -152,11 +152,7 @@ whitespace in the column's values is trimmed.
    with `%`, `_` and `[` escaped), so tables that span many projects send only the relevant rows. Because values are trimmed before they are matched, the filter also
    loads every row that **starts with a whitespace character**, which no folder prefix could match (a further `OR` clause); with more than 20 folders, or an empty folder
    path, it is dropped and every row is loaded. Each folder is made canonical (a full path with one trailing separator) once, and the same list feeds the filter and the walk,
-   so the filter never changes the result; files reached through a link that leads outside every input may be indexed under their target path, which the filter did not load,
-   so the run holds them back and decides them with a second, filtered query once the walk ends, into a second set of hashes (the same cost per row, only for the rows under
-   the link targets). If that query fails, the report is written as `Failed` with everything already decided, and the held-back files are in neither total; the Summary adds
-   a `Not checked:` line with their count (`<n> (reached through links; the index could not be read for them)`), printed only when there are some, and also after a Stop that
-   lands before that query ends. Each path is trimmed, **upper-cased and hashed to 128 bits**, and only the
+   so the filter never changes the result. There is one index set only, since no link is followed (§3.2). Each path is trimmed, **upper-cased and hashed to 128 bits**, and only the
    hashes are kept in memory: measured at about **48 MB per million rows** (the hashes plus the set that holds them; the first estimate of 16 bytes a row was too low), so
    three million rows take roughly 150 MB. A 128-bit hash makes a false match (anti-goal 1) practically impossible.
 3. **Walk the folders.** Folder listings run **concurrently**, up to a fixed limit (for example 16), because each listing over a network share is a round trip.
@@ -171,8 +167,8 @@ The user agreed the index may be loaded fully into memory (as hashes); the build
 
 **What is counted.** A *file* is a file of a listed type, not hidden or system, found by the walk. Each is checked the moment it is found, so every file found is
 either **indexed** or **unindexed**: *Total files* = *Indexed* + *Unindexed*. The audit never opens a file, so a single file cannot fail; what can fail is
-**listing a folder**. Such a folder is **Unverified**: its contents are not checked, and it is counted separately (*Unverified*, in folders), never inside *Total
-files*.
+**listing a folder**. Such a folder is **Unverified**: its contents are not checked, and it is counted separately (*Unverified*), never inside *Total files*. A link that
+is not followed (§3.2) is counted as Unverified too.
 
 Statistics on the Unindexed Files tab: **Total files** (found so far), **Indexed**, **Unindexed**, **Unverified** (folders), **Elapsed**, **Files/second**. **Remaining is
 hidden** on this tab — label and value — because the total is not known until the walk ends (the user's decision). While the run is under way the progress bar shows a **moving
@@ -187,8 +183,8 @@ While a run is under way, **Stop** (button, menu and Esc) and the **status bar**
 hides a run (see milestone 3 §3.3–§3.4, which this extends).
 
 **Stop** during *Loading the index...* writes no report (as Stop during today's count). After that, **Stop** stops the walk and writes the report as
-`Stopped by user`; the counts reflect what was found and checked (there is no *Not checked* line, since the
-total is unknown, except the one line for files held back for the second query, above). Closing the window mid-run behaves as today (SDD §6.4).
+`Stopped by user`; the counts reflect what was found and checked (there is no *Not checked* line, since the total is unknown). Closing the window mid-run behaves as today
+(SDD §6.4).
 
 ### 3.7 The report
 
@@ -241,8 +237,8 @@ Unindexed Files (20)
   U:\Projects\D12345\Scans\IMG_0041.jpg
   ...
 
-Unverified Folders (3)
-----------------------
+Unverified (3)
+--------------
 [Permission denied (2)]
 U:\Projects\D12345\Images\Restricted\
 U:\Projects\D12345\Images\Restricted2\
@@ -262,9 +258,9 @@ U:\Projects\D12345\Images\2020\   I/O error   The semaphore timeout period has e
     decides how many parts make up the extension.
 - The header lists `File types:` and `Exclude:` (each sorted, space-separated; `Exclude:` reads `(none)` when empty) and `Grouped by:` (`Listed type` or
   `Found extension`).
-- **Unverified Folders** lists folders that could not be listed (path ending in `\`; their contents were not checked), grouped by the same reasons as SDD §6.3
-  (*Drive or share not found*, *Permission denied*, *Network location unreachable*, *Path too long*, *Other errors* with reason and system message). Only the
-  first folder that failed on each branch is listed. `No unverified folders.` when there are none.
+- **Unverified** lists the folders that could not be listed and the links that were not followed (a folder's path ends in `\`; a file link is a plain path), grouped by the
+  reasons of SDD §6.3 plus one: *Drive or share not found*, *Permission denied*, *Network location unreachable*, *Path too long*, **Link not followed**, *Other errors* (reason
+  and system message). Each item is listed once. `No unverified folders or links.` when there are none.
 - Folders, file types and the project lines follow the same rules as today's header (custom location → no project lines). `Folders:` notes
   `(with subfolders)` per folder.
 
@@ -291,10 +287,9 @@ blacklist starts empty; a missing grouping choice is *Listed type*. The remember
 - The SQL prefix filter is an optimisation: if the builder finds it unsafe for some input (for example a folder path the `LIKE` escaping cannot represent), it
   falls back to loading every row.
 - Hashing uses an in-box .NET algorithm (no new package); a dedicated hashing package would need the user's approval.
-- Counting: *Total files* = *Indexed* + *Unindexed*; folders that cannot be listed are counted apart as *Unverified* (folders). The tab shows *Indexed* in place of
+- Counting: *Total files* = *Indexed* + *Unindexed*; folders that cannot be listed and links not followed are counted apart as *Unverified*. The tab shows *Indexed* in place of
   *Checked* (every file found is checked at once, so *Checked* would always equal *Total files*).
-- Links follow the rule of §3.2: a link into an input's scope is not walked (the direct visit wins, so results do not depend on timing); one that leads outside every
-  input is walked, with a canonical-path match against the index and a loop guard keyed by canonical path.
+- Links are not followed (§3.2): the walk skips and reports every junction or symbolic link, so there is no final-path resolution, canonical path, loop guard or second index query.
 - A hand-edited project file's invalid File types or Exclude entries are kept as written when it opens, shown in the tab's summary, and named by the pre-flight at Start, rather
   than silently dropped. The File Types dialogue takes one value per line and refuses a line holding a space or a comma.
 - The HTML mock-ups predate this milestone's layout and are kept as historical references; the SDD §5 and the XAML are the contract.
