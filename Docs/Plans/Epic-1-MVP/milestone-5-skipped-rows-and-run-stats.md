@@ -29,6 +29,9 @@ The approved description, verbatim in substance:
 4. **Remaining:** estimated from a rate weighted to roughly the last 30 seconds of checking; between estimates the display counts down one second per second and eases toward
    a new estimate over a few seconds instead of jumping; `Calculating...` until about 5 seconds of checking have passed; `00:00:00` once the run ends. The user saw the old
    estimate hold still until about 30% of a two-minute run and then drift away from real time.
+5. **Added after Task 2.** *Files/second* shows both the whole-run average and the recent average behind *Remaining*; the user suggested a middot separator but asked for
+   whatever Win9x apps commonly used. The statistics become three columns on both tabs — on the Missing tab, Total files and Checked on the left; Missing, Unverified and
+   Skipped in the centre; Elapsed, Remaining and Files/second on the right — so each stat is grouped logically without adding height.
 
 ## Global Constraints
 
@@ -45,7 +48,12 @@ The approved description, verbatim in substance:
 - *Files/second*: `N0` with `CultureInfo.CurrentCulture` (as the counts), rounded; still blank until a full second has elapsed; Missing tab = checked ÷ whole-run elapsed,
   Unindexed tab = total files ÷ whole-run elapsed (unchanged bases).
 - Remaining-estimator constants: rate time constant **30 s**, display easing time constant **3 s**, warm-up **5 s** of checking time (`AuditProgress.CheckingElapsed`).
-- The window stays 640 × 668; the Skipped stat takes the empty cell beside *Unverified* (row 3, columns 2–3 of the Audit grid), so no row is added.
+- The window stays 640 wide; until Task 4 it stays 668 high and the Skipped stat takes the empty cell beside *Unverified* (row 3, columns 2–3 of the Audit grid).
+- *Statistics layout* (Task 4), three columns of three rows: **Missing tab** — left *Total files*, *Checked*; centre *Missing*, *Unverified*, *Skipped*; right *Elapsed*,
+  *Remaining*, *Files/second*. **Unindexed tab** — left *Total files*, *Indexed*; centre *Unindexed*, *Unverified*; right *Elapsed*, *Files/second*.
+- *Files/second with the recent rate* (Task 4): `<whole-run> (<recent>)`, e.g. `54,112 (60,001)`, both `N0`. Parentheses, not a middot: Win9x dialogues put a secondary
+  figure in parentheses, and the middot was not a Win9x convention. The recent figure appears only once the 5 s warm-up has passed and only while the run is under way; before
+  and after, the whole-run figure stands alone.
 - All CLAUDE.md and SDD §12 conventions apply. Commit each task automatically, staging only its files and ticking its boxes in this plan.
 
 ## Review Focus
@@ -58,7 +66,8 @@ The approved description, verbatim in substance:
    value; a table that grew after counting (processed > total) reads `00:00:00` — Task 3 step 3.
 4. **Stop across tabs.** While one direction runs, the other tab's Stop is disabled, the running tab's is enabled, Esc and *Stop* in the menu still stop the run from either
    tab, and after the run both buttons are disabled — Task 2 step 3.
-5. **No layout change.** With the Skipped stat added, the Missing tab still fits 640 × 668 with nothing clipped — Task 1 step 3.
+5. **Nothing clipped in the three columns.** Large counts, long times and a two-figure Files/second fit on both tabs at 640 px, and the re-measured window leaves no gap
+   on the Missing tab — Task 1 step 3 (before) and Task 4 step 4 (after).
 
 ---
 
@@ -109,20 +118,22 @@ The approved description, verbatim in substance:
 
 **Files:**
 
-- Create: `Source/FileAuditor/ViewModels/Groups/RemainingEstimator.cs`
+- Create: `Source/FileAuditor/ViewModels/Groups/RecentRate.cs`, `Source/FileAuditor/ViewModels/Groups/RemainingEstimator.cs`
 - Modify: `ViewModels/Groups/AuditViewModel.cs`
 
 **Interfaces:**
 
 - Consumes: `AuditProgress.Processed`, `TotalFiles`, `HasTotal`, `CheckingElapsed` (Task 1).
+- Produces: `public sealed class RecentRate { public void Reset(); public double? Next(long count, TimeSpan elapsed); public double? Value { get; } }` — the 30 s
+  exponentially weighted rate of `count` per second, `null` until the 5 s warm-up has passed. Task 4 reuses it for the Unindexed tab and shows `Value`.
 - Produces: `public sealed class RemainingEstimator { public void Reset(); public string Next(long processed, long total, TimeSpan checkingElapsed, bool hasTotal,
-  bool isFinished); }`. It is not a `*ViewModel` (no view), like `ReportLocationState`; `AuditViewModel` owns one, resets it in `Reset()` and sets `Remaining` from
-  `Next(...)` on every `Update`.
+  bool isFinished); public double? RecentRate { get; } }`, built on one `RecentRate`; `RecentRate` exposes its current value for Task 4. Neither type is a `*ViewModel` (no
+  view), like `ReportLocationState`; `AuditViewModel` owns one estimator, resets it in `Reset()` and sets `Remaining` from `Next(...)` on every `Update`.
 
-- [ ] **Step 1:** Implement `Next`, called every refresh (about 250 ms), with this algorithm:
+- [ ] **Step 1:** Implement `RecentRate.Next` and `RemainingEstimator.Next`, called every refresh (about 250 ms), with this algorithm:
     - `isFinished` → `00:00:00`. `!hasTotal`, or checking time under the 5 s warm-up → `Calculating...`. `processed >= total` → `00:00:00`.
-    - **Rate:** an exponentially weighted moving average of the per-sample rate (`Δprocessed ÷ Δt` over checking time), weight `1 − e^(−Δt / 30 s)`. At the end of the
-      warm-up it is seeded with the whole-warm-up average (`processed ÷ checkingElapsed`) so it starts sensibly. A sample with `Δt ≤ 0` is ignored.
+    - **Rate (`RecentRate`):** an exponentially weighted moving average of the per-sample rate (`Δcount ÷ Δt`), weight `1 − e^(−Δt / 30 s)`. At the end of the
+      warm-up it is seeded with the whole-warm-up average (`count ÷ elapsed`) so it starts sensibly. A sample with `Δt ≤ 0` is ignored.
     - **Target:** `(total − processed) ÷ rate`; a rate `≤ 0` keeps the last shown value (or `Calculating...` if nothing has been shown yet).
     - **Display:** the first shown value is the target; after that, each call subtracts `Δt` (wall time between calls, from the checking clock) from the shown value, then moves
       it toward the target by `1 − e^(−Δt / 3 s)` of the difference; never below zero. Formatted `hh:mm:ss` as today (hours may exceed 24).
@@ -136,13 +147,36 @@ The approved description, verbatim in substance:
   enough to finish under 5 s (`Calculating...` then `00:00:00`). Drop the database.
 - [ ] **Step 4: Commit** — `feat(✨): estimate Remaining from the recent checking speed and count it down steadily`.
 
-### Task 4: Documentation sync and ledger
+### Task 4: Three statistics columns and the recent rate
+
+Added by the user on 2026-11-08, after Task 2 (approved description item 5).
+
+**Files:** Modify `Views/Groups/AuditView.axaml`, `Views/Groups/UnindexedAuditView.axaml`, `ViewModels/Groups/AuditViewModel.cs`,
+`ViewModels/Groups/UnindexedAuditViewModel.cs`, `Views/Main/MainWindow.axaml` (height)
+
+**Interfaces:**
+
+- Consumes: `RemainingEstimator.RecentRate` and `RecentRate` (Task 3).
+
+- [ ] **Step 1:** Both Audit groups' statistics become three label/value column pairs in three rows (Global Constraints, *Statistics layout*). Columns are sized so the
+  longest value of each fits at 640 px wide without clipping — at least `999,999,999` counts, `99:59:59` times and `9,999,999 (9,999,999)` for Files/second.
+- [ ] **Step 2:** *Files/second* shows the whole-run average, then the recent rate in parentheses (Global Constraints). Missing tab: the recent figure is
+  `RemainingEstimator.RecentRate` (processed rows per second, the rate behind *Remaining*). Unindexed tab: its own `RecentRate` over total files found. Update the XML docs.
+- [ ] **Step 3:** The grid loses a row, so re-measure the window's natural height on the Missing tab (as milestone 4.1 did: temporarily `SizeToContent="Height"`, read
+  it, remove it) with *Custom* ticked and unticked; set `Height` and `d:DesignHeight` in `MainWindow.axaml` to it. The Unindexed tab still scrolls vertically only.
+- [ ] **Step 4: Verify.** Clean build. Screenshot both Audit groups idle and mid-run (LocalDB for the Missing run, a scratch folder for the Unindexed one). Files/second
+  shows `N (M)` once the warm-up has passed and the whole-run figure alone before it and after the run; nothing is clipped on either tab; the Missing tab has no gap
+  and nothing cut off; report the new window size. Drop the database.
+- [ ] **Step 5: Commit** — `feat(✨): show the statistics in three columns with the recent rate beside Files/second`.
+
+### Task 5: Documentation sync and ledger
 
 **Files:** Modify `Docs/Specs/1-file-auditor-master-design.md`, this plan (tick boxes), `MediQuant.FileAuditor.slnx`; Create `Docs/Ledgers/Epic-1-MVP/milestone-5-ledger.md`
 
 - [ ] **Step 1:** Amend the SDD: the skip rule and where it applies (§6, the checking order; the Unindexed audit unaffected); §5.4 statistics (Skipped, Checked excludes
-  skipped, the Files/second format, the Remaining algorithm and `Calculating...`, both window diagrams); §5.4/§6.4 Stop per tab; §7 the report summary with `Skipped:` and the
-  Not-checked arithmetic (and the sample report); §9 (`SkipMarker`, `RemainingEstimator`); §10 the builder's calls taken here.
+  skipped, the Files/second format with the recent rate, the Remaining algorithm and `Calculating...`, the three-column statistics on both tabs, both window diagrams, the
+  new window height in §5 and §11); §5.4/§6.4 Stop per tab; §7 the report summary with `Skipped:` and the Not-checked arithmetic (and the sample report); §9 (`SkipMarker`,
+  `RecentRate`, `RemainingEstimator`); §10 the builder's calls taken here.
 - [ ] **Step 2:** Write the ledger (rulings, user decisions, plan defects, outstanding items, incidents, not exercised, measurements, commits, final review "Pending.").
 - [ ] **Step 3: Verify** — clean build; Markdown prose ≤ 180 characters (PowerShell `[string].Length`); every file under `Docs/` is in the `.slnx`, this plan and the ledger in
   milestone order.
