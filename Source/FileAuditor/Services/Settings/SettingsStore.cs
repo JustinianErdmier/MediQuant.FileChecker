@@ -99,11 +99,11 @@ public static class SettingsStore
             return false;
         }
 
-        HashSet<string> known = SettingsJsonContext.Default.ProjectFile.Properties.Select(property => property.Name)
+        HashSet<string> knownPropertyNames = SettingsJsonContext.Default.ProjectFile.Properties.Select(property => property.Name)
                                                    .ToHashSet(StringComparer.Ordinal);
 
         return document.RootElement.EnumerateObject()
-                       .Any(property => known.Contains(property.Name));
+                       .Any(property => knownPropertyNames.Contains(property.Name));
     }
 
     // Maps the settings to the file shape. Every member is set, so no null is written.
@@ -165,17 +165,17 @@ public static class SettingsStore
             return [];
         }
 
-        List<ScanFolder> kept = [];
+        List<ScanFolder> keptFolders = [];
 
         foreach (ProjectFileFolder? folder in folders)
         {
             if (folder?.Path is not null)
             {
-                kept.Add(new ScanFolder(folder.Path, folder.IncludeSubfolders ?? true));
+                keptFolders.Add(new ScanFolder(folder.Path, folder.IncludeSubfolders ?? true));
             }
         }
 
-        return [.. kept];
+        return [.. keptFolders];
     }
 
     // A null list takes the fallback (a copy, never the shared default array). A null element is dropped. Each valid entry is normalised; an invalid one is kept as
@@ -187,7 +187,7 @@ public static class SettingsStore
             return [.. fallback];
         }
 
-        SortedSet<string> kept = new(StringComparer.Ordinal);
+        SortedSet<string> keptTypes = new(StringComparer.Ordinal);
 
         foreach (string? type in types)
         {
@@ -200,14 +200,14 @@ public static class SettingsStore
 
             if (!parsed.IsError)
             {
-                kept.UnionWith(parsed.Value);
+                keptTypes.UnionWith(parsed.Value);
             }
             else
             {
-                kept.Add(type.Trim());
+                keptTypes.Add(type.Trim());
             }
         }
 
-        return [.. kept];
+        return [.. keptTypes];
     }
 }

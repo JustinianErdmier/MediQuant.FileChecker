@@ -15,13 +15,13 @@ public sealed partial class ReportViewModel : ObservableObject
 
     /// <summary>Initialises a new instance over the shared state.</summary>
     /// <param name="shared">The location values every direction shares.</param>
-    /// <param name="directions">The audit direction whose report this group describes.</param>
-    public ReportViewModel(ReportLocationState shared, AuditDirections directions)
+    /// <param name="direction">The audit direction whose report this group describes.</param>
+    public ReportViewModel(ReportLocationState shared, AuditDirections direction)
     {
         Shared          = shared;
-        Directions      = directions;
-        _customFileName = directions is AuditDirections.Missing ? AppSettings.Default.MissingCustomFileName : AppSettings.Default.UnindexedCustomFileName;
-        Current         = ReportPathResolver.Resolve(Resolved(), directions);
+        Direction       = direction;
+        _customFileName = direction is AuditDirections.Missing ? AppSettings.Default.MissingCustomFileName : AppSettings.Default.UnindexedCustomFileName;
+        Current         = ReportPathResolver.Resolve(Resolved(), direction);
 
         Shared.PropertyChanged += OnSharedChanged;
 
@@ -32,7 +32,7 @@ public sealed partial class ReportViewModel : ObservableObject
     public ReportPath Current { get; private set; }
 
     /// <summary>Gets the audit direction whose report this group describes.</summary>
-    public AuditDirections Directions { get; }
+    public AuditDirections Direction { get; }
 
     /// <summary>Gets or sets the text of the File name box: a read-only preview when built, the typed name when custom.</summary>
     [ ObservableProperty ]
@@ -52,7 +52,7 @@ public sealed partial class ReportViewModel : ObservableObject
     }
 
     /// <summary>Gets a value indicating whether this is the Unindexed direction's group, which has the Group file types by option.</summary>
-    public bool IsUnindexed => Directions is AuditDirections.Unindexed;
+    public bool IsUnindexed => Direction is AuditDirections.Unindexed;
 
     /// <summary>Gets or sets the text of the Location box: a read-only preview when built, the typed folder when custom.</summary>
     [ ObservableProperty ]
@@ -65,7 +65,7 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <param name="settings">The settings to start from.</param>
     /// <returns>A copy of <paramref name="settings" /> carrying this direction's inputs.</returns>
     public AppSettings ApplyTo(AppSettings settings)
-        => Directions is AuditDirections.Missing
+        => Direction is AuditDirections.Missing
                ? settings with
                {
                    MissingCustomFileName = _customFileName
@@ -80,7 +80,7 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <param name="settings">The settings to load.</param>
     public void Load(AppSettings settings)
     {
-        _customFileName = Directions is AuditDirections.Missing ? settings.MissingCustomFileName : settings.UnindexedCustomFileName;
+        _customFileName = Direction is AuditDirections.Missing ? settings.MissingCustomFileName : settings.UnindexedCustomFileName;
 
         GroupByFoundExtension = IsUnindexed && settings.GroupByFoundExtension;
 
@@ -125,7 +125,7 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <summary>Rewrites the Location and File name boxes for the current mode and recomputes <see cref="Current" />.</summary>
     private void Refresh()
     {
-        ReportPath path = ReportPathResolver.Resolve(Resolved(), Directions);
+        ReportPath path = ReportPathResolver.Resolve(Resolved(), Direction);
 
         _isRefreshing = true;
         Location      = Shared.UseCustomLocation ? Shared.CustomLocation : path.DisplayDirectory;
@@ -137,7 +137,7 @@ public sealed partial class ReportViewModel : ObservableObject
 
     private void UpdateCurrent()
     {
-        Current = ReportPathResolver.Resolve(Resolved(), Directions);
+        Current = ReportPathResolver.Resolve(Resolved(), Direction);
 
         OnPropertyChanged(nameof(Current));
     }

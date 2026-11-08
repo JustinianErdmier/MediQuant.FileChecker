@@ -28,13 +28,13 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
 
     /// <summary>Shows a dialogue with two or three buttons.</summary>
     /// <param name="message">The message.</param>
-    /// <param name="icons">The icon to show.</param>
+    /// <param name="icon">The icon to show.</param>
     /// <param name="primaryText">The action button's text; an underscore marks its access key.</param>
     /// <param name="secondaryText">The second button's text.</param>
     /// <param name="tertiaryText">The third button's text, or <see langword="null" /> for a two-button dialogue.</param>
     /// <returns>The button chosen; the last visible button when the dialogue is closed with the title-bar close box.</returns>
-    public Task<DialogueChoices> ChooseAsync(string message, DialogueIcons icons, string primaryText, string secondaryText, string? tertiaryText = null)
-        => ShowAsync(new MessageDialogueViewModel(message, icons, primaryText, secondaryText, tertiaryText));
+    public Task<DialogueChoices> ChooseAsync(string message, DialogueIcons icon, string primaryText, string secondaryText, string? tertiaryText = null)
+        => ShowAsync(new MessageDialogueViewModel(message, icon, primaryText, secondaryText, tertiaryText));
 
     /// <summary>Shows the file types editor.</summary>
     /// <param name="title">The window title.</param>
@@ -113,6 +113,6 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
 
         await window.ShowDialog(owner);
 
-        return window.Choices;
+        return window.Choice;
     }
 }

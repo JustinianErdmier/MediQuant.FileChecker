@@ -13,5 +13,5 @@ public partial class AboutWindow : ClassicWindow
         DataContext = new AboutWindowViewModel();
     }
 
-    private void OnOkClick(object? sender, RoutedEventArgs e) => Close();
+    private void OnOkClick(object? sender, RoutedEventArgs eventArgs) => Close();
 }

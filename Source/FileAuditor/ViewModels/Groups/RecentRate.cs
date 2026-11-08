@@ -99,8 +99,8 @@ public sealed class RecentRate
     /// <returns>The text, such as <c>54,112 (60,001)</c> or <c>54,112</c>.</returns>
     public static string Format(double wholeRun, double? recent)
     {
-        string whole = wholeRun.ToString(format: "N0", CultureInfo.CurrentCulture);
+        string wholeRunText = wholeRun.ToString(format: "N0", CultureInfo.CurrentCulture);
 
-        return recent is null ? whole : $"{whole} ({recent.Value.ToString(format: "N0", CultureInfo.CurrentCulture)})";
+        return recent is null ? wholeRunText : $"{wholeRunText} ({recent.Value.ToString(format: "N0", CultureInfo.CurrentCulture)})";
     }
 }

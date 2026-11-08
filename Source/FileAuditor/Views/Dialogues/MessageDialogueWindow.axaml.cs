@@ -2,7 +2,7 @@ using JetBrains.Annotations;
 
 namespace FileAuditor.Views.Dialogues;
 
-/// <summary>A modal Win9x message dialogue; records which button closed it in <see cref="Choices" />.</summary>
+/// <summary>A modal Win9x message dialogue; records which button closed it in <see cref="Choice" />.</summary>
 public partial class MessageDialogueWindow : ClassicWindow
 {
     /// <summary>Initialises a new instance for the XAML designer.</summary>
@@ -22,11 +22,11 @@ public partial class MessageDialogueWindow : ClassicWindow
         DataContext = viewModel;
 
         // Closing with the title-bar close box counts as the last visible button.
-        Choices = viewModel.HasTertiary ? DialogueChoices.Tertiary : viewModel.HasSecondary ? DialogueChoices.Secondary : DialogueChoices.Primary;
+        Choice = viewModel.HasTertiary ? DialogueChoices.Tertiary : viewModel.HasSecondary ? DialogueChoices.Secondary : DialogueChoices.Primary;
     }
 
     /// <summary>Gets the button that closed the dialogue; the last visible button when closed with the title-bar close box.</summary>
-    public DialogueChoices Choices { get; private set; }
+    public DialogueChoices Choice { get; private set; }
 
     private void OnPrimaryClick(object? sender, RoutedEventArgs eventArgs) => CloseWith(DialogueChoices.Primary);
 
@@ -34,9 +34,9 @@ public partial class MessageDialogueWindow : ClassicWindow
 
     private void OnTertiaryClick(object? sender, RoutedEventArgs eventArgs) => CloseWith(DialogueChoices.Tertiary);
 
-    private void CloseWith(DialogueChoices choices)
+    private void CloseWith(DialogueChoices choice)
     {
-        Choices = choices;
+        Choice = choice;
 
         Close();
     }

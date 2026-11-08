@@ -69,7 +69,7 @@ public static class UnindexedReportBuilder
         lines.Add(ReportFormat.Labelled(label: "Exclude:", exclude is [] ? "(none)" : FileTypeList.Format(exclude)));
         lines.Add(ReportFormat.Labelled(label: "Grouped by:", settings.GroupByFoundExtension ? "Found extension" : "Listed type"));
         ReportFormat.AddProjectLines(lines, settings);
-        ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Kinds, report.FailureMessage);
+        ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Result, report.FailureMessage);
     }
 
     private static void AddSummary(List<string> lines, UnindexedReport report)
@@ -162,7 +162,7 @@ public static class UnindexedReportBuilder
             return;
         }
 
-        bool first = true;
+        bool isFirst = true;
 
         foreach (CheckOutcomes group in UnverifiedOrder)
         {
@@ -181,12 +181,12 @@ public static class UnindexedReportBuilder
                 continue;
             }
 
-            if (!first)
+            if (!isFirst)
             {
                 lines.Add(string.Empty);
             }
 
-            first = false;
+            isFirst = false;
 
             lines.Add($"[{GroupTitle(group)} ({ReportFormat.Count(folders.Count)})]");
 

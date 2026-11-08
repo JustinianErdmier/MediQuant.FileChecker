@@ -280,7 +280,7 @@ names are the report file names, as its remarks document.
 
 **Files:** any C# or XAML file, but not the JSON keys or report text of the Global Constraints.
 
-- [ ] **Step 1: Make single values singular.** Every variable, parameter or property that holds one value of a plural-named enum gets a singular name. These include:
+- [x] **Step 1: Make single values singular.** Every variable, parameter or property that holds one value of a plural-named enum gets a singular name. These include:
   - `CheckResult.Outcomes` → `Outcome`, and `MappedOutcome.Outcomes` → `Outcome`;
   - `AuditProgress.Record(outcomes)`;
   - `ReportBuilder`'s `outcomes` parameters;
@@ -290,16 +290,16 @@ names are the report file names, as its remarks document.
   - `AuditDirections directions` → `direction`, and `ReportViewModel.Directions` → `Direction`;
   - `AuditStages auditStages` → `auditStage`.
   - Update the XAML bindings that use any renamed property.
-- [ ] **Step 2: Fix the glob names.** **12.** In `FileTypePattern.GlobMatches`, rename `p` → `patternIndex`, `t` → `textIndex`, `star` → `starPatternIndex` and `starText` →
+- [x] **Step 2: Fix the glob names.** **12.** In `FileTypePattern.GlobMatches`, rename `p` → `patternIndex`, `t` → `textIndex`, `star` → `starPatternIndex` and `starText` →
   `starTextIndex`.
-- [ ] **Step 3: Sweep the rest of the code.** Go through every file for names that are abbreviated, a single letter (outside lambda parameters such as `_`), vague (`own`, `sub`,
+- [x] **Step 3: Sweep the rest of the code.** Go through every file for names that are abbreviated, a single letter (outside lambda parameters such as `_`), vague (`own`, `sub`,
   `raw`, `info`, `cts`-style suffixes on locals) or that no longer describe what they hold.
   - Rename each to say what it holds.
   - Keep the names that are already clear, and keep British English.
   - List every rename in the task report.
   - Use Rider's rename refactoring when it is connected; otherwise edit and build.
-- [ ] **Step 4: Build and run.** Build with 0 warnings. Run both audits and open, save and close a project.
-- [ ] **Step 5: Commit.** Use `refactor(♻️): give single enum values singular names and make the remaining names descriptive`.
+- [x] **Step 4: Build and run.** Build with 0 warnings. Run both audits and open, save and close a project.
+- [x] **Step 5: Commit.** Use `refactor(♻️): give single enum values singular names and make the remaining names descriptive`.
 
 ### Task 7: Doc comments everywhere (items 8, 9, 10)
 

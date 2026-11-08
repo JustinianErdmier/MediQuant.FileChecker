@@ -55,10 +55,10 @@ public sealed class AuditProgress
     }
 
     /// <summary>Records one processed row: a checked one, or a skipped one.</summary>
-    /// <param name="outcomes">The row's outcome.</param>
-    public void Record(CheckOutcomes outcomes)
+    /// <param name="outcome">The row's outcome.</param>
+    public void Record(CheckOutcomes outcome)
     {
-        switch (outcomes)
+        switch (outcome)
         {
             case CheckOutcomes.Skipped:
                 Interlocked.Increment(ref _skipped);

@@ -110,7 +110,7 @@ public static class FolderWalker
             return;
         }
 
-        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         Walk walk = new([.. pathRoots],
                         allPathRoots.Select(root => root.Path)
@@ -118,7 +118,7 @@ public static class FolderWalker
                         filter,
                         onFile,
                         onUnverified,
-                        linked.Token);
+                        linkedSource.Token);
 
         foreach (InputRoot root in pathRoots)
         {
@@ -130,7 +130,7 @@ public static class FolderWalker
         Task[] workers =
         [
             .. Enumerable.Range(start: 0, MaxConcurrentListings)
-                         .Select(_ => Task.Factory.StartNew(() => RunWorker(walk, linked),
+                         .Select(_ => Task.Factory.StartNew(() => RunWorker(walk, linkedSource),
                                                             CancellationToken.None,
                                                             TaskCreationOptions.LongRunning,
                                                             TaskScheduler.Default))
@@ -149,7 +149,7 @@ public static class FolderWalker
         }
     }
 
-    private static void RunWorker(Walk walk, CancellationTokenSource linked)
+    private static void RunWorker(Walk walk, CancellationTokenSource linkedSource)
     {
         try
         {
@@ -173,7 +173,7 @@ public static class FolderWalker
         catch
         {
             // A callback threw: stop the others, then let the exception surface from WalkAsync.
-            linked.Cancel();
+            linkedSource.Cancel();
 
             throw;
         }
@@ -205,13 +205,13 @@ public static class FolderWalker
 
     // Whether the entry is a junction or symbolic link (it has a link target). Any other reparse point is an ordinary entry, but an entry whose link target cannot
     // be read is Unknown, never assumed ordinary: the caller reports it and does not walk or check it.
-    private static LinkStates Classify(FileSystemInfo info, out string? failure)
+    private static LinkStates Classify(FileSystemInfo fileSystemInfo, out string? failure)
     {
         failure = null;
 
         try
         {
-            return info.LinkTarget is not null ? LinkStates.Link : LinkStates.Ordinary;
+            return fileSystemInfo.LinkTarget is not null ? LinkStates.Link : LinkStates.Ordinary;
         }
         catch (Exception exception)
         {
@@ -410,9 +410,9 @@ public static class FolderWalker
                 MappedOutcome mapped = Win32ErrorMapper.Map(exception);
 
                 // A folder that vanished mid-run is not a "file missing" outcome; it is a folder that could not be checked.
-                _onUnverified(mapped.Outcomes is CheckOutcomes.MissingDoesNotExist
+                _onUnverified(mapped.Outcome is CheckOutcomes.MissingDoesNotExist
                                   ? new UnverifiedFolder(folder, CheckOutcomes.UnverifiedOther, ReasonText: "Folder not found", exception.Message)
-                                  : new UnverifiedFolder(folder, mapped.Outcomes, mapped.Reason, mapped.SystemMessage));
+                                  : new UnverifiedFolder(folder, mapped.Outcome, mapped.Reason, mapped.SystemMessage));
 
                 return;
             }
@@ -450,9 +450,9 @@ public static class FolderWalker
             }
         }
 
-        private void Descend(string folder, Entry sub)
+        private void Descend(string folder, Entry subfolder)
         {
-            string path = $"{folder}{sub.Name}{Path.DirectorySeparatorChar}";
+            string path = $"{folder}{subfolder.Name}{Path.DirectorySeparatorChar}";
 
             // An input is queued, or reported if it is a link, on its own: here it would be a second visit.
             if (_inputPaths.Contains(path))
@@ -463,7 +463,7 @@ public static class FolderWalker
             // A folder's status is probed only for a reparse point, and before the folder is queued; one that cannot be classified is not walked.
             string? failure = null;
 
-            LinkStates state = sub.IsReparsePoint ? Classify(new DirectoryInfo(path), out failure) : LinkStates.Ordinary;
+            LinkStates state = subfolder.IsReparsePoint ? Classify(new DirectoryInfo(path), out failure) : LinkStates.Ordinary;
 
             if (IsOrdinary(state, path, failure, _onUnverified))
             {

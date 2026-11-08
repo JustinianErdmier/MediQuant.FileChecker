@@ -11,8 +11,8 @@ internal static class TimeText
     /// <returns>The duration as text.</returns>
     internal static string Format(double seconds)
     {
-        long whole = double.IsNaN(seconds) ? 0 : (long)Math.Clamp(seconds, min: 0, MaxSeconds);
+        long wholeSeconds = double.IsNaN(seconds) ? 0 : (long)Math.Clamp(seconds, min: 0, MaxSeconds);
 
-        return $"{whole / 3600:00}:{whole / 60 % 60:00}:{whole % 60:00}";
+        return $"{wholeSeconds / 3600:00}:{wholeSeconds / 60 % 60:00}:{wholeSeconds % 60:00}";
     }
 }

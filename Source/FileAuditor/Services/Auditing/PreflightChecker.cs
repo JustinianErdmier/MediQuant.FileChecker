@@ -10,9 +10,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
     ///     folder, existing report.
     /// </summary>
     /// <param name="settings">The settings to audit with.</param>
-    /// <param name="directions">The audit direction, which decides the report file name.</param>
+    /// <param name="direction">The audit direction, which decides the report file name.</param>
     /// <returns>The resolved report path when the run may start; <see langword="null" /> when a check failed or the user declined (the user has been told).</returns>
-    public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirections directions)
+    public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirections direction)
     {
         ErrorOr<AuditQuery> query = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn);
 
@@ -34,7 +34,7 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             // Both tabs write into the one custom location, so equal names would have the reports overwrite each other.
             case true when string.Equals(settings.MissingCustomFileName.Trim(), settings.UnindexedCustomFileName.Trim(), StringComparison.OrdinalIgnoreCase):
             {
-                string name = ReportPathResolver.Resolve(settings, directions)
+                string name = ReportPathResolver.Resolve(settings, direction)
                                                 .FileName;
 
                 await dialogues.ShowErrorAsync($"Both reports would have the same file name:\n{PathText.Breakable(name)}\n\nGive each tab's report its own name.");
@@ -43,13 +43,13 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             }
         }
 
-        if (directions is AuditDirections.Unindexed
+        if (direction is AuditDirections.Unindexed
             && !await CheckUnindexedInputsAsync(settings))
         {
             return null;
         }
 
-        ReportPath report = ReportPathResolver.Resolve(settings, directions);
+        ReportPath report = ReportPathResolver.Resolve(settings, direction);
 
         if (report.IsCustom)
         {
@@ -183,13 +183,13 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
     private async Task<bool> ConfirmTypeWarningsAsync(string[] include, string[] exclude)
     {
-        string? everything = include.FirstOrDefault(entry => new FileTypePattern(entry).MatchesEverything);
+        string? matchAllEntry = include.FirstOrDefault(entry => new FileTypePattern(entry).MatchesEverything);
 
-        if (everything is not null
+        if (matchAllEntry is not null
             && include.Length > 1
             && !project.RedundantTypesConfirmed)
         {
-            if (!await dialogues.ConfirmAsync($"File types contains {everything}, which matches every file, so the other file types are redundant.\n\nDo you want to continue?",
+            if (!await dialogues.ConfirmAsync($"File types contains {matchAllEntry}, which matches every file, so the other file types are redundant.\n\nDo you want to continue?",
                                               confirmText: "_Continue"))
             {
                 return false;
@@ -198,12 +198,12 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             project.RedundantTypesConfirmed = true;
         }
 
-        if (everything is not null
+        if (matchAllEntry is not null
             && exclude.Length > 0
             && !project.ExcludedTypesConfirmed)
         {
             if (!await
-                     dialogues.ConfirmAsync($"File types contains {everything}, which matches every file, so every file will be checked except the excluded types.\n\nDo you want to continue?",
+                     dialogues.ConfirmAsync($"File types contains {matchAllEntry}, which matches every file, so every file will be checked except the excluded types.\n\nDo you want to continue?",
                                             confirmText: "_Continue"))
             {
                 return false;
@@ -212,15 +212,15 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             project.ExcludedTypesConfirmed = true;
         }
 
-        string[] both = [.. include.Intersect(exclude, StringComparer.Ordinal)];
+        string[] inBothLists = [.. include.Intersect(exclude, StringComparer.Ordinal)];
 
-        if (both.Length <= 0
+        if (inBothLists.Length <= 0
             || project.OverlapConfirmed)
         {
             return true;
         }
 
-        string entries = string.Join(separator: ' ', both);
+        string entries = string.Join(separator: ' ', inBothLists);
 
         if (!await dialogues.ConfirmAsync($"These types are in both File types and Exclude, so they will not be checked:\n{entries}\n\nDo you want to continue?",
                                           confirmText: "_Continue"))

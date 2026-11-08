@@ -1,4 +1,4 @@
-﻿namespace FileAuditor.ViewModels.Main;
+namespace FileAuditor.ViewModels.Main;
 
 /// <summary>The main window: composes the group and tab view models and owns the Start, Stop, View Report, About and Exit commands.</summary>
 public sealed partial class MainWindowViewModel : ObservableObject
@@ -18,11 +18,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private readonly PreflightChecker _preflight;
 
-    private readonly ProjectSettingsService _project;
+    private readonly ProjectSettingsService _projectSettingsService;
 
     private readonly UnindexedAuditRunner _unindexedRunner = new();
 
-    private CancellationTokenSource? _auditCts;
+    private CancellationTokenSource? _auditCancellationSource;
 
     private Task _auditTask = Task.CompletedTask;
 
@@ -34,7 +34,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     // raise the untick warning.
     private bool _isRevertingTick;
 
-    private CancellationTokenSource? _probeCts;
+    private CancellationTokenSource? _probeCancellationSource;
 
     private bool _reportExists;
 
@@ -52,19 +52,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     /// <summary>Initialises a new instance populated with the default settings.</summary>
     /// <param name="dialogues">Shows the errors, confirmations and questions.</param>
-    /// <param name="project">Holds the open project's settings file and saves it when an audit starts.</param>
-    public MainWindowViewModel(DialogueService dialogues, ProjectSettingsService project)
+    /// <param name="projectSettingsService">Holds the open project's settings file and saves it when an audit starts.</param>
+    public MainWindowViewModel(DialogueService dialogues, ProjectSettingsService projectSettingsService)
     {
         AppSettings settings = AppSettings.Default;
 
-        _dialogues = dialogues;
-        _project   = project;
-        _preflight = new PreflightChecker(dialogues, project);
+        _dialogues              = dialogues;
+        _projectSettingsService = projectSettingsService;
+        _preflight              = new PreflightChecker(dialogues, projectSettingsService);
 
         Database        = new DatabaseViewModel(settings);
         FileIndexTable  = new FileIndexTableViewModel(settings);
         ReportLocation  = new ReportLocationState();
-        ProjectSettings = new ProjectSettingsViewModel(ReportLocation, project);
+        ProjectSettings = new ProjectSettingsViewModel(ReportLocation, projectSettingsService);
         MissingFiles    = new MissingFilesTabViewModel(ReportLocation);
         UnindexedFiles  = new UnindexedFilesTabViewModel(ReportLocation, dialogues);
 
@@ -152,9 +152,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
 
             // The run may have ended while the question was open; cancelling a finished run is harmless.
-            if (_auditCts is { } auditCts)
+            if (_auditCancellationSource is { } auditCancellationSource)
             {
-                await auditCts.CancelAsync();
+                await auditCancellationSource.CancelAsync();
             }
 
             await _auditTask;
@@ -164,7 +164,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return false;
         }
 
-        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), ReportLocation.ResolveFolder(), ReportLocation.SaveProjectSettings);
+        SavePointResult savePoint = await _projectSettingsService.RunSavePointAsync(Snapshot(), ReportLocation.ResolveFolder(), ReportLocation.SaveProjectSettings);
 
         return savePoint.Proceed;
     }
@@ -212,7 +212,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         if (eventArgs.PropertyName is not nameof(ReportLocationState.SaveProjectSettings)
             || ReportLocation.SaveProjectSettings
-            || _project.UntickConfirmed
+            || _projectSettingsService.UntickConfirmed
             || _isRevertingTick)
         {
             return;
@@ -243,7 +243,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         if (await _dialogues.ConfirmAsync(message, confirmText: "_Untick"))
         {
-            _project.UntickConfirmed = true;
+            _projectSettingsService.UntickConfirmed = true;
 
             return;
         }
@@ -260,11 +260,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task ProbeReportAsync()
     {
-        CancellationTokenSource? previous = _probeCts;
+        CancellationTokenSource? previous = _probeCancellationSource;
 
         CancellationTokenSource cancellationTokenSource = new();
 
-        _probeCts = cancellationTokenSource;
+        _probeCancellationSource = cancellationTokenSource;
 
         if (previous is not null)
         {
@@ -328,8 +328,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     // Every direction has a tab. Checklist for adding another: the constructor's tab and Report PropertyChanged subscriptions (OnInputChanged and OnReportChanged); Snapshot;
     // LoadAll; ReportFor; AuditFor; SelectedDirection; StartAsync (the run and its pre-flight inputs); and the TabItem in MainWindow.axaml.
-    private ReportViewModel ReportFor(AuditDirections directions)
-        => directions switch
+    private ReportViewModel ReportFor(AuditDirections direction)
+        => direction switch
         {
             AuditDirections.Missing   => MissingFiles.Report,
             AuditDirections.Unindexed => UnindexedFiles.Report,
@@ -374,7 +374,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        SavePointResult savePoint = await _project.RunSavePointAsync(settings, reportPath, ReportLocation.SaveProjectSettings);
+        SavePointResult savePoint = await _projectSettingsService.RunSavePointAsync(settings, reportPath, ReportLocation.SaveProjectSettings);
 
         if (!savePoint.Proceed)
         {
@@ -411,7 +411,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Stopwatch               clock                   = Stopwatch.StartNew();
         CancellationTokenSource cancellationTokenSource = new();
 
-        _auditCts = cancellationTokenSource;
+        _auditCancellationSource = cancellationTokenSource;
 
         audit.Reset();
         run.Begin();
@@ -451,7 +451,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             // so the window behind it already reads correctly.
             timer.Stop();
 
-            _auditCts = null;
+            _auditCancellationSource = null;
 
             cancellationTokenSource.Dispose();
 
@@ -476,7 +476,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     [ RelayCommand(CanExecute = nameof(CanStop)) ]
-    private void Stop() => _auditCts?.Cancel();
+    private void Stop() => _auditCancellationSource?.Cancel();
 
     [ RelayCommand(CanExecute = nameof(CanViewReport)) ]
     private async Task ViewReportAsync()
@@ -521,7 +521,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ RelayCommand(CanExecute = nameof(CanChangeProject)) ]
     private async Task CloseProjectAsync()
     {
-        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), ReportLocation.ResolveFolder(), ReportLocation.SaveProjectSettings);
+        SavePointResult savePoint = await _projectSettingsService.RunSavePointAsync(Snapshot(), ReportLocation.ResolveFolder(), ReportLocation.SaveProjectSettings);
 
         if (!savePoint.Proceed)
         {
@@ -534,7 +534,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ RelayCommand(CanExecute = nameof(CanChangeProject)) ]
     private async Task OpenProjectAsync()
     {
-        SavePointResult savePoint = await _project.RunSavePointAsync(Snapshot(), ReportLocation.ResolveFolder(), ReportLocation.SaveProjectSettings);
+        SavePointResult savePoint = await _projectSettingsService.RunSavePointAsync(Snapshot(), ReportLocation.ResolveFolder(), ReportLocation.SaveProjectSettings);
 
         if (!savePoint.Proceed)
         {
@@ -560,7 +560,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        ErrorOr<AppSettings> loaded = await _project.LoadAsync(path);
+        ErrorOr<AppSettings> loaded = await _projectSettingsService.LoadAsync(path);
 
         if (loaded.IsError)
         {
@@ -575,7 +575,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         LoadAll(loaded.Value);
 
-        _project.MarkLoaded(path, Snapshot());
+        _projectSettingsService.MarkLoaded(path, Snapshot());
     }
 
     // The shared location is loaded before the tabs, so each tab's Report group refreshes against the new shared values.
@@ -622,7 +622,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         LoadAll(AppSettings.Default);
 
-        _project.Reset();
+        _projectSettingsService.Reset();
 
         SetSaveProjectSettings(value: true);
 

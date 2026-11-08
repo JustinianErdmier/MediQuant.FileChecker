@@ -92,7 +92,7 @@ public sealed class FileChecker(bool reportEmptyFiles)
             }
         }
 
-        MappedOutcome own;
+        MappedOutcome fileOutcome;
 
         try
         {
@@ -112,15 +112,15 @@ public sealed class FileChecker(bool reportEmptyFiles)
         }
         catch (Exception exception)
         {
-            own = Win32ErrorMapper.Map(exception);
+            fileOutcome = Win32ErrorMapper.Map(exception);
         }
 
-        CheckResult result = own.Outcomes is CheckOutcomes.UnverifiedPermissionDenied or CheckOutcomes.UnverifiedNetworkUnreachable or CheckOutcomes.UnverifiedOther
-                                 ? LocaliseFailure(row, own, ancestors)
-                                 : ToResult(row, own);
+        CheckResult result = fileOutcome.Outcome is CheckOutcomes.UnverifiedPermissionDenied or CheckOutcomes.UnverifiedNetworkUnreachable or CheckOutcomes.UnverifiedOther
+                                 ? LocaliseFailure(row, fileOutcome, ancestors)
+                                 : ToResult(row, fileOutcome);
 
         // The root was reachable when it was cached, but a share or drive can disappear mid-run; a not-found outcome is only trustworthy if the root is still there.
-        if (result.Outcomes is CheckOutcomes.MissingDoesNotExist
+        if (result.Outcome is CheckOutcomes.MissingDoesNotExist
             && RootHasVanished(root) is { } vanished)
         {
             return ToResult(row, vanished);
@@ -170,7 +170,7 @@ public sealed class FileChecker(bool reportEmptyFiles)
     }
 
     /// <summary>Walks from the root's child down to the file's parent to find the first directory that cannot be reached, and caches it.</summary>
-    private CheckResult LocaliseFailure(IndexRow row, MappedOutcome own, List<string> ancestorsDeepestFirst)
+    private CheckResult LocaliseFailure(IndexRow row, MappedOutcome fileOutcome, List<string> ancestorsDeepestFirst)
     {
         for (int i = ancestorsDeepestFirst.Count - 1; i >= 0; i--)
         {
@@ -184,7 +184,7 @@ public sealed class FileChecker(bool reportEmptyFiles)
             {
                 MappedOutcome mapped = Win32ErrorMapper.Map(exception);
 
-                switch (mapped.Outcomes)
+                switch (mapped.Outcome)
                 {
                     case CheckOutcomes.UnverifiedPermissionDenied or CheckOutcomes.UnverifiedNetworkUnreachable or CheckOutcomes.UnverifiedOther:
                         _blockedDirectories.TryAdd(directory, mapped);
@@ -212,7 +212,7 @@ public sealed class FileChecker(bool reportEmptyFiles)
         }
 
         // Every directory above the file is reachable, so the failure belongs to the file itself and nothing is cached.
-        return ToResult(row, own);
+        return ToResult(row, fileOutcome);
     }
 
     /// <summary>Probes a root once. Returns <see langword="null" /> when it is reachable.</summary>
@@ -228,7 +228,7 @@ public sealed class FileChecker(bool reportEmptyFiles)
         {
             MappedOutcome mapped = Win32ErrorMapper.Map(exception);
 
-            return mapped.Outcomes is CheckOutcomes.MissingDoesNotExist or CheckOutcomes.UnverifiedDriveOrShareNotFound
+            return mapped.Outcome is CheckOutcomes.MissingDoesNotExist or CheckOutcomes.UnverifiedDriveOrShareNotFound
                        ? new MappedOutcome(CheckOutcomes.UnverifiedDriveOrShareNotFound)
                        : mapped;
         }
@@ -259,5 +259,5 @@ public sealed class FileChecker(bool reportEmptyFiles)
 
     private static string AsDirectoryKey(string directory) => directory.Length > 0 && directory[^1] is '\\' or '/' ? directory : directory + '\\';
 
-    private static CheckResult ToResult(IndexRow row, MappedOutcome mapped) => new(row, mapped.Outcomes, mapped.Reason, mapped.SystemMessage);
+    private static CheckResult ToResult(IndexRow row, MappedOutcome mapped) => new(row, mapped.Outcome, mapped.Reason, mapped.SystemMessage);
 }

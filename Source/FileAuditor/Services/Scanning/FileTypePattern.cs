@@ -101,29 +101,29 @@ public sealed class FileTypePattern
     // Glob match of one part: '*' is any run (including none), '?' exactly one character; case-insensitive. The pattern is already lower case.
     private static bool GlobMatches(string pattern, ReadOnlySpan<char> text)
     {
-        int p        = 0;
-        int t        = 0;
-        int star     = -1;
-        int starText = 0;
+        int patternIndex     = 0;
+        int textIndex        = 0;
+        int starPatternIndex = -1;
+        int starTextIndex    = 0;
 
-        while (t < text.Length)
+        while (textIndex < text.Length)
         {
-            if (p < pattern.Length
-                && pattern[p] is '*')
+            if (patternIndex < pattern.Length
+                && pattern[patternIndex] is '*')
             {
-                star     = p++;
-                starText = t;
+                starPatternIndex = patternIndex++;
+                starTextIndex    = textIndex;
             }
-            else if (p < pattern.Length
-                     && (pattern[p] is '?' || pattern[p] == char.ToLowerInvariant(text[t])))
+            else if (patternIndex < pattern.Length
+                     && (pattern[patternIndex] is '?' || pattern[patternIndex] == char.ToLowerInvariant(text[textIndex])))
             {
-                p++;
-                t++;
+                patternIndex++;
+                textIndex++;
             }
-            else if (star >= 0)
+            else if (starPatternIndex >= 0)
             {
-                p = star + 1;
-                t = ++starText;
+                patternIndex = starPatternIndex + 1;
+                textIndex    = ++starTextIndex;
             }
             else
             {
@@ -131,12 +131,12 @@ public sealed class FileTypePattern
             }
         }
 
-        while (p < pattern.Length
-               && pattern[p] is '*')
+        while (patternIndex < pattern.Length
+               && pattern[patternIndex] is '*')
         {
-            p++;
+            patternIndex++;
         }
 
-        return p == pattern.Length;
+        return patternIndex == pattern.Length;
     }
 }

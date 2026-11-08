@@ -13,15 +13,15 @@ public static class ReportPathResolver
     ///     filled in. Custom: the typed location and file name, complete once both are filled in.
     /// </summary>
     /// <param name="settings">The current settings.</param>
-    /// <param name="directions">The audit direction the report belongs to.</param>
+    /// <param name="direction">The audit direction the report belongs to.</param>
     /// <returns>The resolved report path.</returns>
-    public static ReportPath Resolve(AppSettings settings, AuditDirections directions)
+    public static ReportPath Resolve(AppSettings settings, AuditDirections direction)
     {
         if (settings.UseCustomReportLocation)
         {
             string location = settings.CustomLocation.Trim();
 
-            string fileName = directions is AuditDirections.Missing
+            string fileName = direction is AuditDirections.Missing
                                   ? settings.MissingCustomFileName.Trim()
                                   : settings.UnindexedCustomFileName.Trim();
 
@@ -30,9 +30,9 @@ public static class ReportPathResolver
 
         string projectFolder = settings.ProjectFolder.Trim();
 
-        AuditStages auditStages = settings.ProjectStage is ProjectStages.Sample
-                                      ? AuditStages.Interim
-                                      : settings.AuditStage;
+        AuditStages auditStage = settings.ProjectStage is ProjectStages.Sample
+                                     ? AuditStages.Interim
+                                     : settings.AuditStage;
 
         string directory = Path.Combine(BuiltRoot,
                                         projectFolder.Length > 0
@@ -41,7 +41,7 @@ public static class ReportPathResolver
                                         path3: "DE",
                                         settings.ProjectStage.ToString());
 
-        return new ReportPath(directory, $"FileAuditor{directions}Report_{auditStages}.txt", projectFolder.Length > 0, IsCustom: false);
+        return new ReportPath(directory, $"FileAuditor{direction}Report_{auditStage}.txt", projectFolder.Length > 0, IsCustom: false);
     }
 
     /// <summary>

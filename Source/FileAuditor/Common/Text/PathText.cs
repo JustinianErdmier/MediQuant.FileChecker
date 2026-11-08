@@ -20,12 +20,12 @@ public static class PathText
     {
         StringBuilder builder = new(path.Length + path.Length / 8);
 
-        foreach (char c in path)
+        foreach (char character in path)
         {
-            switch (c)
+            switch (character)
             {
                 case '\\' or '/':
-                    builder.Append(c)
+                    builder.Append(character)
                            .Append(ZeroWidthSpace);
 
                     break;
@@ -36,13 +36,13 @@ public static class PathText
                     break;
 
                 case '-':
-                    builder.Append(c)
+                    builder.Append(character)
                            .Append(WordJoiner);
 
                     break;
 
                 default:
-                    builder.Append(c);
+                    builder.Append(character);
 
                     break;
             }

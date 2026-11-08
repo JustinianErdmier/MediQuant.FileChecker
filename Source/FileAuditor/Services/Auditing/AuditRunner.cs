@@ -65,7 +65,7 @@ public sealed class AuditRunner
         });
 
         // Cancelled by the caller's token, and by this method when the consumer dies, so the reader is never left blocked on a full channel.
-        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         ErrorOr<Success> readResult = Result.Success;
 
@@ -74,7 +74,7 @@ public sealed class AuditRunner
                                      try
                                      {
                                          // ReSharper disable AccessToDisposedClosure
-                                         readResult = await IndexTableReader.ReadAsync(connectionString, query, row => channel.Writer.WriteAsync(row, linked.Token), linked.Token);
+                                         readResult = await IndexTableReader.ReadAsync(connectionString, query, row => channel.Writer.WriteAsync(row, linkedSource.Token), linkedSource.Token);
                                          // ReSharper restore AccessToDisposedClosure
                                      }
                                      finally
@@ -88,22 +88,22 @@ public sealed class AuditRunner
 
         try
         {
-            await Parallel.ForEachAsync(channel.Reader.ReadAllAsync(linked.Token),
+            await Parallel.ForEachAsync(channel.Reader.ReadAllAsync(linkedSource.Token),
                                         new ParallelOptions
                                         {
                                             MaxDegreeOfParallelism = MaxParallelism,
-                                            CancellationToken      = linked.Token
+                                            CancellationToken      = linkedSource.Token
                                         },
                                         (row, _) =>
                                         {
                                             CheckResult result = checker.Check(row);
 
-                                            if (result.Outcomes is not (CheckOutcomes.Found or CheckOutcomes.Skipped))
+                                            if (result.Outcome is not (CheckOutcomes.Found or CheckOutcomes.Skipped))
                                             {
                                                 problems.Add(result);
                                             }
 
-                                            progress.Record(result.Outcomes);
+                                            progress.Record(result.Outcome);
 
                                             return ValueTask.CompletedTask;
                                         });
@@ -114,7 +114,7 @@ public sealed class AuditRunner
         }
         catch
         {
-            await linked.CancelAsync();
+            await linkedSource.CancelAsync();
 
             await Task.WhenAny(producer);
 
@@ -137,12 +137,12 @@ public sealed class AuditRunner
 
         long             checkedCount   = progress.Checked;
         long             skippedCount   = progress.Skipped;
-        AuditResultKinds kinds          = AuditResultKinds.Completed;
+        AuditResultKinds result         = AuditResultKinds.Completed;
         string?          failureMessage = null;
 
         if (stopped)
         {
-            kinds = AuditResultKinds.StoppedByUser;
+            result = AuditResultKinds.StoppedByUser;
         }
         else if (readResult.IsError)
         {
@@ -151,7 +151,7 @@ public sealed class AuditRunner
                 return readResult.Errors;
             }
 
-            kinds          = AuditResultKinds.Failed;
+            result         = AuditResultKinds.Failed;
             failureMessage = readResult.FirstError.Description;
         }
 
@@ -161,7 +161,7 @@ public sealed class AuditRunner
         AuditReport report = new(settings,
                                  startedUtc,
                                  DateTime.UtcNow,
-                                 kinds,
+                                 result,
                                  failureMessage,
                                  Math.Max(total, checkedCount + skippedCount),
                                  checkedCount - problems.Count,

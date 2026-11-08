@@ -9,7 +9,7 @@ public sealed partial class ProjectSettingsViewModel : ObservableObject
 
     private const string SameFolderMessage = "Saved as FileAuditorSettings.json in the same folder as the audit reports.";
 
-    private readonly ProjectSettingsService _project;
+    private readonly ProjectSettingsService _projectSettingsService;
 
     /// <summary>Initialises a new instance with its own default state, for the XAML designer.</summary>
     public ProjectSettingsViewModel()
@@ -18,14 +18,14 @@ public sealed partial class ProjectSettingsViewModel : ObservableObject
 
     /// <summary>Initialises a new instance over the shared report location and the open project.</summary>
     /// <param name="shared">The location values and the save tick that every group shares.</param>
-    /// <param name="project">Holds the open project's settings file.</param>
-    public ProjectSettingsViewModel(ReportLocationState shared, ProjectSettingsService project)
+    /// <param name="projectSettingsService">Holds the open project's settings file.</param>
+    public ProjectSettingsViewModel(ReportLocationState shared, ProjectSettingsService projectSettingsService)
     {
-        Shared   = shared;
-        _project = project;
+        Shared                  = shared;
+        _projectSettingsService = projectSettingsService;
 
-        Shared.PropertyChanged   += OnSharedChanged;
-        _project.FilePathChanged += OnFilePathChanged;
+        Shared.PropertyChanged                  += OnSharedChanged;
+        _projectSettingsService.FilePathChanged += OnFilePathChanged;
 
         Message = ComposeMessage();
     }
@@ -37,9 +37,9 @@ public sealed partial class ProjectSettingsViewModel : ObservableObject
     /// <summary>Gets the location values and the save tick shared with the other groups.</summary>
     public ReportLocationState Shared { get; }
 
-    private void OnSharedChanged(object? sender, PropertyChangedEventArgs e) => Message = ComposeMessage();
+    private void OnSharedChanged(object? sender, PropertyChangedEventArgs eventArgs) => Message = ComposeMessage();
 
-    private void OnFilePathChanged(object? sender, EventArgs e) => Message = ComposeMessage();
+    private void OnFilePathChanged(object? sender, EventArgs eventArgs) => Message = ComposeMessage();
 
     private string ComposeMessage()
     {
@@ -48,13 +48,13 @@ public sealed partial class ProjectSettingsViewModel : ObservableObject
             return NotSavedMessage;
         }
 
-        if (_project.FilePath is null)
+        if (_projectSettingsService.FilePath is null)
         {
             return SameFolderMessage;
         }
 
         ReportPath folder = Shared.ResolveFolder();
 
-        return folder.IsComplete && _project.IsInFolder(folder.Directory) ? SameFolderMessage : DifferentFolderMessage;
+        return folder.IsComplete && _projectSettingsService.IsInFolder(folder.Directory) ? SameFolderMessage : DifferentFolderMessage;
     }
 }

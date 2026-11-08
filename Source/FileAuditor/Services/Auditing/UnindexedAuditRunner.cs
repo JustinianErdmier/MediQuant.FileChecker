@@ -105,16 +105,16 @@ public sealed class UnindexedAuditRunner
 
         progress.StopScan();
 
-        AuditResultKinds kinds = cancellationToken.IsCancellationRequested
-                                     ? AuditResultKinds.StoppedByUser
-                                     : AuditResultKinds.Completed;
+        AuditResultKinds result = cancellationToken.IsCancellationRequested
+                                      ? AuditResultKinds.StoppedByUser
+                                      : AuditResultKinds.Completed;
 
         progress.Phase = "Writing report...";
 
         UnindexedReport report = new(settings,
                                      startedUtc,
                                      DateTime.UtcNow,
-                                     kinds,
+                                     result,
                                      [.. unindexed],
                                      [.. unverified],
                                      progress.TotalFiles,

@@ -129,14 +129,14 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     }
 
     // A change to the list or to a row's checkbox is an input change, like a change to either box.
-    private void OnFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    private void OnFoldersChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
     {
-        foreach (ScanFolderItem item in e.OldItems?.OfType<ScanFolderItem>() ?? [])
+        foreach (ScanFolderItem item in eventArgs.OldItems?.OfType<ScanFolderItem>() ?? [])
         {
             item.PropertyChanged -= OnFolderChanged;
         }
 
-        foreach (ScanFolderItem item in e.NewItems?.OfType<ScanFolderItem>() ?? [])
+        foreach (ScanFolderItem item in eventArgs.NewItems?.OfType<ScanFolderItem>() ?? [])
         {
             item.PropertyChanged += OnFolderChanged;
         }

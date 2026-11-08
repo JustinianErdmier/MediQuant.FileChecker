@@ -61,7 +61,7 @@ public static class ReportBuilder
 
     private static void AddSummary(List<string> lines, AuditReport report)
     {
-        long missing    = report.Problems.Count(result => result.Outcomes is CheckOutcomes.MissingEmpty or CheckOutcomes.MissingDoesNotExist);
+        long missing    = report.Problems.Count(result => result.Outcome is CheckOutcomes.MissingEmpty or CheckOutcomes.MissingDoesNotExist);
         long unverified = report.Problems.Count - missing;
 
         lines.Add(item: "Summary");
@@ -85,7 +85,7 @@ public static class ReportBuilder
             .. from outcome in order
                let results = (List<CheckResult>)
                [
-                   .. report.Problems.Where(result => result.Outcomes == outcome)
+                   .. report.Problems.Where(result => result.Outcome == outcome)
                             .OrderBy(result => result.Row.Path, StringComparer.OrdinalIgnoreCase)
                             .ThenBy(result => result.Row.Path, StringComparer.Ordinal)
                             .ThenBy(result => result.Row.Id        ?? string.Empty, StringComparer.Ordinal)
@@ -122,7 +122,7 @@ public static class ReportBuilder
         }
     }
 
-    private static void AddFileLines(List<string> lines, CheckOutcomes outcomes, List<CheckResult> results, AppSettings settings)
+    private static void AddFileLines(List<string> lines, CheckOutcomes outcome, List<CheckResult> results, AppSettings settings)
     {
         bool hasId = HasIdColumn(settings);
 
@@ -149,7 +149,7 @@ public static class ReportBuilder
 
             line.Append(paths[index]);
 
-            if (outcomes is CheckOutcomes.UnverifiedOther)
+            if (outcome is CheckOutcomes.UnverifiedOther)
             {
                 line.Append(new string(c: ' ', pathWidth - paths[index].Length))
                     .Append(ColumnGap);
@@ -166,8 +166,8 @@ public static class ReportBuilder
         }
     }
 
-    private static string GroupTitle(CheckOutcomes outcomes)
-        => outcomes switch
+    private static string GroupTitle(CheckOutcomes outcome)
+        => outcome switch
         {
             CheckOutcomes.MissingEmpty                   => "Empty",
             CheckOutcomes.MissingDoesNotExist            => "Does not exist",

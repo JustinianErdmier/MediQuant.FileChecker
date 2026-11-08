@@ -100,7 +100,7 @@ public sealed class ProjectSettingsService
             return SavePointResult.Go;
         }
 
-        bool tick = false;
+        bool shouldTick = false;
 
         if (!saveTicked)
         {
@@ -116,7 +116,7 @@ public sealed class ProjectSettingsService
                 return SavePointResult.Go;
             }
 
-            tick = true;
+            shouldTick = true;
         }
 
         // A built location is only usable when the project folder is a single valid folder name; Start checks this in the pre-flight, other save points here.
@@ -126,7 +126,7 @@ public sealed class ProjectSettingsService
                                 || ReportPathResolver.IsSingleFolderName(current.ProjectFolder.Trim()));
 
         string target;
-        bool   own;
+        bool   isOpenedFile;
 
         if (FilePath is null)
         {
@@ -135,13 +135,13 @@ public sealed class ProjectSettingsService
                 return await CannotSaveAsync(report.DisplayDirectory, reason: "The report location is incomplete.", Done);
             }
 
-            target = Path.Combine(report.Directory, SettingsStore.FileName);
-            own    = false;
+            target       = Path.Combine(report.Directory, SettingsStore.FileName);
+            isOpenedFile = false;
         }
         else if (reportUsable
                  && !SameFolder(Path.GetDirectoryName(FilePath) ?? string.Empty, report.Directory))
         {
-            DialogueChoices choices
+            DialogueChoices choice
                 = await _dialogues.ChooseAsync($"The report folder has changed.\n\nThis project's settings were opened from:\n{PathText.Breakable(FilePath)}\n\n"
                                                + $"The report is now written to:\n{PathText.Breakable(report.DisplayDirectory)}\n\nWhere should the settings be saved?",
                                                DialogueIcons.Question,
@@ -149,17 +149,17 @@ public sealed class ProjectSettingsService
                                                secondaryText: "_Original File",
                                                tertiaryText: "Cancel");
 
-            switch (choices)
+            switch (choice)
             {
                 case DialogueChoices.Primary:
-                    target = Path.Combine(report.Directory, SettingsStore.FileName);
-                    own    = false;
+                    target       = Path.Combine(report.Directory, SettingsStore.FileName);
+                    isOpenedFile = false;
 
                     break;
 
                 case DialogueChoices.Secondary:
-                    target = FilePath;
-                    own    = true;
+                    target       = FilePath;
+                    isOpenedFile = true;
 
                     break;
 
@@ -172,8 +172,8 @@ public sealed class ProjectSettingsService
         }
         else
         {
-            target = FilePath;
-            own    = true;
+            target       = FilePath;
+            isOpenedFile = true;
         }
 
         string folder = Path.GetDirectoryName(target) ?? string.Empty;
@@ -183,17 +183,17 @@ public sealed class ProjectSettingsService
             return await CannotSaveAsync(target, reason: "The folder does not exist.", Done);
         }
 
-        if (!own
+        if (!isOpenedFile
             && await Task.Run(() => File.Exists(target)))
         {
-            DialogueChoices choices
+            DialogueChoices choice
                 = await _dialogues.ChooseAsync($"A project settings file already exists in this folder:\n{PathText.Breakable(target)}\n\nDo you want to overwrite it?",
                                                DialogueIcons.Warning,
                                                primaryText: "_Overwrite",
                                                secondaryText: "_Skip Save",
                                                tertiaryText: "Cancel");
 
-            switch (choices)
+            switch (choice)
             {
                 case DialogueChoices.Secondary:
                     return Done();
@@ -221,17 +221,17 @@ public sealed class ProjectSettingsService
 
         return Done();
 
-        SavePointResult Done() => tick ? SavePointResult.GoAndTick : SavePointResult.Go;
+        SavePointResult Done() => shouldTick ? SavePointResult.GoAndTick : SavePointResult.Go;
     }
 
     private async Task<SavePointResult> CannotSaveAsync(string path, string reason, Func<SavePointResult> done)
     {
-        DialogueChoices choices = await _dialogues.ChooseAsync($"This project's settings cannot be saved:\n{PathText.Breakable(path)}\n\n{reason}",
-                                                               DialogueIcons.Error,
-                                                               primaryText: "_Skip Save",
-                                                               secondaryText: "Cancel");
+        DialogueChoices choice = await _dialogues.ChooseAsync($"This project's settings cannot be saved:\n{PathText.Breakable(path)}\n\n{reason}",
+                                                              DialogueIcons.Error,
+                                                              primaryText: "_Skip Save",
+                                                              secondaryText: "Cancel");
 
-        return choices switch
+        return choice switch
         {
             DialogueChoices.Primary   => done(),
             DialogueChoices.Secondary => SavePointResult.Cancel,
@@ -240,12 +240,12 @@ public sealed class ProjectSettingsService
     }
 
     // Compares the full paths, so a relative segment or a mixed separator does not make the same folder look different.
-    private static bool SameFolder(string a, string b)
+    private static bool SameFolder(string firstPath, string secondPath)
     {
         try
         {
-            a = Path.GetFullPath(a);
-            b = Path.GetFullPath(b);
+            firstPath  = Path.GetFullPath(firstPath);
+            secondPath = Path.GetFullPath(secondPath);
         }
         catch (Exception exception) when (exception is ArgumentException
                                                        or NotSupportedException
@@ -254,7 +254,7 @@ public sealed class ProjectSettingsService
             // Compare the paths as given.
         }
 
-        return string.Equals(Path.TrimEndingDirectorySeparator(a), Path.TrimEndingDirectorySeparator(b), StringComparison.OrdinalIgnoreCase);
+        return string.Equals(Path.TrimEndingDirectorySeparator(firstPath), Path.TrimEndingDirectorySeparator(secondPath), StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Raised whenever <see cref="FilePath" /> changes: a project is opened, reset, or first saved or saved to a new target.</summary>
