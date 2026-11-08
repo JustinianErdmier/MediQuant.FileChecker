@@ -3,8 +3,12 @@ namespace FileAuditor.ViewModels.Groups;
 /// <summary>The Audit group of the Unindexed Files tab: read-only run statistics as display strings, blank before the first run. It has no Remaining time.</summary>
 public sealed partial class UnindexedAuditViewModel : AuditStatusBase
 {
-    // How far the sweep advances on each refresh; with refreshes four times a second the bar crosses in about three seconds.
-    private const double SweepStep = 9;
+    // The marquee block is MarqueeWidth of 100 units wide and moves MarqueeStep units on each refresh, so with four refreshes a second it crosses in four seconds.
+    private const double MarqueeWidth = 20;
+
+    private const double MarqueeStep = 5;
+
+    private double _marqueePosition;
 
     /// <summary>Gets or sets the elapsed time as <c>hh:mm:ss</c>.</summary>
     [ ObservableProperty ]
@@ -18,10 +22,22 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     [ ObservableProperty ]
     public partial string Indexed { get; set; } = "";
 
-    /// <summary>
-    ///     Gets or sets the progress-bar position, from 0 to 100. The total is unknown, so while a run is under way the bar sweeps from empty to full and starts again, and it is
-    ///     full when the run ends. (The Classic theme draws nothing for <c>ProgressBar.IsIndeterminate</c>, so the sweep is driven from here.)
-    /// </summary>
+    /// <summary>Gets or sets a value indicating whether a run is under way, which shows the moving block in place of the progress bar.</summary>
+    [ ObservableProperty ]
+    public partial bool IsRunning { get; set; }
+
+    /// <summary>Gets or sets the width, in star units, of the gap before the moving block.</summary>
+    [ ObservableProperty ]
+    public partial GridLength MarqueeBefore { get; set; } = new(value: 0, GridUnitType.Star);
+
+    /// <summary>Gets or sets the width, in star units, of the gap after the moving block.</summary>
+    [ ObservableProperty ]
+    public partial GridLength MarqueeAfter { get; set; } = new(100 - MarqueeWidth, GridUnitType.Star);
+
+    /// <summary>Gets the width, in star units, of the moving block.</summary>
+    public GridLength MarqueeBlock { get; } = new(MarqueeWidth, GridUnitType.Star);
+
+    /// <summary>Gets or sets the progress-bar position: full when a run has ended, otherwise empty; a running audit shows the moving block instead.</summary>
     [ ObservableProperty ]
     public partial double Percent { get; set; }
 
@@ -40,20 +56,32 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     /// <inheritdoc />
     public override void Reset()
     {
-        TotalFiles      = "";
-        Indexed         = "";
-        Unindexed       = "";
-        Unverified      = "";
-        Elapsed         = "";
-        FilesPerSecond  = "";
-        Percent         = 0;
-        StatusPercent   = "";
+        TotalFiles     = "";
+        Indexed        = "";
+        Unindexed      = "";
+        Unverified     = "";
+        Elapsed        = "";
+        FilesPerSecond = "";
+        Percent        = 0;
+        StatusPercent  = "";
+
+        SetMarquee(position: 0);
+
+        IsRunning = false;
+    }
+
+    /// <summary>Shows the moving block, for the moment a run begins and nothing has been counted yet.</summary>
+    public void Begin()
+    {
+        SetMarquee(position: 0);
+
+        IsRunning = true;
     }
 
     /// <summary>Refreshes the statistics from a running audit.</summary>
     /// <param name="progress">The audit's live counters.</param>
     /// <param name="elapsed">The time since the run started.</param>
-    /// <param name="isFinished">Whether the run has ended, which fills the progress bar; otherwise each refresh advances its sweep.</param>
+    /// <param name="isFinished">Whether the run has ended, which fills the progress bar; otherwise each refresh moves the block on.</param>
     public void Update(UnindexedProgress progress, TimeSpan elapsed, bool isFinished)
     {
         long total = progress.TotalFiles;
@@ -65,7 +93,22 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
         Elapsed        = $"{(long)elapsed.TotalHours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}";
         FilesPerSecond = elapsed.TotalSeconds >= 1 ? (total / elapsed.TotalSeconds).ToString(format: "0.00", CultureInfo.CurrentCulture) : "";
 
-        Percent       = isFinished ? 100 : Percent >= 100 ? 0 : Math.Min(val1: 100, Percent + SweepStep);
+        IsRunning     = !isFinished;
+        Percent       = isFinished ? 100 : 0;
         StatusPercent = isFinished ? "100%" : "";
+
+        if (!isFinished)
+        {
+            // The block runs off the right-hand end and starts again from the left.
+            SetMarquee(_marqueePosition + MarqueeStep > 100 - MarqueeWidth ? 0 : _marqueePosition + MarqueeStep);
+        }
+    }
+
+    private void SetMarquee(double position)
+    {
+        _marqueePosition = position;
+
+        MarqueeBefore = new GridLength(position, GridUnitType.Star);
+        MarqueeAfter  = new GridLength(100 - MarqueeWidth - position, GridUnitType.Star);
     }
 }

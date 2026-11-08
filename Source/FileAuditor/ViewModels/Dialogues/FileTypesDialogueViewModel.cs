@@ -1,0 +1,84 @@
+namespace FileAuditor.ViewModels.Dialogues;
+
+/// <summary>The content of the file types editor: one editable entry per line, with New, Delete and (for File types only) Reset.</summary>
+public sealed partial class FileTypesDialogueViewModel : ObservableObject
+{
+    /// <summary>Initialises a new instance with placeholder content, for the XAML designer.</summary>
+    public FileTypesDialogueViewModel()
+        : this("Edit File Types", FileTypeList.Defaults, canReset: true)
+    { }
+
+    /// <summary>Initialises a new instance.</summary>
+    /// <param name="title">The window title.</param>
+    /// <param name="entries">The entries to start with.</param>
+    /// <param name="canReset">Whether the dialogue offers Reset, which restores the built-in file types.</param>
+    public FileTypesDialogueViewModel(string title, IEnumerable<string> entries, bool canReset)
+    {
+        Title    = title;
+        CanReset = canReset;
+
+        foreach (string entry in entries)
+        {
+            Entries.Add(new FileTypeEntryItem(entry));
+        }
+    }
+
+    /// <summary>Gets a value indicating whether Reset is offered.</summary>
+    public bool CanReset { get; }
+
+    /// <summary>Gets the entries, one per line.</summary>
+    public ObservableCollection<FileTypeEntryItem> Entries { get; } = [];
+
+    /// <summary>Gets or sets the selected line.</summary>
+    [ ObservableProperty ]
+    [ NotifyCanExecuteChangedFor(nameof(DeleteCommand)) ]
+    public partial FileTypeEntryItem? SelectedEntry { get; set; }
+
+    /// <summary>Gets the window title.</summary>
+    public string Title { get; }
+
+    /// <summary>Appends an empty line and selects it.</summary>
+    /// <returns>The new line.</returns>
+    public FileTypeEntryItem AddEntry()
+    {
+        FileTypeEntryItem item = new(text: "");
+
+        Entries.Add(item);
+
+        SelectedEntry = item;
+
+        return item;
+    }
+
+    /// <summary>Validates and normalises the entries.</summary>
+    /// <returns>The normalised entries, or the first entry that is not valid.</returns>
+    public ErrorOr<string[]> Validate() => FileTypeList.Parse(string.Join(separator: ' ', Entries.Select(entry => entry.Text)));
+
+    private bool CanDelete() => SelectedEntry is not null;
+
+    [ RelayCommand(CanExecute = nameof(CanDelete)) ]
+    private void Delete()
+    {
+        if (SelectedEntry is not { } item)
+        {
+            return;
+        }
+
+        int index = Entries.IndexOf(item);
+
+        Entries.Remove(item);
+
+        SelectedEntry = Entries.Count == 0 ? null : Entries[Math.Min(index, Entries.Count - 1)];
+    }
+
+    [ RelayCommand ]
+    private void Reset()
+    {
+        Entries.Clear();
+
+        foreach (string entry in FileTypeList.Defaults)
+        {
+            Entries.Add(new FileTypeEntryItem(entry));
+        }
+    }
+}

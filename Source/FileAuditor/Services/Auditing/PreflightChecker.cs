@@ -11,9 +11,8 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
     /// </summary>
     /// <param name="settings">The settings to audit with.</param>
     /// <param name="direction">The audit direction, which decides the report file name.</param>
-    /// <param name="typeText">The File types and Exclude boxes as typed; read only for the Unindexed direction.</param>
     /// <returns>The resolved report path when the run may start; <see langword="null" /> when a check failed or the user declined (the user has been told).</returns>
-    public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirection direction, FileTypeText? typeText = null)
+    public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirection direction)
     {
         ErrorOr<AuditQuery> query = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn);
 
@@ -44,10 +43,8 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             return null;
         }
 
-        FileTypeText types = typeText ?? new FileTypeText(FileTypeList.Format(settings.FileTypes ?? []), FileTypeList.Format(settings.ExcludeTypes ?? []));
-
         if (direction == AuditDirection.Unindexed
-            && !await CheckUnindexedInputsAsync(settings, types))
+            && !await CheckUnindexedInputsAsync(settings))
         {
             return null;
         }
@@ -129,7 +126,7 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
     }
 
     // The Unindexed direction's own inputs: folders first, then the two type lists, then the three warnings in the order of milestone 4 spec §3.3.
-    private async Task<bool> CheckUnindexedInputsAsync(AppSettings settings, FileTypeText text)
+    private async Task<bool> CheckUnindexedInputsAsync(AppSettings settings)
     {
         IReadOnlyList<ScanFolder> folders = settings.ScanFolders ?? [];
 
@@ -150,8 +147,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             return false;
         }
 
-        ErrorOr<string[]> include = FileTypeList.Parse(text.FileTypes);
-        ErrorOr<string[]> exclude = FileTypeList.Parse(text.Exclude);
+        // The Edit dialogues only accept valid entries, so an invalid one can come only from a project file edited by hand.
+        ErrorOr<string[]> include = FileTypeList.Parse(string.Join(separator: ' ', settings.FileTypes ?? []));
+        ErrorOr<string[]> exclude = FileTypeList.Parse(string.Join(separator: ' ', settings.ExcludeTypes ?? []));
 
         if (include.IsError || exclude.IsError)
         {

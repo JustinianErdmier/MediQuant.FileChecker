@@ -37,7 +37,7 @@ public sealed partial class ReportViewModel : ObservableObject
     /// <summary>Gets the audit direction whose report this group describes.</summary>
     public AuditDirection Direction { get; }
 
-    /// <summary>Gets or sets a value indicating whether the unindexed report groups files by the extension found, not the listed type. Used by the Unindexed direction only.</summary>
+    /// <summary>Gets or sets a value indicating whether the unindexed report groups files by the found extension, not the listed type. Unindexed direction only.</summary>
     [ ObservableProperty ]
     [ NotifyPropertyChangedFor(nameof(GroupByListedType)) ]
     public partial bool GroupByFoundExtension { get; set; }

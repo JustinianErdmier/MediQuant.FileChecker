@@ -16,6 +16,9 @@ public sealed class UnindexedAuditRun(UnindexedAuditViewModel audit, UnindexedAu
     public override string Phase => _progress.Phase;
 
     /// <inheritdoc />
+    public override void Begin() => audit.Begin();
+
+    /// <inheritdoc />
     public override void Update(TimeSpan elapsed, bool isFinished) => audit.Update(_progress, elapsed, isFinished);
 
     /// <inheritdoc />

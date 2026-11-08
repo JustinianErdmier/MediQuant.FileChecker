@@ -3,6 +3,8 @@ namespace FileAuditor.ViewModels.Tabs;
 /// <summary>The Unindexed Files tab: its Folders to Check group, its direction's Report group and its Audit group.</summary>
 public sealed partial class UnindexedFilesTabViewModel : ObservableObject
 {
+    private readonly DialogueService? _dialogues;
+
     /// <summary>Initialises a new instance with its own default shared state, for the XAML designer.</summary>
     public UnindexedFilesTabViewModel()
         : this(new ReportLocationState())
@@ -10,8 +12,11 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
 
     /// <summary>Initialises a new instance over the shared report location.</summary>
     /// <param name="shared">The report location values every tab shares.</param>
-    public UnindexedFilesTabViewModel(ReportLocationState shared)
+    /// <param name="dialogues">Shows the file types editor; <see langword="null" /> in the XAML designer.</param>
+    public UnindexedFilesTabViewModel(ReportLocationState shared, DialogueService? dialogues = null)
     {
+        _dialogues = dialogues;
+
         Report = new ReportViewModel(shared, AuditDirection.Unindexed);
         Audit  = new UnindexedAuditViewModel();
 
@@ -21,11 +26,11 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     /// <summary>Gets the Audit group.</summary>
     public UnindexedAuditViewModel Audit { get; }
 
-    /// <summary>Gets or sets the Exclude box: the extension blacklist, parsed on Start and when saved.</summary>
+    /// <summary>Gets or sets the Exclude summary: the extension blacklist in normal form, changed only through its editor.</summary>
     [ ObservableProperty ]
     public partial string ExcludeText { get; set; } = "";
 
-    /// <summary>Gets or sets the File types box: the extension whitelist, parsed on Start and when saved.</summary>
+    /// <summary>Gets or sets the File types summary: the extension whitelist in normal form, changed only through its editor.</summary>
     [ ObservableProperty ]
     public partial string FileTypesText { get; set; } = FileTypeList.Format(FileTypeList.Defaults);
 
@@ -39,9 +44,6 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     [ ObservableProperty ]
     [ NotifyCanExecuteChangedFor(nameof(RemoveCommand)) ]
     public partial ScanFolderItem? SelectedFolder { get; set; }
-
-    /// <summary>Gets the two boxes as typed, for the pre-flight to parse.</summary>
-    public FileTypeText TypeText => new(FileTypesText, ExcludeText);
 
     /// <summary>Adds a folder to the list unless it is already there.</summary>
     /// <param name="path">The folder's full path.</param>
@@ -64,7 +66,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         return true;
     }
 
-    /// <summary>Copies this tab's inputs into the given settings. Entries that are not valid are left out; the pre-flight reports them.</summary>
+    /// <summary>Copies this tab's inputs into the given settings.</summary>
     /// <param name="settings">The settings to start from.</param>
     /// <returns>A copy of <paramref name="settings" /> carrying this tab's inputs.</returns>
     public AppSettings ApplyTo(AppSettings settings)
@@ -72,8 +74,8 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         {
             ScanFolders = Folders.Select(folder => new ScanFolder(folder.Path, folder.IncludeSubfolders))
                                  .ToArray(),
-            FileTypes = ParseLeniently(FileTypesText),
-            ExcludeTypes = ParseLeniently(ExcludeText)
+            FileTypes = Entries(FileTypesText),
+            ExcludeTypes = Entries(ExcludeText)
         });
 
     /// <summary>Sets this tab's inputs from the given settings.</summary>
@@ -93,7 +95,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         Report.Load(settings);
     }
 
-    /// <summary>Rewrites both boxes in their normal form (lower case, a leading dot, sorted), once the pre-flight has accepted them.</summary>
+    /// <summary>Rewrites both summaries in normal form (lower case, leading dot, sorted) once the pre-flight accepts them; a hand-edited project file may hold others.</summary>
     /// <param name="settings">The settings the pre-flight accepted.</param>
     public void Normalise(AppSettings settings)
     {
@@ -101,27 +103,29 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         ExcludeText   = FileTypeList.Format(settings.ExcludeTypes ?? []);
     }
 
-    private static string[] ParseLeniently(string text)
+    private static string[] Entries(string text) => text.Split(FileTypeList.Separators.ToArray(), StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    [ RelayCommand ]
+    private async Task EditFileTypesAsync()
     {
-        ErrorOr<string[]> parsed = FileTypeList.Parse(text);
+        string[]? edited = _dialogues is null ? null : await _dialogues.EditFileTypesAsync("Edit File Types", Entries(FileTypesText), canReset: true);
 
-        if (!parsed.IsError)
+        if (edited is not null)
         {
-            return parsed.Value;
+            FileTypesText = FileTypeList.Format(edited);
         }
-
-        return text.Split([ ',', ' ', '\t', '\r', '\n' ], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                   .Select(FileTypeList.Parse)
-                   .Where(entry => !entry.IsError)
-                   .SelectMany(entry => entry.Value)
-                   .Distinct()
-                   .Order(StringComparer.Ordinal)
-                   .ToArray();
     }
 
     [ RelayCommand ]
-    private void ResetTypes() => FileTypesText = FileTypeList.Format(FileTypeList.Defaults);
+    private async Task EditExcludeAsync()
+    {
+        string[]? edited = _dialogues is null ? null : await _dialogues.EditFileTypesAsync("Edit Exclude List", Entries(ExcludeText), canReset: false);
 
+        if (edited is not null)
+        {
+            ExcludeText = FileTypeList.Format(edited);
+        }
+    }
     private bool CanRemove() => SelectedFolder is not null;
 
     [ RelayCommand(CanExecute = nameof(CanRemove)) ]

@@ -7,6 +7,9 @@ public static class FileTypeList
                                                    .Where(c => c is not ('*' or '?'))
                                                    .ToArray();
 
+    /// <summary>Gets the characters that separate entries in a list of file types: white space and commas.</summary>
+    public static IReadOnlyList<char> Separators { get; } = [ ',', ' ', '\t', '\r', '\n' ];
+
     /// <summary>Gets the built-in File types, sorted.</summary>
     public static IReadOnlyList<string> Defaults { get; } =
     [
@@ -41,7 +44,7 @@ public static class FileTypeList
     {
         SortedSet<string> entries = new(StringComparer.Ordinal);
 
-        foreach (string raw in text.Split([ ',', ' ', '\t', '\r', '\n' ], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (string raw in text.Split(Separators.ToArray(), StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             string? normalised = Normalise(raw);
 

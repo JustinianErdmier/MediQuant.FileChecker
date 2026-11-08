@@ -65,7 +65,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         FileIndexTable = new FileIndexTableViewModel(settings);
         ReportLocation = new ReportLocationState();
         MissingFiles   = new MissingFilesTabViewModel(ReportLocation);
-        UnindexedFiles = new UnindexedFilesTabViewModel(ReportLocation);
+        UnindexedFiles = new UnindexedFilesTabViewModel(ReportLocation, dialogues);
 
         Database.PropertyChanged            += OnInputChanged;
         FileIndexTable.PropertyChanged      += OnInputChanged;
@@ -348,7 +348,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         AuditDirection direction = SelectedDirection;
         AppSettings settings     = Snapshot();
-        ReportPath? reportPath   = await _preflight.RunAsync(settings, direction, UnindexedFiles.TypeText);
+        ReportPath? reportPath   = await _preflight.RunAsync(settings, direction);
 
         if (reportPath is null)
         {
@@ -398,6 +398,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _auditCts = cts;
 
         audit.Reset();
+        run.Begin();
 
         audit.StatusMessage = run.Phase;
         _runningDirection   = direction;

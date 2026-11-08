@@ -15,69 +15,67 @@
     <ct:GroupBox Header="Report"
                  Margin="4,2">
         <Grid ColumnDefinitions="92,*,Auto"
-              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
-              RowSpacing="6"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+              RowSpacing="4"
               Margin="4">
             <CheckBox Grid.ColumnSpan="3"
                       Content="_Use a custom report location and file name"
                       IsChecked="{Binding Shared.UseCustomLocation}" />
-            <Label Grid.Row="1"
-                   Content="Pro_ject folder:"
-                   Target="{Binding #ProjectFolderBox}"
-                   IsEnabled="{Binding Shared.IsBuilt}"
-                   VerticalAlignment="Center" />
-            <Grid Grid.Row="1"
-                  Grid.Column="1"
-                  Grid.ColumnSpan="2"
-                  ColumnDefinitions="140,*">
-                <TextBox x:Name="ProjectFolderBox"
-                         Watermark="D12345"
-                         Text="{Binding Shared.ProjectFolder}"
-                         IsEnabled="{Binding Shared.IsBuilt}" />
-            </Grid>
-            <Grid Grid.Row="2"
-                  Grid.ColumnSpan="3"
-                  ColumnDefinitions="*,*"
-                  ColumnSpacing="6">
-                <ct:GroupBox Header="Project Stage"
-                             IsEnabled="{Binding Shared.IsBuilt}">
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="14"
-                                Margin="4">
-                        <RadioButton GroupName="ProjectStage"
-                                     Content="Sa_mple"
-                                     IsChecked="{Binding Shared.IsSampleProject}" />
-                        <RadioButton GroupName="ProjectStage"
-                                     Content="Fi_nal"
-                                     IsChecked="{Binding Shared.IsFinalProject}" />
-                    </StackPanel>
-                </ct:GroupBox>
-                <ct:GroupBox Grid.Column="1"
-                             Header="Audit Stage"
-                             IsEnabled="{Binding Shared.IsAuditStageEnabled}">
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="14"
-                                Margin="4">
-                        <RadioButton GroupName="AuditStage"
-                                     Content="Inte_rim"
-                                     IsChecked="{Binding Shared.IsInterimAudit}" />
-                        <RadioButton GroupName="AuditStage"
-                                     Content="Fina_l"
-                                     IsChecked="{Binding Shared.IsFinalAudit}" />
-                    </StackPanel>
-                </ct:GroupBox>
-            </Grid>
-            <Label Grid.Row="3"
+            <!-- The built location's inputs are hidden, not disabled, while a custom location is used. -->
+            <StackPanel Grid.Row="1"
+                        Grid.ColumnSpan="3"
+                        Spacing="4"
+                        IsVisible="{Binding Shared.IsBuilt}">
+                <Grid ColumnDefinitions="92,140,*">
+                    <Label Content="Pro_ject folder:"
+                           Target="{Binding #ProjectFolderBox}"
+                           VerticalAlignment="Center" />
+                    <TextBox x:Name="ProjectFolderBox"
+                             Grid.Column="1"
+                             Watermark="D12345"
+                             Text="{Binding Shared.ProjectFolder}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,*"
+                      ColumnSpacing="6">
+                    <ct:GroupBox Header="Project Stage">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="14"
+                                    Margin="4">
+                            <RadioButton GroupName="ProjectStage"
+                                         Content="Sa_mple"
+                                         IsChecked="{Binding Shared.IsSampleProject}" />
+                            <RadioButton GroupName="ProjectStage"
+                                         Content="Fi_nal"
+                                         IsChecked="{Binding Shared.IsFinalProject}" />
+                        </StackPanel>
+                    </ct:GroupBox>
+                    <ct:GroupBox Grid.Column="1"
+                                 Header="Audit Stage"
+                                 IsEnabled="{Binding Shared.IsAuditStageEnabled}">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="14"
+                                    Margin="4">
+                            <RadioButton GroupName="AuditStage"
+                                         Content="Inte_rim"
+                                         IsChecked="{Binding Shared.IsInterimAudit}" />
+                            <RadioButton GroupName="AuditStage"
+                                         Content="Fina_l"
+                                         IsChecked="{Binding Shared.IsFinalAudit}" />
+                        </StackPanel>
+                    </ct:GroupBox>
+                </Grid>
+            </StackPanel>
+            <Label Grid.Row="2"
                    Content="Lo_cation:"
                    Target="{Binding #LocationBox}"
                    VerticalAlignment="Center" />
             <TextBox x:Name="LocationBox"
-                     Grid.Row="3"
+                     Grid.Row="2"
                      Grid.Column="1"
                      Text="{Binding Location}"
                      IsReadOnly="{Binding Shared.IsBuilt}" />
             <Button x:Name="BrowseButton"
-                    Grid.Row="3"
+                    Grid.Row="2"
                     Grid.Column="2"
                     Content="_Browse..."
                     MinWidth="75"
@@ -86,19 +84,19 @@
                     HorizontalContentAlignment="Center"
                     IsEnabled="{Binding Shared.UseCustomLocation}"
                     Click="OnBrowseClick" />
-            <Label Grid.Row="4"
+            <Label Grid.Row="3"
                    Content="File nam_e:"
                    Target="{Binding #FileNameBox}"
                    VerticalAlignment="Center" />
             <TextBox x:Name="FileNameBox"
-                     Grid.Row="4"
+                     Grid.Row="3"
                      Grid.Column="1"
                      Grid.ColumnSpan="2"
                      Text="{Binding FileName}"
                      IsReadOnly="{Binding Shared.IsBuilt}" />
-            <StackPanel Grid.Row="5"
+            <StackPanel Grid.Row="4"
                         Grid.ColumnSpan="3"
-                        Spacing="6">
+                        Spacing="4">
                 <StackPanel x:Name="GroupByPanel"
                             Orientation="Horizontal"
                             Spacing="14"

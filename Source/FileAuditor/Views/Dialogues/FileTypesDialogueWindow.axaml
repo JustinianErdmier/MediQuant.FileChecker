@@ -1,0 +1,81 @@
+<ClassicWindow xmlns="https://github.com/avaloniaui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+               xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+               xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+               xmlns:vm="clr-namespace:FileAuditor.ViewModels.Dialogues"
+               mc:Ignorable="d"
+               d:DesignWidth="360"
+               d:DesignHeight="300"
+               x:Class="FileAuditor.Views.Dialogues.FileTypesDialogueWindow"
+               x:DataType="vm:FileTypesDialogueViewModel"
+               Title="{Binding Title}"
+               Icon="avares://FileAuditor/Assets/FileAuditor.png"
+               Width="360"
+               Height="300"
+               CanResize="False"
+               ShowInTaskbar="False"
+               WindowStartupLocation="CenterOwner">
+    <Design.DataContext>
+        <vm:FileTypesDialogueViewModel />
+    </Design.DataContext>
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Bottom"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="6"
+                    Margin="0,12,0,0">
+            <Button Content="OK"
+                    MinWidth="75"
+                    MinHeight="23"
+                    HorizontalContentAlignment="Center"
+                    IsDefault="True"
+                    Click="OnOkClick" />
+            <Button Content="Cancel"
+                    MinWidth="75"
+                    MinHeight="23"
+                    HorizontalContentAlignment="Center"
+                    IsCancel="True"
+                    Click="OnCancelClick" />
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Right"
+                    Spacing="6"
+                    Margin="12,0,0,0">
+            <Button x:Name="NewButton"
+                    Content="_New"
+                    MinWidth="75"
+                    MinHeight="23"
+                    HorizontalContentAlignment="Center"
+                    Click="OnNewClick" />
+            <Button x:Name="EditButton"
+                    Content="_Edit"
+                    MinWidth="75"
+                    MinHeight="23"
+                    HorizontalContentAlignment="Center"
+                    Click="OnEditClick" />
+            <Button x:Name="DeleteButton"
+                    Content="_Delete"
+                    MinWidth="75"
+                    MinHeight="23"
+                    HorizontalContentAlignment="Center"
+                    Command="{Binding DeleteCommand}" />
+            <Button x:Name="ResetButton"
+                    Content="_Reset"
+                    MinWidth="75"
+                    MinHeight="23"
+                    HorizontalContentAlignment="Center"
+                    IsVisible="{Binding CanReset}"
+                    Command="{Binding ResetCommand}" />
+        </StackPanel>
+        <ListBox x:Name="EntriesList"
+                 ItemsSource="{Binding Entries}"
+                 SelectedItem="{Binding SelectedEntry}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:FileTypeEntryItem">
+                    <TextBox Text="{Binding Text}"
+                             Padding="2,0" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</ClassicWindow>
