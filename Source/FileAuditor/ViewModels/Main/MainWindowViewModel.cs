@@ -452,6 +452,24 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    private static bool CanOpenHelpTopics() => !string.IsNullOrEmpty(HelpLinks.UserGuideUrl);
+
+    [ RelayCommand(CanExecute = nameof(CanOpenHelpTopics)) ]
+    private async Task HelpTopicsAsync()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(HelpLinks.UserGuideUrl)
+            {
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or FileNotFoundException)
+        {
+            await _dialogues.ShowErrorAsync($"The user guide could not be opened:\n{PathText.Breakable(HelpLinks.UserGuideUrl)}\n\n{ex.Message}");
+        }
+    }
+
     private bool CanChangeProject() => !IsRunning && !_isBusy;
 
     [ RelayCommand(CanExecute = nameof(CanChangeProject)) ]

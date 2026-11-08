@@ -35,6 +35,7 @@ global using Microsoft.Data.SqlClient;
 
 global using FileAuditor.Common.Errors;
 global using FileAuditor.Common.Extensions;
+global using FileAuditor.Common.Links;
 global using FileAuditor.Common.Serialisation;
 global using FileAuditor.Common.Text;
 global using FileAuditor.Models.Auditing;

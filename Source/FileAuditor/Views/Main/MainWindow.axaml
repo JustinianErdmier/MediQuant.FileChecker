@@ -46,6 +46,11 @@
                           InputGesture="Alt+F4" />
             </MenuItem>
             <MenuItem Header="_Help">
+                <MenuItem Header="_Help Topics"
+                          Command="{Binding HelpTopicsCommand}"
+                          HotKey="F1"
+                          InputGesture="F1" />
+                <Separator />
                 <MenuItem Header="_About File Auditor"
                           Command="{Binding AboutCommand}" />
             </MenuItem>

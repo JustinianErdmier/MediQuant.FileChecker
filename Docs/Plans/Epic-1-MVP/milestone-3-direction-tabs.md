@@ -127,12 +127,12 @@ this plan must leave room for its second tab but builds none of it. The master S
 
 - Produces: `HelpLinks.UserGuideUrl` (`const string`, `""`); `HelpTopicsCommand` (`CanExecute` = the address is not empty).
 
-- [ ] **Step 1:** Add the menu item and command per Global Constraints and spec §3.3a. It opens the address by shell execute; a launch failure shows an error
+- [x] **Step 1:** Add the menu item and command per Global Constraints and spec §3.3a. It opens the address by shell execute; a launch failure shows an error
   dialogue (`The user guide could not be opened:\n{address}\n\n{message}`, address through `PathText.Breakable`).
-- [ ] **Step 2: Verify.** Clean build. In the running app the item shows `F1` and is disabled; F1 does nothing. Temporarily set the constant to
+- [x] **Step 2: Verify.** Clean build. In the running app the item shows `F1` and is disabled; F1 does nothing. Temporarily set the constant to
   `https://example.com`, rebuild, and confirm the item is enabled and F1 opens the browser; **restore the empty string** before committing. Close the browser tab
   you opened and the app.
-- [ ] **Step 3: Commit** — `feat(✨): add a Help Topics item for the user guide`.
+- [x] **Step 3: Commit** — `feat(✨): add a Help Topics item for the user guide`.
 
 ### Task 4: Documentation sync and ledger
 
