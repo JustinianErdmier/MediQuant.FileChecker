@@ -197,19 +197,19 @@ place milestone 4 must touch (above `IsTabbed`).
   - `UnindexedReportBuilder.Build(UnindexedReport report) : string`; `static class ReportFormat` holding the helpers both builders share (label padding,
     counts, timestamps, elapsed, flattening, the common header lines).
 
-- [ ] **Step 1:** Extract `ReportFormat` from `ReportBuilder` without changing its output (compare a built missing report before and after, byte for byte).
-- [ ] **Step 2:** `UnindexedProgress`, `UnindexedReport`, `UnindexedAuditRunner` (load the set, then walk, checking each file with `Contains` as it arrives).
-- [ ] **Step 3:** `UnindexedReportBuilder` — exactly spec §3.7: header (no ID column line; `File types:`, `Exclude:`, `Grouped by:`), Summary, *Unindexed Files*
+- [x] **Step 1:** Extract `ReportFormat` from `ReportBuilder` without changing its output (compare a built missing report before and after, byte for byte).
+- [x] **Step 2:** `UnindexedProgress`, `UnindexedReport`, `UnindexedAuditRunner` (load the set, then walk, checking each file with `Contains` as it arrives).
+- [x] **Step 3:** `UnindexedReportBuilder` — exactly spec §3.7: header (no ID column line; `File types:`, `Exclude:`, `Grouped by:`), Summary, *Unindexed Files*
   grouped by input folder (input order) → `  [<type> (n)]` (alphabetical), where `<type>` is the matched pattern's `Text` (*Listed type*) or its
   `FoundExtension` (*Found extension*, per `settings.GroupByFoundExtension`) → paths sorted ordinal-ignore-case, indented two spaces;
   *Unverified Folders* by the SDD §6.3 reason order with *Other errors*
   columns; the stopped report has no *Not checked* line.
-- [ ] **Step 4: Verify.** Clean build. Harness against LocalDB: a generated tree of at least 100,000 files over two input folders, with the index holding all but a
+- [x] **Step 4: Verify.** Clean build. Harness against LocalDB: a generated tree of at least 100,000 files over two input folders, with the index holding all but a
   known 50 (some differing only in case or trailing spaces in the index) plus a deny-list subfolder → the report lists exactly those 50, grouped and sorted as
   specified, the deny-list folder under *Unverified Folders*, and Total = Indexed + Unindexed. A `FileAuditorSettings.json` and a `.txt` report inside the tree are
   not listed. With `zip.*` listed and `B.zip.001`/`B.zip.002` unindexed: *Listed type* gives one `[.zip.* (2)]` group, *Found extension* gives `[.zip.001 (1)]`
   and `[.zip.002 (1)]`. Stop during the walk → a `Stopped by user` report. Record elapsed time and peak working set. Clean up the tree, ACE and database.
-- [ ] **Step 5: Commit** — `feat(✨): run the unindexed audit and write its report`.
+- [x] **Step 5: Commit** — `feat(✨): run the unindexed audit and write its report`.
 
 ### Task 5: The Unindexed Files tab
 
