@@ -47,7 +47,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     { }
 
     private MainWindowViewModel(DialogueService dialogues)
-        : this(dialogues, new ProjectSettingsService(new SettingsStore(), dialogues))
+        : this(dialogues, new ProjectSettingsService(dialogues))
     { }
 
     /// <summary>Initialises a new instance populated with the default settings.</summary>

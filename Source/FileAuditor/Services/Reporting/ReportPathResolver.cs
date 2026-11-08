@@ -30,16 +30,16 @@ public static class ReportPathResolver
 
         string projectFolder = settings.ProjectFolder.Trim();
 
-        AuditStages auditStages = settings.ProjectStages is ProjectStages.Sample
+        AuditStages auditStages = settings.ProjectStage is ProjectStages.Sample
                                       ? AuditStages.Interim
-                                      : settings.AuditStages;
+                                      : settings.AuditStage;
 
         string directory = Path.Combine(BuiltRoot,
                                         projectFolder.Length > 0
                                             ? projectFolder
                                             : ProjectFolderPlaceholder,
                                         path3: "DE",
-                                        settings.ProjectStages.ToString());
+                                        settings.ProjectStage.ToString());
 
         return new ReportPath(directory, $"FileAuditor{directions}Report_{auditStages}.txt", projectFolder.Length > 0, IsCustom: false);
     }

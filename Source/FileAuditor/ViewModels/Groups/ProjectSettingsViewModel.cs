@@ -13,7 +13,7 @@ public sealed partial class ProjectSettingsViewModel : ObservableObject
 
     /// <summary>Initialises a new instance with its own default state, for the XAML designer.</summary>
     public ProjectSettingsViewModel()
-        : this(new ReportLocationState(), new ProjectSettingsService(new SettingsStore(), new DialogueService(() => null)))
+        : this(new ReportLocationState(), new ProjectSettingsService(new DialogueService(() => null)))
     { }
 
     /// <summary>Initialises a new instance over the shared report location and the open project.</summary>

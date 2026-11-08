@@ -83,9 +83,9 @@ Items:
   - `ProjectSettingsService` no longer takes a `SettingsStore`.
   - `SettingsJsonContext` serialises `ProjectFile` only.
 
-- [ ] **Step 1: Write the model types.** Create `ProjectFile` and `ProjectFileFolder`. Reshape `AppSettings` as above, then rename `ProjectStages`/`AuditStages` (properties) to
+- [x] **Step 1: Write the model types.** Create `ProjectFile` and `ProjectFileFolder`. Reshape `AppSettings` as above, then rename `ProjectStages`/`AuditStages` (properties) to
   `ProjectStage`/`AuditStage` everywhere.
-- [ ] **Step 2: Map in `SettingsStore`.**
+- [x] **Step 2: Map in `SettingsStore`.**
   - `Load` deserialises a `ProjectFile`, keeps the `LooksLikeProject` check against `ProjectFile`'s keys, and maps the result to `AppSettings`. Each mapping rule is a fallback:
     - a `null` value takes `AppSettings.Default`'s value;
     - an undefined enum value takes its default;
@@ -95,16 +95,16 @@ Items:
     - a `null` type entry is dropped, a valid one is normalised, and an invalid one is kept trimmed, as today.
   - `Save` maps `AppSettings` to a `ProjectFile` and serialises that.
   - The normalising helpers take the nullable *file* types, which is honest now, so no warning remains.
-- [ ] **Step 3: Remove the workarounds.** Make `SettingsStore` static and update its three construction sites. Remove every `?? []` and `!` that existed only because the three
+- [x] **Step 3: Remove the workarounds.** Make `SettingsStore` static and update its three construction sites. Remove every `?? []` and `!` that existed only because the three
   lists were nullable.
-- [ ] **Step 4: Build.** Run `dotnet clean MediQuant.FileAuditor.slnx; dotnet build MediQuant.FileAuditor.slnx`. Expected result: 0 errors and 0 warnings.
-- [ ] **Step 5: Verify in the app.** Write each project file below in the scratch folder, open it with *File ▸ Open Project* through the UIA `ValuePattern` file-name box, and read
+- [x] **Step 4: Build.** Run `dotnet clean MediQuant.FileAuditor.slnx; dotnet build MediQuant.FileAuditor.slnx`. Expected result: 0 errors and 0 warnings.
+- [x] **Step 5: Verify in the app.** Write each project file below in the scratch folder, open it with *File ▸ Open Project* through the UIA `ValuePattern` file-name box, and read
   the fields back through UIA:
   - (a) An old-format file with `"ProjectStage": "Sample"` and `"AuditStage": "Final"`. Both stages show.
   - (b) A file with `"Server": null`, `"ReportEmptyFiles": null`, `"FileTypes": [null, ".pdf", "bad<"]` and `"ScanFolders": [null, {"Path": null}, {"Path": "<scratch>"}]`. Every
     other field loads; the types are `.pdf` and `bad<`; one folder remains.
   - (c) Save the project with *Save project settings* ticked, read the written JSON, and check its keys against the Global Constraints.
-- [ ] **Step 6: Commit.** Use `fix(🐛): read project files through a nullable file model and restore the ProjectStage and AuditStage keys`.
+- [x] **Step 6: Commit.** Use `fix(🐛): read project files through a nullable file model and restore the ProjectStage and AuditStage keys`.
 
 ### Task 2: Analyser and inspection fixes (items 2, 3, 4, 11, 13, 16, 17, 18, 19, 26–31)
 

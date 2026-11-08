@@ -130,7 +130,7 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
     // The Unindexed direction's own inputs: folders first, then the two type lists, then the three warnings in the order of milestone 4 spec §3.3.
     private async Task<bool> CheckUnindexedInputsAsync(AppSettings settings)
     {
-        ScanFolder[] folders = settings.ScanFolders ?? [];
+        ScanFolder[] folders = settings.ScanFolders;
 
         if (folders.Length is 0)
         {
@@ -150,9 +150,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         }
 
         // The Edit dialogues only accept valid entries, so an invalid one can come only from a project file edited by hand.
-        ErrorOr<string[]> include = FileTypeList.Parse(string.Join(separator: ' ', settings.FileTypes ?? []));
+        ErrorOr<string[]> include = FileTypeList.Parse(string.Join(separator: ' ', settings.FileTypes));
 
-        ErrorOr<string[]> exclude = FileTypeList.Parse(string.Join(separator: ' ', settings.ExcludeTypes ?? []));
+        ErrorOr<string[]> exclude = FileTypeList.Parse(string.Join(separator: ' ', settings.ExcludeTypes));
 
         if (include.IsError
             || exclude.IsError)

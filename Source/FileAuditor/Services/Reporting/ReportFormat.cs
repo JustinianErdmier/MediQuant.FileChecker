@@ -50,8 +50,8 @@ public static class ReportFormat
         }
 
         lines.Add(Labelled(label: "Project folder:", settings.ProjectFolder));
-        lines.Add(Labelled(label: "Project stage:", settings.ProjectStages.ToString()));
-        lines.Add(Labelled(label: "Audit stage:", settings.AuditStages.ToString()));
+        lines.Add(Labelled(label: "Project stage:", settings.ProjectStage.ToString()));
+        lines.Add(Labelled(label: "Audit stage:", settings.AuditStage.ToString()));
     }
 
     /// <summary>Adds the blank line and the Started, Finished, Elapsed and Result lines.</summary>

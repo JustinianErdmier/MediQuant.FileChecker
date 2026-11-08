@@ -57,8 +57,8 @@ public sealed partial class ReportLocationState : ObservableObject
         => settings with
         {
             ProjectFolder = ProjectFolder,
-            ProjectStages = IsSampleProject ? ProjectStages.Sample : ProjectStages.Final,
-            AuditStages = IsFinalAudit ? AuditStages.Final : AuditStages.Interim,
+            ProjectStage = IsSampleProject ? ProjectStages.Sample : ProjectStages.Final,
+            AuditStage = IsFinalAudit ? AuditStages.Final : AuditStages.Interim,
             UseCustomReportLocation = UseCustomLocation,
             CustomLocation = CustomLocation
         };
@@ -77,9 +77,9 @@ public sealed partial class ReportLocationState : ObservableObject
         CustomLocation = settings.CustomLocation;
 
         ProjectFolder     = settings.ProjectFolder;
-        IsSampleProject   = settings.ProjectStages is ProjectStages.Sample;
+        IsSampleProject   = settings.ProjectStage is ProjectStages.Sample;
         IsFinalProject    = !IsSampleProject;
-        IsInterimAudit    = IsSampleProject || settings.AuditStages is AuditStages.Interim;
+        IsInterimAudit    = IsSampleProject || settings.AuditStage is AuditStages.Interim;
         IsFinalAudit      = !IsInterimAudit;
         UseCustomLocation = settings.UseCustomReportLocation;
     }

@@ -5,19 +5,15 @@ public sealed class ProjectSettingsService
 {
     private readonly DialogueService _dialogues;
 
-    private readonly SettingsStore _store;
-
     private AppSettings _baseline = AppSettings.Default;
 
     // The save prompt was answered No; it is not asked again this session.
     private bool _saveDeclined;
 
     /// <summary>Initialises a new instance.</summary>
-    /// <param name="store">Reads and writes the settings files.</param>
     /// <param name="dialogues">Shows the prompts.</param>
-    public ProjectSettingsService(SettingsStore store, DialogueService dialogues)
+    public ProjectSettingsService(DialogueService dialogues)
     {
-        _store     = store;
         _dialogues = dialogues;
     }
 
@@ -54,7 +50,7 @@ public sealed class ProjectSettingsService
     /// <summary>Loads a project settings file off the UI thread.</summary>
     /// <param name="filePath">The full path of the settings file.</param>
     /// <returns>The settings, or <see cref="SettingsErrors.Unreadable" /> when the file cannot be read or is not a File Auditor project.</returns>
-    public Task<ErrorOr<AppSettings>> LoadAsync(string filePath) => Task.Run(() => _store.Load(filePath));
+    public Task<ErrorOr<AppSettings>> LoadAsync(string filePath) => Task.Run(() => SettingsStore.Load(filePath));
 
     /// <summary>Determines whether the project's settings file is in the given folder, compared by the same rule as the save rule.</summary>
     /// <param name="folder">The folder to compare with, typically the report folder.</param>
@@ -87,7 +83,7 @@ public sealed class ProjectSettingsService
     /// <param name="current">The current settings.</param>
     /// <returns><see langword="true" /> when they differ. They are compared by value through their serialised form, because record equality would compare the list arrays by reference.</returns>
     public bool IsChanged(AppSettings current)
-        => JsonSerializer.Serialize(current, SettingsJsonContext.Default.AppSettings) != JsonSerializer.Serialize(_baseline, SettingsJsonContext.Default.AppSettings);
+        => SettingsStore.Serialise(current) != SettingsStore.Serialise(_baseline);
 
     /// <summary>Runs the save rule: saves the settings when they have changed and the rules allow it, asking whether and where to as needed.</summary>
     /// <param name="current">The current settings.</param>
@@ -209,7 +205,7 @@ public sealed class ProjectSettingsService
             }
         }
 
-        ErrorOr<Success> saved = await Task.Run(() => _store.Save(current, target));
+        ErrorOr<Success> saved = await Task.Run(() => SettingsStore.Save(current, target));
 
         if (saved.IsError)
         {

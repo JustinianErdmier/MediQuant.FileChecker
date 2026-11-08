@@ -83,14 +83,14 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     {
         Folders.Clear();
 
-        foreach (ScanFolder folder in settings.ScanFolders ?? [])
+        foreach (ScanFolder folder in settings.ScanFolders)
         {
             Folders.Add(new ScanFolderItem(folder.Path, folder.IncludeSubfolders));
         }
 
-        FileTypesText = FileTypeList.Format(settings.FileTypes ?? FileTypeList.Defaults);
+        FileTypesText = FileTypeList.Format(settings.FileTypes);
 
-        ExcludeText = FileTypeList.Format(settings.ExcludeTypes ?? []);
+        ExcludeText = FileTypeList.Format(settings.ExcludeTypes);
 
         Report.Load(settings);
     }

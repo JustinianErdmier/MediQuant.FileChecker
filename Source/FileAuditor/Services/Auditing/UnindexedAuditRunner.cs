@@ -24,7 +24,7 @@ public sealed class UnindexedAuditRunner
         // (`U:/A/./B`, a trailing separator, other letter case). The report still names each folder as it was entered.
         ScanFolder[] folders =
         [
-            .. (settings.ScanFolders ?? []).Select(folder => folder with
+            .. settings.ScanFolders.Select(folder => folder with
             {
                 Path = FolderWalker.NormaliseFolder(folder.Path)
             })
@@ -32,7 +32,7 @@ public sealed class UnindexedAuditRunner
 
         Dictionary<string, string> entered = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (ScanFolder folder in settings.ScanFolders ?? [])
+        foreach (ScanFolder folder in settings.ScanFolders)
         {
             entered.TryAdd(FolderWalker.NormaliseFolder(folder.Path), folder.Path);
         }
@@ -74,7 +74,7 @@ public sealed class UnindexedAuditRunner
 
         progress.StartScan();
 
-        FileTypeFilter filter = new(settings.FileTypes ?? FileTypeList.Defaults, settings.ExcludeTypes ?? []);
+        FileTypeFilter filter = new(settings.FileTypes, settings.ExcludeTypes);
 
         ConcurrentBag<ScannedFile> unindexed = [];
 

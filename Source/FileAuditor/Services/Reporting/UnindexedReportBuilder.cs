@@ -50,7 +50,7 @@ public static class UnindexedReportBuilder
 
         ReportFormat.AddConnectionLines(lines, settings);
 
-        ScanFolder[] folders = settings.ScanFolders ?? [];
+        ScanFolder[] folders = settings.ScanFolders;
 
         for (int index = 0; index < Math.Max(folders.Length, val2: 1); index++)
         {
@@ -63,9 +63,9 @@ public static class UnindexedReportBuilder
                           : ReportFormat.Continued(value));
         }
 
-        string[] exclude = settings.ExcludeTypes ?? [];
+        string[] exclude = settings.ExcludeTypes;
 
-        lines.Add(ReportFormat.Labelled(label: "File types:", FileTypeList.Format(settings.FileTypes ?? FileTypeList.Defaults)));
+        lines.Add(ReportFormat.Labelled(label: "File types:", FileTypeList.Format(settings.FileTypes)));
         lines.Add(ReportFormat.Labelled(label: "Exclude:", exclude is [] ? "(none)" : FileTypeList.Format(exclude)));
         lines.Add(ReportFormat.Labelled(label: "Grouped by:", settings.GroupByFoundExtension ? "Found extension" : "Listed type"));
         ReportFormat.AddProjectLines(lines, settings);
@@ -99,7 +99,7 @@ public static class UnindexedReportBuilder
         // Input folders in the order the user listed them; a folder not in the list (which the walker cannot produce) goes last.
         Dictionary<string, int> inputOrder = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (ScanFolder folder in report.Settings.ScanFolders ?? [])
+        foreach (ScanFolder folder in report.Settings.ScanFolders)
         {
             inputOrder.TryAdd(folder.Path, inputOrder.Count);
         }

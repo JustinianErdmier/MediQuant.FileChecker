@@ -12,7 +12,7 @@ public class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             DialogueService        dialogues = new(() => desktop.MainWindow);
-            ProjectSettingsService project   = new(new SettingsStore(), dialogues);
+            ProjectSettingsService project   = new(dialogues);
 
             desktop.MainWindow = new MainWindow
             {
