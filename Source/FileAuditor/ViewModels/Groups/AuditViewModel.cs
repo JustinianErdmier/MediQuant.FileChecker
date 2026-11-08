@@ -60,7 +60,7 @@ public sealed partial class AuditViewModel : AuditStatusBase
     /// <param name="isFinished">Whether the run has ended, which makes an empty table read 100%.</param>
     public void Update(AuditProgress progress, TimeSpan elapsed, bool isFinished)
     {
-        long   total   = progress.TotalFiles;
+        long   total   = Math.Max(progress.TotalFiles, progress.Processed);
         long   done    = progress.Checked;
         long   handled = progress.Processed;
         double seconds = progress.CheckingElapsed.TotalSeconds;

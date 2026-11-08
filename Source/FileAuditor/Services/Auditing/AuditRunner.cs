@@ -14,8 +14,8 @@ public sealed class AuditRunner
     /// <param name="progress">Receives the live statistics.</param>
     /// <param name="ct">Stops the run; whatever was checked is reported.</param>
     /// <returns>
-    ///     The report that was written for a completed, stopped or mid-run failed audit; a <c>Sql.QueryFailed</c> error when SQL Server failed before any row was checked;
-    ///     <c>Audit.ReadFailed</c> when the row stream failed for another reason before any row was checked; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while counting;
+    ///     The report that was written for a completed, stopped or mid-run failed audit; a <c>Sql.QueryFailed</c> error when SQL Server failed before any row was processed;
+    ///     <c>Audit.ReadFailed</c> when the row stream failed for another reason before any row was processed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while counting;
     ///     or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
     public async Task<ErrorOr<AuditReport>> RunAsync(AuditRequest request, AuditProgress progress, CancellationToken ct)
@@ -147,7 +147,7 @@ public sealed class AuditRunner
         }
         else if (readResult.IsError)
         {
-            if (checkedCount == 0)
+            if (checkedCount + skippedCount == 0)
             {
                 return readResult.Errors;
             }
