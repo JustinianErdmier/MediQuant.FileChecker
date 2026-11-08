@@ -178,8 +178,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         RefreshReportState();
     }
 
-    // Each tab has its own Start, View Report and idle status, so a change of tab re-evaluates them all against the new tab's report.
     // ReSharper disable once UnusedParameterInPartialMethod
+    // Each tab has its own Start, View Report and idle status, so a change of tab re-evaluates them all against the new tab's report.
     partial void OnSelectedTabIndexChanged(int value)
     {
         OnPropertyChanged(nameof(StatusAudit));
@@ -260,14 +260,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task ProbeReportAsync()
     {
-        if (_probeCts is { } probeCts)
-        {
-            await probeCts.CancelAsync();
-        }
+        CancellationTokenSource? previous = _probeCts;
 
         CancellationTokenSource cancellationTokenSource = new();
 
         _probeCts = cancellationTokenSource;
+
+        if (previous is not null)
+        {
+            await previous.CancelAsync();
+        }
 
         ReportViewModel report = SelectedReport;
         ReportPath      path   = report.Current;

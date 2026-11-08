@@ -78,30 +78,30 @@ public sealed class UnindexedAuditRunner
 
         // The walker returns normally when stopped, so a stop is told apart by the token afterwards. An exception from a callback is a bug and surfaces as one.
         await FolderWalker.WalkAsync(folders,
-                                filter,
-                                walked =>
-                                {
-                                    ScannedFile file = walked with
-                                    {
-                                        InputFolder = entered.GetValueOrDefault(walked.InputFolder, walked.InputFolder)
-                                    };
+                                     filter,
+                                     walked =>
+                                     {
+                                         ScannedFile file = walked with
+                                         {
+                                             InputFolder = entered.GetValueOrDefault(walked.InputFolder, walked.InputFolder)
+                                         };
 
-                                    if (paths.Contains(file.Path))
-                                    {
-                                        progress.Record(indexed: true);
-                                    }
-                                    else
-                                    {
-                                        unindexed.Add(file);
-                                        progress.Record(indexed: false);
-                                    }
-                                },
-                                folder =>
-                                {
-                                    unverified.Add(folder);
-                                    progress.RecordUnverified();
-                                },
-                                cancellationToken);
+                                         if (paths.Contains(file.Path))
+                                         {
+                                             progress.Record(indexed: true);
+                                         }
+                                         else
+                                         {
+                                             unindexed.Add(file);
+                                             progress.Record(indexed: false);
+                                         }
+                                     },
+                                     folder =>
+                                     {
+                                         unverified.Add(folder);
+                                         progress.RecordUnverified();
+                                     },
+                                     cancellationToken);
 
         progress.StopScan();
 

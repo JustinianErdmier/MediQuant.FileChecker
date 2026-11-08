@@ -53,10 +53,10 @@ public static class FolderWalker
     /// <param name="cancellationToken">Stops the walk promptly; see the cancellation note on the type.</param>
     /// <returns>A task that completes when no folder is queued or being listed, or the walk was stopped.</returns>
     public static Task WalkAsync(IReadOnlyList<ScanFolder> folders,
-                          FileTypeFilter            filter,
-                          Action<ScannedFile>       onFile,
-                          Action<UnverifiedFolder>  onUnverified,
-                          CancellationToken         cancellationToken)
+                                 FileTypeFilter            filter,
+                                 Action<ScannedFile>       onFile,
+                                 Action<UnverifiedFolder>  onUnverified,
+                                 CancellationToken         cancellationToken)
         => Task.Run(() => WalkAsyncCore(folders, filter, onFile, onUnverified, cancellationToken), CancellationToken.None);
 
     /// <summary>Makes an input folder's path canonical: a full path with exactly one trailing separator, as the walk and the index query both use it.</summary>
