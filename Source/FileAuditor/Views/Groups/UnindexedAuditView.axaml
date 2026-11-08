@@ -56,7 +56,7 @@
                              Value="{Binding Percent}"
                              ShowProgressText="False"
                              IsVisible="{Binding !IsRunning}" />
-                <!-- The total is unknown while a run is under way, so a fixed-width block moves across a sunken track instead of a fill that would read as a percentage. -->
+                <!--The total is unknown while a run is under way, so a fixed-width block moves across a sunken track instead of a fill that would read as a percentage.-->
                 <Border IsVisible="{Binding IsRunning}"
                         BorderBrush="{DynamicResource {x:Static cc:SystemColors.ControlDarkBrushKey}}"
                         BorderThickness="1,1,0,0">

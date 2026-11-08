@@ -1,11 +1,14 @@
+using JetBrains.Annotations;
+
 namespace FileAuditor.Views.Dialogues;
 
-/// <summary>A modal Win9x message dialogue; records which button closed it in <see cref="Choice" />.</summary>
+/// <summary>A modal Win9x message dialogue; records which button closed it in <see cref="Choices" />.</summary>
 public partial class MessageDialogueWindow : ClassicWindow
 {
     /// <summary>Initialises a new instance for the XAML designer.</summary>
+    [ UsedImplicitly ]
     public MessageDialogueWindow()
-        : this(new MessageDialogueViewModel(Message: "Message", DialogueIcon.Warning, PrimaryText: "OK", SecondaryText: "Cancel"))
+        : this(new MessageDialogueViewModel(Message: "Message", DialogueIcons.Warning, PrimaryText: "OK", SecondaryText: "Cancel"))
     { }
 
     /// <summary>Initialises a new instance showing the given content.</summary>
@@ -19,21 +22,21 @@ public partial class MessageDialogueWindow : ClassicWindow
         DataContext = viewModel;
 
         // Closing with the title-bar close box counts as the last visible button.
-        Choice = viewModel.HasTertiary ? DialogueChoice.Tertiary : viewModel.HasSecondary ? DialogueChoice.Secondary : DialogueChoice.Primary;
+        Choices = viewModel.HasTertiary ? DialogueChoices.Tertiary : viewModel.HasSecondary ? DialogueChoices.Secondary : DialogueChoices.Primary;
     }
 
     /// <summary>Gets the button that closed the dialogue; the last visible button when closed with the title-bar close box.</summary>
-    public DialogueChoice Choice { get; private set; }
+    public DialogueChoices Choices { get; private set; }
 
-    private void OnPrimaryClick(object? sender, RoutedEventArgs e) => CloseWith(DialogueChoice.Primary);
+    private void OnPrimaryClick(object? sender, RoutedEventArgs eventArgs) => CloseWith(DialogueChoices.Primary);
 
-    private void OnSecondaryClick(object? sender, RoutedEventArgs e) => CloseWith(DialogueChoice.Secondary);
+    private void OnSecondaryClick(object? sender, RoutedEventArgs eventArgs) => CloseWith(DialogueChoices.Secondary);
 
-    private void OnTertiaryClick(object? sender, RoutedEventArgs e) => CloseWith(DialogueChoice.Tertiary);
+    private void OnTertiaryClick(object? sender, RoutedEventArgs eventArgs) => CloseWith(DialogueChoices.Tertiary);
 
-    private void CloseWith(DialogueChoice choice)
+    private void CloseWith(DialogueChoices choices)
     {
-        Choice = choice;
+        Choices = choices;
 
         Close();
     }

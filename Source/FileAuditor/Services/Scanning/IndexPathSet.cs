@@ -41,6 +41,7 @@ public sealed class IndexPathSet
             Span<char> upper = stackalloc char[trimmed.Length];
 
             trimmed.ToUpperInvariant(upper);
+
             MD5.HashData(MemoryMarshal.AsBytes(upper), digest);
         }
         else
@@ -50,6 +51,7 @@ public sealed class IndexPathSet
             try
             {
                 trimmed.ToUpperInvariant(rented);
+
                 MD5.HashData(MemoryMarshal.AsBytes(rented.AsSpan(start: 0, trimmed.Length)), digest);
             }
             finally

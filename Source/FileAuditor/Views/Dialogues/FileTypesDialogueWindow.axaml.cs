@@ -1,9 +1,12 @@
+using JetBrains.Annotations;
+
 namespace FileAuditor.Views.Dialogues;
 
 /// <summary>A modal Win9x editor for a list of file types, working like the Windows "Edit environment variable" editor; <see cref="Result" /> holds the accepted entries.</summary>
 public partial class FileTypesDialogueWindow : ClassicWindow
 {
     /// <summary>Initialises a new instance for the XAML designer.</summary>
+    [ UsedImplicitly ]
     public FileTypesDialogueWindow()
         : this(new FileTypesDialogueViewModel())
     { }
@@ -27,17 +30,17 @@ public partial class FileTypesDialogueWindow : ClassicWindow
 
     private FileTypesDialogueViewModel ViewModel => (FileTypesDialogueViewModel)DataContext!;
 
-    private void OnEntryGotFocus(object? sender, RoutedEventArgs e)
+    private void OnEntryGotFocus(object? sender, RoutedEventArgs eventArgs)
     {
-        if (e.Source is TextBox { DataContext: FileTypeEntryItem item })
+        if (eventArgs.Source is TextBox { DataContext: FileTypeEntryItem item })
         {
             ViewModel.SelectedEntry = item;
         }
     }
 
-    private void OnNewClick(object? sender, RoutedEventArgs e) => FocusEntry(ViewModel.AddEntry());
+    private void OnNewClick(object? sender, RoutedEventArgs eventArgs) => FocusEntry(ViewModel.AddEntry());
 
-    private void OnEditClick(object? sender, RoutedEventArgs e)
+    private void OnEditClick(object? sender, RoutedEventArgs eventArgs)
     {
         if (ViewModel.SelectedEntry is { } item)
         {
@@ -63,14 +66,14 @@ public partial class FileTypesDialogueWindow : ClassicWindow
                                  DispatcherPriority.Loaded);
     }
 
-    private async void OnOkClick(object? sender, RoutedEventArgs e)
+    private async void OnOkClick(object? sender, RoutedEventArgs eventArgs)
     {
         ErrorOr<string[]> parsed = ViewModel.Validate();
 
         if (parsed.IsError)
         {
-            // The dialogue stays open so the entry can be corrected.
-            MessageDialogueViewModel message = new(parsed.FirstError.Description, DialogueIcon.Error, PrimaryText: "OK", SecondaryText: null);
+            // The dialogue stays open, so the entry can be corrected.
+            MessageDialogueViewModel message = new(parsed.FirstError.Description, DialogueIcons.Error, PrimaryText: "OK", SecondaryText: null);
 
             await new MessageDialogueWindow(message).ShowDialog(this);
 
@@ -82,5 +85,5 @@ public partial class FileTypesDialogueWindow : ClassicWindow
         Close();
     }
 
-    private void OnCancelClick(object? sender, RoutedEventArgs e) => Close();
+    private void OnCancelClick(object? sender, RoutedEventArgs eventArgs) => Close();
 }

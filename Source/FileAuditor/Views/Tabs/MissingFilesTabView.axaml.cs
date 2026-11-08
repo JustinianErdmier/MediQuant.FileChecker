@@ -4,8 +4,5 @@ namespace FileAuditor.Views.Tabs;
 public partial class MissingFilesTabView : UserControl
 {
     /// <summary>Initialises a new instance of the <see cref="MissingFilesTabView" /> class.</summary>
-    public MissingFilesTabView()
-    {
-        InitializeComponent();
-    }
+    public MissingFilesTabView() => InitializeComponent();
 }

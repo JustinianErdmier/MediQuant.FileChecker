@@ -9,7 +9,7 @@ public sealed class RemainingEstimator
     private const string Finished = "00:00:00";
 
     // How long, in seconds of checking time, the processed count must stand still before the display holds. One refresh is 250 ms, and a single quiet refresh is
-    // ordinary jitter on a slow share, not a stall.
+    // the ordinary jitter on a slow share, not a stall.
     private const double StallHoldSeconds = 1;
 
     /// <summary>The placeholder shown until there is a rate to estimate from.</summary>

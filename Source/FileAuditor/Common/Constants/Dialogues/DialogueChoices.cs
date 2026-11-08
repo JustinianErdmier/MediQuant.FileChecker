@@ -1,7 +1,7 @@
-namespace FileAuditor.ViewModels.Dialogues;
+namespace FileAuditor.Common.Constants.Dialogues;
 
 /// <summary>The button a person chose to close a message dialogue.</summary>
-public enum DialogueChoice
+public enum DialogueChoices
 {
     /// <summary>The action button, first from the left.</summary>
     Primary,

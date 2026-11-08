@@ -4,10 +4,7 @@ namespace FileAuditor.Startup;
 public class App : Application
 {
     /// <inheritdoc />
-    public override void Initialize()
-    {
-        AvaloniaXamlLoader.Load(this);
-    }
+    public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     /// <inheritdoc />
     public override void OnFrameworkInitializationCompleted()

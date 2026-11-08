@@ -1,7 +1,7 @@
-namespace FileAuditor.Models.Settings;
+namespace FileAuditor.Common.Constants.Settings;
 
 /// <summary>The stage of the project whose files are being audited.</summary>
-public enum ProjectStage
+public enum ProjectStages
 {
     /// <summary>The project is at its sample stage.</summary>
     Sample,

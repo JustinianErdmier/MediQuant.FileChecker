@@ -6,14 +6,14 @@ namespace FileAuditor.Services.Reporting;
 /// </summary>
 public static class UnindexedReportBuilder
 {
-    private static readonly CheckOutcome[] UnverifiedOrder =
+    private static readonly CheckOutcomes[] UnverifiedOrder =
     [
-        CheckOutcome.UnverifiedDriveOrShareNotFound,
-        CheckOutcome.UnverifiedPermissionDenied,
-        CheckOutcome.UnverifiedNetworkUnreachable,
-        CheckOutcome.UnverifiedPathTooLong,
-        CheckOutcome.UnverifiedLinkNotFollowed,
-        CheckOutcome.UnverifiedOther
+        CheckOutcomes.UnverifiedDriveOrShareNotFound,
+        CheckOutcomes.UnverifiedPermissionDenied,
+        CheckOutcomes.UnverifiedNetworkUnreachable,
+        CheckOutcomes.UnverifiedPathTooLong,
+        CheckOutcomes.UnverifiedLinkNotFollowed,
+        CheckOutcomes.UnverifiedOther
     ];
 
     /// <summary>Builds the report text.</summary>
@@ -21,15 +21,20 @@ public static class UnindexedReportBuilder
     /// <returns>The report, with CRLF line endings and a trailing line break.</returns>
     public static string Build(UnindexedReport report)
     {
-        List<string> lines =
-            [];
+        List<string> lines = [];
 
         AddHeader(lines, report);
+
         lines.Add(string.Empty);
+
         AddSummary(lines, report);
+
         lines.Add(string.Empty);
+
         AddUnindexed(lines, report);
+
         lines.Add(string.Empty);
+
         AddUnverified(lines, report);
 
         return ReportFormat.Join(lines);
@@ -42,28 +47,29 @@ public static class UnindexedReportBuilder
         lines.Add(item: "File Auditor Unindexed Report");
         lines.Add(item: "=============================");
         lines.Add(string.Empty);
+
         ReportFormat.AddConnectionLines(lines, settings);
 
-        ScanFolder[] folders = settings.ScanFolders
-                               ??
-                               [];
+        ScanFolder[] folders = settings.ScanFolders ?? [];
 
         for (int index = 0; index < Math.Max(folders.Length, val2: 1); index++)
         {
-            string value = folders.Length == 0 ? "(none)" : folders[index].Path + (folders[index].IncludeSubfolders ? " (with subfolders)" : string.Empty);
+            string value = folders is []
+                               ? "(none)"
+                               : $"{folders[index].Path}{(folders[index].IncludeSubfolders ? " (with subfolders)" : string.Empty)}";
 
-            lines.Add(index == 0 ? ReportFormat.Labelled(label: "Folders:", value) : ReportFormat.Continued(value));
+            lines.Add(index is 0
+                          ? ReportFormat.Labelled(label: "Folders:", value)
+                          : ReportFormat.Continued(value));
         }
 
-        string[] exclude = settings.ExcludeTypes
-                           ??
-                           [];
+        string[] exclude = settings.ExcludeTypes ?? [];
 
         lines.Add(ReportFormat.Labelled(label: "File types:", FileTypeList.Format(settings.FileTypes ?? FileTypeList.Defaults)));
-        lines.Add(ReportFormat.Labelled(label: "Exclude:", exclude.Length == 0 ? "(none)" : FileTypeList.Format(exclude)));
+        lines.Add(ReportFormat.Labelled(label: "Exclude:", exclude is [] ? "(none)" : FileTypeList.Format(exclude)));
         lines.Add(ReportFormat.Labelled(label: "Grouped by:", settings.GroupByFoundExtension ? "Found extension" : "Listed type"));
         ReportFormat.AddProjectLines(lines, settings);
-        ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Kind, report.FailureMessage);
+        ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Kinds, report.FailureMessage);
     }
 
     private static void AddSummary(List<string> lines, UnindexedReport report)
@@ -83,7 +89,7 @@ public static class UnindexedReportBuilder
         lines.Add(heading);
         lines.Add(new string(c: '-', heading.Length));
 
-        if (report.Unindexed.Count == 0)
+        if (report.Unindexed is [])
         {
             lines.Add(item: "No unindexed files.");
 
@@ -93,21 +99,21 @@ public static class UnindexedReportBuilder
         // Input folders in the order the user listed them; a folder not in the list (which the walker cannot produce) goes last.
         Dictionary<string, int> inputOrder = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (ScanFolder folder in report.Settings.ScanFolders
-                                      ??
-                                      [])
+        foreach (ScanFolder folder in report.Settings.ScanFolders ?? [])
         {
             inputOrder.TryAdd(folder.Path, inputOrder.Count);
         }
 
         bool groupByFound = report.Settings.GroupByFoundExtension;
 
-        List<IGrouping<string, ScannedFile>> byFolder = report.Unindexed
-                                                              .GroupBy(file => file.InputFolder, StringComparer.OrdinalIgnoreCase)
-                                                              .OrderBy(group => inputOrder.GetValueOrDefault(group.Key, int.MaxValue))
-                                                              .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
-                                                              .ThenBy(group => group.Key, StringComparer.Ordinal)
-                                                              .ToList();
+        List<IGrouping<string, ScannedFile>> byFolder =
+        [
+            .. report.Unindexed
+                     .GroupBy(file => file.InputFolder, StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(group => inputOrder.GetValueOrDefault(group.Key, int.MaxValue))
+                     .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+                     .ThenBy(group => group.Key, StringComparer.Ordinal)
+        ];
 
         for (int folderIndex = 0; folderIndex < byFolder.Count; folderIndex++)
         {
@@ -118,26 +124,29 @@ public static class UnindexedReportBuilder
 
             lines.Add($"[{ReportFormat.Flatten(byFolder[folderIndex].Key)} ({ReportFormat.Count(byFolder[folderIndex].Count())})]");
 
-            List<IGrouping<string, ScannedFile>> byType = byFolder[folderIndex]
-                                                          .GroupBy(file => TypeKey(file, groupByFound), StringComparer.Ordinal)
-                                                          .OrderBy(group => group.Key, StringComparer.Ordinal)
-                                                          .ToList();
+            List<IGrouping<string, ScannedFile>> byType =
+            [
+                .. byFolder[folderIndex]
+                   .GroupBy(file => TypeKey(file, groupByFound), StringComparer.Ordinal)
+                   .OrderBy(group => group.Key, StringComparer.Ordinal)
+            ];
 
             foreach (IGrouping<string, ScannedFile> group in byType)
             {
                 lines.Add(string.Empty);
                 lines.Add($"  [{ReportFormat.Flatten(group.Key)} ({ReportFormat.Count(group.Count())})]");
 
-                foreach (ScannedFile file in group.OrderBy(file => file.Path, StringComparer.OrdinalIgnoreCase)
-                                                  .ThenBy(file => file.Path, StringComparer.Ordinal))
-                {
-                    lines.Add("  " + ReportFormat.Flatten(file.Path));
-                }
+                lines.AddRange(group.OrderBy(file => file.Path, StringComparer.OrdinalIgnoreCase)
+                                    .ThenBy(file => file.Path, StringComparer.Ordinal)
+                                    .Select(file => $"  {ReportFormat.Flatten(file.Path)}"));
             }
         }
     }
 
-    private static string TypeKey(ScannedFile file, bool groupByFound) => groupByFound ? file.Type.FoundExtension(Path.GetFileName(file.Path)) : file.Type.Text;
+    private static string TypeKey(ScannedFile file, bool groupByFound)
+        => groupByFound
+               ? file.Type.FoundExtension(Path.GetFileName(file.Path))
+               : file.Type.Text;
 
     private static void AddUnverified(List<string> lines, UnindexedReport report)
     {
@@ -146,7 +155,7 @@ public static class UnindexedReportBuilder
         lines.Add(heading);
         lines.Add(new string(c: '-', heading.Length));
 
-        if (report.Unverified.Count == 0)
+        if (report.Unverified is [])
         {
             lines.Add(item: "No unverified folders or links.");
 
@@ -155,17 +164,19 @@ public static class UnindexedReportBuilder
 
         bool first = true;
 
-        foreach (CheckOutcome group in UnverifiedOrder)
+        foreach (CheckOutcomes group in UnverifiedOrder)
         {
-            List<UnverifiedFolder> folders = report.Unverified
-                                                   .Where(folder => GroupOf(folder) == group)
-                                                   .OrderBy(folder => folder.Path, StringComparer.OrdinalIgnoreCase)
-                                                   .ThenBy(folder => folder.Path, StringComparer.Ordinal)
-                                                   .ThenBy(folder => folder.ReasonText    ?? string.Empty, StringComparer.Ordinal)
-                                                   .ThenBy(folder => folder.SystemMessage ?? string.Empty, StringComparer.Ordinal)
-                                                   .ToList();
+            List<UnverifiedFolder> folders =
+            [
+                .. report.Unverified
+                         .Where(folder => GroupOf(folder) == group)
+                         .OrderBy(folder => folder.Path, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(folder => folder.Path, StringComparer.Ordinal)
+                         .ThenBy(folder => folder.ReasonText    ?? string.Empty, StringComparer.Ordinal)
+                         .ThenBy(folder => folder.SystemMessage ?? string.Empty, StringComparer.Ordinal)
+            ];
 
-            if (folders.Count == 0)
+            if (folders is [])
             {
                 continue;
             }
@@ -178,24 +189,23 @@ public static class UnindexedReportBuilder
             first = false;
 
             lines.Add($"[{GroupTitle(group)} ({ReportFormat.Count(folders.Count)})]");
+
             AddFolderLines(lines, group, folders);
         }
     }
 
-    private static void AddFolderLines(List<string> lines, CheckOutcome group, List<UnverifiedFolder> folders)
+    private static void AddFolderLines(List<string> lines, CheckOutcomes group, List<UnverifiedFolder> folders)
     {
-        string[] paths = folders.Select(folder => ReportFormat.Flatten(folder.Path))
-                                .ToArray();
+        string[] paths = [.. folders.Select(folder => ReportFormat.Flatten(folder.Path))];
 
-        if (group != CheckOutcome.UnverifiedOther)
+        if (group is not CheckOutcomes.UnverifiedOther)
         {
             lines.AddRange(paths);
 
             return;
         }
 
-        string[] reasons = folders.Select(folder => ReportFormat.Flatten(ReasonOf(folder)))
-                                  .ToArray();
+        string[] reasons = [.. folders.Select(folder => ReportFormat.Flatten(ReasonOf(folder)))];
 
         int pathWidth   = paths.Max(path => path.Length);
         int reasonWidth = reasons.Max(reason => reason.Length);
@@ -218,31 +228,31 @@ public static class UnindexedReportBuilder
     }
 
     // The report has six groups; every other reason (invalid characters, anything unforeseen) is an Other error that carries its own reason text.
-    private static CheckOutcome GroupOf(UnverifiedFolder folder)
-        => folder.Reason is CheckOutcome.UnverifiedDriveOrShareNotFound
-                            or CheckOutcome.UnverifiedPermissionDenied
-                            or CheckOutcome.UnverifiedNetworkUnreachable
-                            or CheckOutcome.UnverifiedPathTooLong
-                            or CheckOutcome.UnverifiedLinkNotFollowed
+    private static CheckOutcomes GroupOf(UnverifiedFolder folder)
+        => folder.Reason is CheckOutcomes.UnverifiedDriveOrShareNotFound
+                            or CheckOutcomes.UnverifiedPermissionDenied
+                            or CheckOutcomes.UnverifiedNetworkUnreachable
+                            or CheckOutcomes.UnverifiedPathTooLong
+                            or CheckOutcomes.UnverifiedLinkNotFollowed
                ? folder.Reason
-               : CheckOutcome.UnverifiedOther;
+               : CheckOutcomes.UnverifiedOther;
 
     private static string ReasonOf(UnverifiedFolder folder)
         => folder.ReasonText
            ?? folder.Reason switch
            {
-               CheckOutcome.UnverifiedInvalidCharacters => "Invalid characters in path",
-               var _                                    => "I/O error"
+               CheckOutcomes.UnverifiedInvalidCharacters => "Invalid characters in path",
+               var _                                     => "I/O error"
            };
 
-    private static string GroupTitle(CheckOutcome group)
+    private static string GroupTitle(CheckOutcomes group)
         => group switch
         {
-            CheckOutcome.UnverifiedDriveOrShareNotFound => "Drive or share not found",
-            CheckOutcome.UnverifiedPermissionDenied     => "Permission denied",
-            CheckOutcome.UnverifiedNetworkUnreachable   => "Network location unreachable",
-            CheckOutcome.UnverifiedPathTooLong          => "Path too long",
-            CheckOutcome.UnverifiedLinkNotFollowed      => "Link not followed",
-            var _                                       => "Other errors"
+            CheckOutcomes.UnverifiedDriveOrShareNotFound => "Drive or share not found",
+            CheckOutcomes.UnverifiedPermissionDenied     => "Permission denied",
+            CheckOutcomes.UnverifiedNetworkUnreachable   => "Network location unreachable",
+            CheckOutcomes.UnverifiedPathTooLong          => "Path too long",
+            CheckOutcomes.UnverifiedLinkNotFollowed      => "Link not followed",
+            var _                                        => "Other errors"
         };
 }

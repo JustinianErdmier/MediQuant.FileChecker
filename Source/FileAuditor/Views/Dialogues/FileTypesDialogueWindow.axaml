@@ -19,7 +19,7 @@
         <vm:FileTypesDialogueViewModel />
     </Design.DataContext>
     <ClassicWindow.Styles>
-        <!-- The padding leaves a band of the selection colour around the text box, so the selected row shows. -->
+        <!--The padding leaves a band of the selection colour around the text box, so the selected row shows.-->
         <Style Selector="ListBoxItem">
             <Setter Property="Padding"
                     Value="3" />

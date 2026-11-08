@@ -12,11 +12,8 @@ public static class ClassicWindowExtensions
     {
         Control? button = window.GetVisualDescendants()
                                 .OfType<Control>()
-                                .FirstOrDefault(c => c.Name == "PART_RestoreButton");
+                                .FirstOrDefault(c => c.Name is "PART_RestoreButton");
 
-        if (button is not null)
-        {
-            button.IsVisible = false;
-        }
+        button?.IsVisible = false;
     }
 }

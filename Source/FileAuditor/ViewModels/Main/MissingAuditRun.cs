@@ -18,9 +18,9 @@ public sealed class MissingAuditRun(AuditViewModel audit, AuditRunner runner, Au
     public override void Update(TimeSpan elapsed, bool isFinished) => audit.Update(_progress, elapsed, isFinished);
 
     /// <inheritdoc />
-    protected override async Task<(string Status, string? Error)> RunAsync(CancellationToken ct)
+    protected override async Task<(string Status, string? Error)> RunAsync(CancellationToken cancellationToken)
     {
-        ErrorOr<AuditReport> outcome = await runner.RunAsync(request, _progress, ct);
+        ErrorOr<AuditReport> outcome = await runner.RunAsync(request, _progress, cancellationToken);
 
         return outcome.IsError ? DescribeError(outcome.FirstError) : DescribeResult(outcome.Value.Result, outcome.Value.FailureMessage);
     }

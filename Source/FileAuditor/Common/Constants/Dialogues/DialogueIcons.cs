@@ -1,7 +1,7 @@
-namespace FileAuditor.ViewModels.Dialogues;
+namespace FileAuditor.Common.Constants.Dialogues;
 
 /// <summary>The icon a dialogue shows beside its message.</summary>
-public enum DialogueIcon
+public enum DialogueIcons
 {
     /// <summary>A red circle with a cross.</summary>
     Error,

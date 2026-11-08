@@ -3,41 +3,27 @@ namespace FileAuditor.Services.Scanning;
 /// <summary>Parses, normalises and formats the File types and Exclude lists (milestone 4 spec §3.3).</summary>
 public static class FileTypeList
 {
-    private static readonly char[] Forbidden = Path.GetInvalidFileNameChars()
-                                                   .Where(c => c is not ('*' or '?'))
-                                                   .ToArray();
+    private static readonly char[] Forbidden =
+    [
+        .. Path.GetInvalidFileNameChars()
+               .Where(c => c is not ('*' or '?'))
+    ];
 
     /// <summary>Gets the built-in File types, sorted.</summary>
     public static IReadOnlyList<string> Defaults { get; } =
     [
-        ".bmp",
-        ".doc",
-        ".docx",
-        ".eml",
-        ".gif",
-        ".jpeg",
-        ".jpg",
-        ".msg",
-        ".odt",
-        ".pdf",
-        ".png",
-        ".ppt",
-        ".pptx",
-        ".rtf",
-        ".tif",
-        ".tiff",
-        ".xls",
-        ".xlsx",
-        ".xps"
+        ".bmp", ".doc", ".docx", ".eml", ".gif", ".jpeg", ".jpg", ".msg", ".odt", ".pdf", ".png", ".ppt", ".pptx", ".rtf", ".tif", ".tiff", ".xls", ".xlsx", ".xps"
     ];
 
     /// <summary>Splits the text of a file types box into its entries: they are separated by white space (any kind) or commas.</summary>
     /// <param name="text">The text typed.</param>
     /// <returns>The entries as typed, without empty ones.</returns>
     public static string[] Split(string text)
-        => text.Split(separator: ',')
-               .SelectMany(part => part.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-               .ToArray();
+        =>
+        [
+            .. text.Split(separator: ',')
+                   .SelectMany(part => part.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        ];
 
     /// <summary>Parses the text of a file types box: entries separated by white space or commas.</summary>
     /// <param name="text">The text typed.</param>
@@ -58,6 +44,7 @@ public static class FileTypeList
             entries.Add(normalised);
         }
 
+        // ReSharper disable once UseCollectionExpression
         return entries.ToArray();
     }
 
@@ -84,10 +71,10 @@ public static class FileTypeList
             entry = entry[1..];
         }
 
-        if (entry.Length                   == 0
+        if (entry is []
             || entry.IndexOfAny(Forbidden) >= 0
             || entry.Split(separator: '.')
-                    .Any(part => part.Length == 0))
+                    .Any(part => part is []))
         {
             return null;
         }

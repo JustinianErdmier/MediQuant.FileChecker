@@ -29,8 +29,7 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
     public bool CanReset { get; }
 
     /// <summary>Gets the entries, one per line.</summary>
-    public ObservableCollection<FileTypeEntryItem> Entries { get; } =
-        [];
+    public ObservableCollection<FileTypeEntryItem> Entries { get; } = [];
 
     /// <summary>Gets or sets the selected line.</summary>
     [ ObservableProperty ]
@@ -57,19 +56,18 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
     /// <returns>The normalised entries, or the first entry that is not valid.</returns>
     public ErrorOr<string[]> Validate()
     {
-        List<string> entries =
-            [];
+        List<string> entries = [];
 
         foreach (FileTypeEntryItem entry in Entries)
         {
             string text = entry.Text.Trim();
 
-            if (text.Length == 0)
+            if (text is [])
             {
                 continue;
             }
 
-            if (text.Any(c => char.IsWhiteSpace(c) || c == ','))
+            if (text.Any(character => char.IsWhiteSpace(character) || character is ','))
             {
                 return FileTypeList.InvalidEntry(text);
             }
@@ -94,7 +92,7 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
 
         Entries.Remove(item);
 
-        SelectedEntry = Entries.Count == 0 ? null : Entries[Math.Min(index, Entries.Count - 1)];
+        SelectedEntry = Entries is [] ? null : Entries[Math.Min(index, Entries.Count - 1)];
     }
 
     private bool CanClear() => Entries.Count > 0;

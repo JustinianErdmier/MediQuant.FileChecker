@@ -4,12 +4,9 @@ namespace FileAuditor.Views.Groups;
 public partial class ReportView : UserControl
 {
     /// <summary>Initialises a new instance of the <see cref="ReportView" /> class.</summary>
-    public ReportView()
-    {
-        InitializeComponent();
-    }
+    public ReportView() => InitializeComponent();
 
-    private async void OnBrowseClick(object? sender, RoutedEventArgs e)
+    private async void OnBrowseClick(object? sender, RoutedEventArgs eventArgs)
     {
         if (DataContext is not ReportViewModel viewModel
             || TopLevel.GetTopLevel(this) is not { } topLevel)

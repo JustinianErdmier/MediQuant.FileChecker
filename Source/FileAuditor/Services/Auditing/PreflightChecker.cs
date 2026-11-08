@@ -10,9 +10,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
     ///     folder, existing report.
     /// </summary>
     /// <param name="settings">The settings to audit with.</param>
-    /// <param name="direction">The audit direction, which decides the report file name.</param>
+    /// <param name="directions">The audit direction, which decides the report file name.</param>
     /// <returns>The resolved report path when the run may start; <see langword="null" /> when a check failed or the user declined (the user has been told).</returns>
-    public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirection direction)
+    public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirections directions)
     {
         ErrorOr<AuditQuery> query = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn);
 
@@ -23,34 +23,33 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             return null;
         }
 
-        if (!settings.UseCustomReportLocation
-            && !ReportPathResolver.IsSingleFolderName(settings.ProjectFolder.Trim()))
+        switch (settings.UseCustomReportLocation)
         {
-            await dialogues.ShowErrorAsync("The project folder must be a single folder name, not a path, and must not contain characters that are not allowed:\n"
-                                           + settings.ProjectFolder.Trim());
+            case false when !ReportPathResolver.IsSingleFolderName(settings.ProjectFolder.Trim()):
+                await dialogues.ShowErrorAsync("The project folder must be a single folder name, not a path, and must not contain characters that are not allowed:\n"
+                                               + settings.ProjectFolder.Trim());
 
-            return null;
+                return null;
+
+            // Both tabs write into the one custom location, so equal names would have the reports overwrite each other.
+            case true when string.Equals(settings.MissingCustomFileName.Trim(), settings.UnindexedCustomFileName.Trim(), StringComparison.OrdinalIgnoreCase):
+            {
+                string name = ReportPathResolver.Resolve(settings, directions)
+                                                .FileName;
+
+                await dialogues.ShowErrorAsync($"Both reports would have the same file name:\n{PathText.Breakable(name)}\n\nGive each tab's report its own name.");
+
+                return null;
+            }
         }
 
-        // Both tabs write into the one custom location, so equal names would have the reports overwrite each other.
-        if (settings.UseCustomReportLocation
-            && string.Equals(settings.MissingCustomFileName.Trim(), settings.UnindexedCustomFileName.Trim(), StringComparison.OrdinalIgnoreCase))
-        {
-            string name = ReportPathResolver.Resolve(settings, direction)
-                                            .FileName;
-
-            await dialogues.ShowErrorAsync($"Both reports would have the same file name:\n{PathText.Breakable(name)}\n\nGive each tab's report its own name.");
-
-            return null;
-        }
-
-        if (direction == AuditDirection.Unindexed
+        if (directions is AuditDirections.Unindexed
             && !await CheckUnindexedInputsAsync(settings))
         {
             return null;
         }
 
-        ReportPath report = ReportPathResolver.Resolve(settings, direction);
+        ReportPath report = ReportPathResolver.Resolve(settings, directions);
 
         if (report.IsCustom)
         {
@@ -106,21 +105,23 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             return null;
         }
 
-        if (await Task.Run(() => File.Exists(report.FullPath)))
+        if (!await Task.Run(() => File.Exists(report.FullPath)))
         {
-            // An existing read-only report would pass the folder probe but fail at the final move, after the whole table had been checked.
-            if (await Task.Run(() => IsReadOnly(report.FullPath)))
-            {
-                await dialogues.ShowErrorAsync(ReportErrors.ReadOnly(report.FullPath)
-                                                           .Description);
+            return report;
+        }
 
-                return null;
-            }
+        // An existing read-only report would pass the folder probe but fail at the final move, after the whole table had been checked.
+        if (await Task.Run(() => IsReadOnly(report.FullPath)))
+        {
+            await dialogues.ShowErrorAsync(ReportErrors.ReadOnly(report.FullPath)
+                                                       .Description);
 
-            if (!await dialogues.ConfirmAsync($"The report already exists:\n{PathText.Breakable(report.FullPath)}\n\nDo you want to overwrite it?", confirmText: "_Overwrite"))
-            {
-                return null;
-            }
+            return null;
+        }
+
+        if (!await dialogues.ConfirmAsync($"The report already exists:\n{PathText.Breakable(report.FullPath)}\n\nDo you want to overwrite it?", confirmText: "_Overwrite"))
+        {
+            return null;
         }
 
         return report;
@@ -129,11 +130,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
     // The Unindexed direction's own inputs: folders first, then the two type lists, then the three warnings in the order of milestone 4 spec §3.3.
     private async Task<bool> CheckUnindexedInputsAsync(AppSettings settings)
     {
-        IReadOnlyList<ScanFolder> folders = settings.ScanFolders
-                                            ??
-                                            [];
+        ScanFolder[] folders = settings.ScanFolders ?? [];
 
-        if (folders.Count == 0)
+        if (folders.Length is 0)
         {
             await dialogues.ShowErrorAsync(message: "Add at least one folder to check.");
 
@@ -151,15 +150,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         }
 
         // The Edit dialogues only accept valid entries, so an invalid one can come only from a project file edited by hand.
-        ErrorOr<string[]> include = FileTypeList.Parse(string.Join(separator: ' ',
-                                                                   settings.FileTypes
-                                                                   ??
-                                                                   []));
+        ErrorOr<string[]> include = FileTypeList.Parse(string.Join(separator: ' ', settings.FileTypes ?? []));
 
-        ErrorOr<string[]> exclude = FileTypeList.Parse(string.Join(separator: ' ',
-                                                                   settings.ExcludeTypes
-                                                                   ??
-                                                                   []));
+        ErrorOr<string[]> exclude = FileTypeList.Parse(string.Join(separator: ' ', settings.ExcludeTypes ?? []));
 
         if (include.IsError
             || exclude.IsError)
@@ -169,7 +162,7 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             return false;
         }
 
-        if (include.Value.Length == 0)
+        if (include.Value.Length is 0)
         {
             await dialogues.ShowErrorAsync(message: "Add at least one file type.");
 
@@ -178,14 +171,14 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
         string? excludeEverything = exclude.Value.FirstOrDefault(entry => new FileTypePattern(entry).MatchesEverything);
 
-        if (excludeEverything is not null)
+        if (excludeEverything is null)
         {
-            await dialogues.ShowErrorAsync($"The Exclude list contains {excludeEverything}, which matches every file, so nothing would be checked. Remove it to run the audit.");
-
-            return false;
+            return await ConfirmTypeWarningsAsync(include.Value, exclude.Value);
         }
 
-        return await ConfirmTypeWarningsAsync(include.Value, exclude.Value);
+        await dialogues.ShowErrorAsync($"The Exclude list contains {excludeEverything}, which matches every file, so nothing would be checked. Remove it to run the audit.");
+
+        return false;
     }
 
     private async Task<bool> ConfirmTypeWarningsAsync(string[] include, string[] exclude)
@@ -219,22 +212,23 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             project.ExcludedTypesConfirmed = true;
         }
 
-        string[] both = include.Intersect(exclude, StringComparer.Ordinal)
-                               .ToArray();
+        string[] both = [.. include.Intersect(exclude, StringComparer.Ordinal)];
 
-        if (both.Length > 0
-            && !project.OverlapConfirmed)
+        if (both.Length <= 0
+            || project.OverlapConfirmed)
         {
-            string entries = string.Join(separator: ' ', both);
-
-            if (!await dialogues.ConfirmAsync($"These types are in both File types and Exclude, so they will not be checked:\n{entries}\n\nDo you want to continue?",
-                                              confirmText: "_Continue"))
-            {
-                return false;
-            }
-
-            project.OverlapConfirmed = true;
+            return true;
         }
+
+        string entries = string.Join(separator: ' ', both);
+
+        if (!await dialogues.ConfirmAsync($"These types are in both File types and Exclude, so they will not be checked:\n{entries}\n\nDo you want to continue?",
+                                          confirmText: "_Continue"))
+        {
+            return false;
+        }
+
+        project.OverlapConfirmed = true;
 
         return true;
     }
@@ -257,15 +251,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
         HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (ScanFolder folder in folders)
-        {
-            if (!seen.Add(FolderWalker.NormaliseFolder(folder.Path)))
-            {
-                return $"This folder is listed twice:\n{PathText.Breakable(folder.Path)}";
-            }
-        }
-
-        return null;
+        return (from folder in folders
+                where !seen.Add(FolderWalker.NormaliseFolder(folder.Path))
+                select $"This folder is listed twice:\n{PathText.Breakable(folder.Path)}").FirstOrDefault();
     }
 
     // Creates and immediately removes the temporary file that ReportWriter uses, so the probe leaves nothing behind.
@@ -277,9 +265,12 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
             return Result.Success;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        catch (Exception exception) when (exception is IOException
+                                                       or UnauthorizedAccessException
+                                                       or ArgumentException
+                                                       or NotSupportedException)
         {
-            return ReportErrors.FolderNotWritable(report.Directory, ex.Message);
+            return ReportErrors.FolderNotWritable(report.Directory, exception.Message);
         }
     }
 
@@ -290,9 +281,12 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             return File.GetAttributes(path)
                        .HasFlag(FileAttributes.ReadOnly);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        catch (Exception exception) when (exception is IOException
+                                                       or UnauthorizedAccessException
+                                                       or ArgumentException
+                                                       or NotSupportedException)
         {
-            // Unreadable attributes are not proof of a read-only file; the write itself will report any real failure.
+            // Unreadable attributes are not proof of a read-only file; the write operation itself will report any real failure.
             return false;
         }
     }
@@ -305,9 +299,12 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
             return null;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        catch (Exception exception) when (exception is IOException
+                                                       or UnauthorizedAccessException
+                                                       or ArgumentException
+                                                       or NotSupportedException)
         {
-            return ex.Message;
+            return exception.Message;
         }
     }
 }

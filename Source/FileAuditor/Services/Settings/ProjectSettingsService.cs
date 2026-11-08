@@ -64,14 +64,14 @@ public sealed class ProjectSettingsService
     /// <summary>Forgets the file, the baseline (back to <see cref="AppSettings.Default" />) and every remembered answer.</summary>
     public void Reset()
     {
-        FilePath        = null;
-        _baseline       = AppSettings.Default;
-        _saveDeclined   = false;
-        UntickConfirmed = false;
+        _baseline     = AppSettings.Default;
+        _saveDeclined = false;
 
-        RedundantTypesConfirmed = false;
         ExcludedTypesConfirmed  = false;
+        FilePath                = null;
+        RedundantTypesConfirmed = false;
         OverlapConfirmed        = false;
+        UntickConfirmed         = false;
     }
 
     /// <summary>Records a successfully opened project.</summary>
@@ -123,12 +123,11 @@ public sealed class ProjectSettingsService
             tick = true;
         }
 
-        SavePointResult Done() => tick ? SavePointResult.GoAndTick : SavePointResult.Go;
-
         // A built location is only usable when the project folder is a single valid folder name; Start checks this in the pre-flight, other save points here.
         bool reportUsable = report.IsComplete
                             && Path.IsPathFullyQualified(report.Directory)
-                            && (report.IsCustom || ReportPathResolver.IsSingleFolderName(current.ProjectFolder.Trim()));
+                            && (report.IsCustom
+                                || ReportPathResolver.IsSingleFolderName(current.ProjectFolder.Trim()));
 
         string target;
         bool   own;
@@ -146,27 +145,29 @@ public sealed class ProjectSettingsService
         else if (reportUsable
                  && !SameFolder(Path.GetDirectoryName(FilePath) ?? string.Empty, report.Directory))
         {
-            DialogueChoice choice = await _dialogues.ChooseAsync($"The report folder has changed.\n\nThis project's settings were opened from:\n{PathText.Breakable(FilePath)}\n\n"
-                                                                 + $"The report is now written to:\n{PathText.Breakable(report.DisplayDirectory)}\n\nWhere should the settings be saved?",
-                                                                 DialogueIcon.Question,
-                                                                 primaryText: "_Report Folder",
-                                                                 secondaryText: "_Original File",
-                                                                 tertiaryText: "Cancel");
+            DialogueChoices choices
+                = await _dialogues.ChooseAsync($"The report folder has changed.\n\nThis project's settings were opened from:\n{PathText.Breakable(FilePath)}\n\n"
+                                               + $"The report is now written to:\n{PathText.Breakable(report.DisplayDirectory)}\n\nWhere should the settings be saved?",
+                                               DialogueIcons.Question,
+                                               primaryText: "_Report Folder",
+                                               secondaryText: "_Original File",
+                                               tertiaryText: "Cancel");
 
-            switch (choice)
+            switch (choices)
             {
-                case DialogueChoice.Primary:
+                case DialogueChoices.Primary:
                     target = Path.Combine(report.Directory, SettingsStore.FileName);
                     own    = false;
 
                     break;
 
-                case DialogueChoice.Secondary:
+                case DialogueChoices.Secondary:
                     target = FilePath;
                     own    = true;
 
                     break;
 
+                case DialogueChoices.Tertiary:
                 default:
                     return SavePointResult.Cancel;
             }
@@ -187,21 +188,24 @@ public sealed class ProjectSettingsService
         if (!own
             && await Task.Run(() => File.Exists(target)))
         {
-            DialogueChoice choice
+            DialogueChoices choices
                 = await _dialogues.ChooseAsync($"A project settings file already exists in this folder:\n{PathText.Breakable(target)}\n\nDo you want to overwrite it?",
-                                               DialogueIcon.Warning,
+                                               DialogueIcons.Warning,
                                                primaryText: "_Overwrite",
                                                secondaryText: "_Skip Save",
                                                tertiaryText: "Cancel");
 
-            if (choice == DialogueChoice.Secondary)
+            switch (choices)
             {
-                return Done();
-            }
+                case DialogueChoices.Secondary:
+                    return Done();
 
-            if (choice == DialogueChoice.Tertiary)
-            {
-                return SavePointResult.Cancel;
+                case DialogueChoices.Tertiary:
+                    return SavePointResult.Cancel;
+
+                case DialogueChoices.Primary:
+                default:
+                    break;
             }
         }
 
@@ -216,16 +220,18 @@ public sealed class ProjectSettingsService
         _baseline = current;
 
         return Done();
+
+        SavePointResult Done() => tick ? SavePointResult.GoAndTick : SavePointResult.Go;
     }
 
     private async Task<SavePointResult> CannotSaveAsync(string path, string reason, Func<SavePointResult> done)
     {
-        DialogueChoice choice = await _dialogues.ChooseAsync($"This project's settings cannot be saved:\n{PathText.Breakable(path)}\n\n{reason}",
-                                                             DialogueIcon.Error,
-                                                             primaryText: "_Skip Save",
-                                                             secondaryText: "Cancel");
+        DialogueChoices choices = await _dialogues.ChooseAsync($"This project's settings cannot be saved:\n{PathText.Breakable(path)}\n\n{reason}",
+                                                               DialogueIcons.Error,
+                                                               primaryText: "_Skip Save",
+                                                               secondaryText: "Cancel");
 
-        return choice == DialogueChoice.Primary ? done() : SavePointResult.Cancel;
+        return choices is DialogueChoices.Primary ? done() : SavePointResult.Cancel;
     }
 
     // Compares the full paths, so a relative segment or a mixed separator does not make the same folder look different.
@@ -236,7 +242,9 @@ public sealed class ProjectSettingsService
             a = Path.GetFullPath(a);
             b = Path.GetFullPath(b);
         }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        catch (Exception exception) when (exception is ArgumentException
+                                                       or NotSupportedException
+                                                       or PathTooLongException)
         {
             // Compare the paths as given.
         }

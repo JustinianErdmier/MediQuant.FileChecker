@@ -26,7 +26,7 @@
                       RowSpacing="4"
                       Margin="4">
                     <StackPanel Grid.ColumnSpan="3">
-                        <!-- The 16 px right margin is the vertical scroll bar's width: the bar is pinned Visible so the header and the rows share one right edge. -->
+                        <!--The 16 px right margin is the vertical scroll bar's width: the bar is pinned Visible so the header and the rows share one right edge.-->
                         <Grid ColumnDefinitions="*,110"
                               Margin="4,0,16,0">
                             <TextBlock Text="Folder" />

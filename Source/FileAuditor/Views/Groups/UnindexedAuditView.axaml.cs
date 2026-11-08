@@ -4,8 +4,5 @@ namespace FileAuditor.Views.Groups;
 public partial class UnindexedAuditView : UserControl
 {
     /// <summary>Initialises a new instance of the <see cref="UnindexedAuditView" /> class.</summary>
-    public UnindexedAuditView()
-    {
-        InitializeComponent();
-    }
+    public UnindexedAuditView() => InitializeComponent();
 }

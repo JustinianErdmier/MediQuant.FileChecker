@@ -13,23 +13,35 @@ public static class ReportPathResolver
     ///     filled in. Custom: the typed location and file name, complete once both are filled in.
     /// </summary>
     /// <param name="settings">The current settings.</param>
-    /// <param name="direction">The audit direction the report belongs to.</param>
+    /// <param name="directions">The audit direction the report belongs to.</param>
     /// <returns>The resolved report path.</returns>
-    public static ReportPath Resolve(AppSettings settings, AuditDirection direction)
+    public static ReportPath Resolve(AppSettings settings, AuditDirections directions)
     {
         if (settings.UseCustomReportLocation)
         {
             string location = settings.CustomLocation.Trim();
-            string fileName = direction == AuditDirection.Missing ? settings.MissingCustomFileName.Trim() : settings.UnindexedCustomFileName.Trim();
+
+            string fileName = directions is AuditDirections.Missing
+                                  ? settings.MissingCustomFileName.Trim()
+                                  : settings.UnindexedCustomFileName.Trim();
 
             return new ReportPath(location, fileName, location.Length > 0 && fileName.Length > 0, IsCustom: true);
         }
 
-        string     projectFolder = settings.ProjectFolder.Trim();
-        AuditStage auditStage    = settings.ProjectStage == ProjectStage.Sample ? AuditStage.Interim : settings.AuditStage;
-        string     directory     = Path.Combine(BuiltRoot, projectFolder.Length > 0 ? projectFolder : ProjectFolderPlaceholder, path3: "DE", settings.ProjectStage.ToString());
+        string projectFolder = settings.ProjectFolder.Trim();
 
-        return new ReportPath(directory, $"FileAuditor{direction}Report_{auditStage}.txt", projectFolder.Length > 0, IsCustom: false);
+        AuditStages auditStages = settings.ProjectStages is ProjectStages.Sample
+                                      ? AuditStages.Interim
+                                      : settings.AuditStages;
+
+        string directory = Path.Combine(BuiltRoot,
+                                        projectFolder.Length > 0
+                                            ? projectFolder
+                                            : ProjectFolderPlaceholder,
+                                        path3: "DE",
+                                        settings.ProjectStages.ToString());
+
+        return new ReportPath(directory, $"FileAuditor{directions}Report_{auditStages}.txt", projectFolder.Length > 0, IsCustom: false);
     }
 
     /// <summary>
@@ -44,14 +56,14 @@ public static class ReportPathResolver
         {
             string location = settings.CustomLocation.Trim();
 
-            return new ReportPath(location, FileName: "", location.Length > 0, IsCustom: true);
+            return new ReportPath(location, string.Empty, location.Length > 0, IsCustom: true);
         }
 
-        ReportPath built = Resolve(settings, AuditDirection.Missing);
+        ReportPath built = Resolve(settings, AuditDirections.Missing);
 
         return built with
         {
-            FileName = ""
+            FileName = string.Empty
         };
     }
 
@@ -62,10 +74,6 @@ public static class ReportPathResolver
         => folder.Length > 0
            && folder is not ("." or "..")
            && !Path.IsPathRooted(folder)
-           && folder.IndexOfAny([
-               '\\',
-               '/'
-           ])
-           < 0
+           && folder.IndexOfAny(['\\', '/'])                    < 0
            && folder.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
 }

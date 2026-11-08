@@ -12,7 +12,7 @@ public sealed partial class MissingFilesTabViewModel : ObservableObject
     /// <param name="shared">The report location values every tab shares.</param>
     public MissingFilesTabViewModel(ReportLocationState shared)
     {
-        Report = new ReportViewModel(shared, AuditDirection.Missing);
+        Report = new ReportViewModel(shared, AuditDirections.Missing);
         Audit  = new AuditViewModel();
     }
 

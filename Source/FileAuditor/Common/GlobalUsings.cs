@@ -39,6 +39,10 @@ global using ErrorOr;
 
 global using Microsoft.Data.SqlClient;
 
+global using FileAuditor.Common.Constants.Auditing;
+global using FileAuditor.Common.Constants.Dialogues;
+global using FileAuditor.Common.Constants.Reporting;
+global using FileAuditor.Common.Constants.Settings;
 global using FileAuditor.Common.Errors;
 global using FileAuditor.Common.Extensions;
 global using FileAuditor.Common.Links;

@@ -10,22 +10,19 @@ public sealed partial class FileIndexTableViewModel : ObservableObject
 
     /// <summary>Initialises a new instance populated from the given settings.</summary>
     /// <param name="settings">The settings to load.</param>
-    public FileIndexTableViewModel(AppSettings settings)
-    {
-        Load(settings);
-    }
+    public FileIndexTableViewModel(AppSettings settings) => Load(settings);
 
     /// <summary>Gets or sets the name of the optional ID column.</summary>
     [ ObservableProperty ]
-    public partial string IdColumn { get; set; } = "";
+    public partial string IdColumn { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the name of the column holding file paths.</summary>
     [ ObservableProperty ]
-    public partial string PathColumn { get; set; } = "";
+    public partial string PathColumn { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the table name, optionally schema-qualified.</summary>
     [ ObservableProperty ]
-    public partial string Table { get; set; } = "";
+    public partial string Table { get; set; } = string.Empty;
 
     /// <summary>Copies this group's inputs into the given settings.</summary>
     /// <param name="settings">The settings to start from.</param>

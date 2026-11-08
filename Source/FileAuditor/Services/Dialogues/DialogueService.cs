@@ -11,30 +11,30 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
     /// <summary>Shows an error with a single OK button.</summary>
     /// <param name="message">The message.</param>
     /// <returns>A task that completes when the dialogue closes.</returns>
-    public async Task ShowErrorAsync(string message) => await ShowAsync(new MessageDialogueViewModel(message, DialogueIcon.Error, PrimaryText: "OK", SecondaryText: null));
+    public async Task ShowErrorAsync(string message) => await ShowAsync(new MessageDialogueViewModel(message, DialogueIcons.Error, PrimaryText: "OK", SecondaryText: null));
 
     /// <summary>Shows a warning with an action button and Cancel.</summary>
     /// <param name="message">The message.</param>
     /// <param name="confirmText">The action button's text; an underscore marks its access key.</param>
     /// <returns><see langword="true" /> when the user chose the action; <see langword="false" /> for Cancel or closing the dialogue.</returns>
     public async Task<bool> ConfirmAsync(string message, string confirmText)
-        => await ShowAsync(new MessageDialogueViewModel(message, DialogueIcon.Warning, confirmText, SecondaryText: "Cancel")) == DialogueChoice.Primary;
+        => await ShowAsync(new MessageDialogueViewModel(message, DialogueIcons.Warning, confirmText, SecondaryText: "Cancel")) is DialogueChoices.Primary;
 
     /// <summary>Asks a Yes/No question.</summary>
     /// <param name="message">The question.</param>
     /// <returns><see langword="true" /> for Yes; <see langword="false" /> for No or closing the dialogue.</returns>
     public async Task<bool> AskYesNoAsync(string message)
-        => await ShowAsync(new MessageDialogueViewModel(message, DialogueIcon.Question, PrimaryText: "_Yes", SecondaryText: "_No")) == DialogueChoice.Primary;
+        => await ShowAsync(new MessageDialogueViewModel(message, DialogueIcons.Question, PrimaryText: "_Yes", SecondaryText: "_No")) is DialogueChoices.Primary;
 
     /// <summary>Shows a dialogue with two or three buttons.</summary>
     /// <param name="message">The message.</param>
-    /// <param name="icon">The icon to show.</param>
+    /// <param name="icons">The icon to show.</param>
     /// <param name="primaryText">The action button's text; an underscore marks its access key.</param>
     /// <param name="secondaryText">The second button's text.</param>
     /// <param name="tertiaryText">The third button's text, or <see langword="null" /> for a two-button dialogue.</param>
     /// <returns>The button chosen; the last visible button when the dialogue is closed with the title-bar close box.</returns>
-    public Task<DialogueChoice> ChooseAsync(string message, DialogueIcon icon, string primaryText, string secondaryText, string? tertiaryText = null)
-        => ShowAsync(new MessageDialogueViewModel(message, icon, primaryText, secondaryText, tertiaryText));
+    public Task<DialogueChoices> ChooseAsync(string message, DialogueIcons icons, string primaryText, string secondaryText, string? tertiaryText = null)
+        => ShowAsync(new MessageDialogueViewModel(message, icons, primaryText, secondaryText, tertiaryText));
 
     /// <summary>Shows the file types editor.</summary>
     /// <param name="title">The window title.</param>
@@ -81,41 +81,35 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
             [
                 new FilePickerFileType(name: "File Auditor project (FileAuditorSettings.json)")
                 {
-                    Patterns =
-                    [
-                        "FileAuditorSettings.json"
-                    ]
+                    Patterns = ["FileAuditorSettings.json"]
                 },
                 new FilePickerFileType(name: "JSON files (*.json)")
                 {
-                    Patterns =
-                    [
-                        "*.json"
-                    ]
+                    Patterns = ["*.json"]
                 }
             ]
         });
 
-        return files.Count == 0
+        return files.Count is 0
                    ? null
                    : new ProjectFilePick(files[index: 0].Name,
                                          files[index: 0]
                                              .TryGetLocalPath());
     }
 
-    private async Task<DialogueChoice> ShowAsync(MessageDialogueViewModel viewModel)
+    private async Task<DialogueChoices> ShowAsync(MessageDialogueViewModel viewModel)
     {
         Window? owner = ownerProvider();
 
         if (owner is null)
         {
-            return DialogueChoice.Secondary;
+            return DialogueChoices.Secondary;
         }
 
         MessageDialogueWindow window = new(viewModel);
 
         await window.ShowDialog(owner);
 
-        return window.Choice;
+        return window.Choices;
     }
 }

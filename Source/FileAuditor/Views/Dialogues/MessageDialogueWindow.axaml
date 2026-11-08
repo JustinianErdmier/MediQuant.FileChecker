@@ -17,7 +17,7 @@
                WindowStartupLocation="CenterOwner">
     <Design.DataContext>
         <vm:MessageDialogueViewModel Message="The report folder does not exist."
-                                     Icon="Warning"
+                                     Icons="Warning"
                                      PrimaryText="_Create Folder"
                                      SecondaryText="Cancel" />
     </Design.DataContext>

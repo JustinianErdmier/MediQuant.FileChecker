@@ -9,11 +9,11 @@ public abstract partial class AuditStatusBase : ObservableObject
 
     /// <summary>Gets or sets the status-bar message.</summary>
     [ ObservableProperty ]
-    public partial string StatusMessage { get; set; } = "";
+    public partial string StatusMessage { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the status-bar percentage text, blank when no run is under way or the percentage is not known.</summary>
     [ ObservableProperty ]
-    public partial string StatusPercent { get; set; } = "";
+    public partial string StatusPercent { get; set; } = string.Empty;
 
     /// <summary>Blanks every statistic and the progress bar, ready for a new run.</summary>
     public abstract void Reset();

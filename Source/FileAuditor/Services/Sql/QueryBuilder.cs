@@ -33,17 +33,21 @@ public static class QueryBuilder
         string selectList = $"{SqlIdentifier.Quote(pathParts.Value[index: 0])} AS [Path]";
         bool   hasId      = !string.IsNullOrWhiteSpace(idColumn);
 
-        if (hasId)
+        if (!hasId)
         {
-            ErrorOr<IReadOnlyList<string>> idParts = SqlIdentifier.ParseMultipart(idColumn, maxParts: 1);
-
-            if (idParts.IsError)
-            {
-                return idParts.Errors;
-            }
-
-            selectList += $", {SqlIdentifier.Quote(idParts.Value[index: 0])} AS [Id]";
+            return new AuditQuery($"SELECT COUNT_BIG(*) FROM {tableSql};",
+                                  $"SELECT {selectList} FROM {tableSql};",
+                                  hasId);
         }
+
+        ErrorOr<IReadOnlyList<string>> idParts = SqlIdentifier.ParseMultipart(idColumn, maxParts: 1);
+
+        if (idParts.IsError)
+        {
+            return idParts.Errors;
+        }
+
+        selectList += $", {SqlIdentifier.Quote(idParts.Value[index: 0])} AS [Id]";
 
         return new AuditQuery($"SELECT COUNT_BIG(*) FROM {tableSql};",
                               $"SELECT {selectList} FROM {tableSql};",
@@ -90,11 +94,11 @@ public static class QueryBuilder
         List<KeyValuePair<string, string>> parameters = new(folders.Count);
         List<string>                       clauses    = new(folders.Count);
 
-        for (int i = 0; i < folders.Count; i++)
+        for (int index = 0; index < folders.Count; index++)
         {
-            string name = $"@p{i}";
+            string name = $"@p{index}";
 
-            parameters.Add(new KeyValuePair<string, string>(name, EscapePrefix(folders[i])));
+            parameters.Add(new KeyValuePair<string, string>(name, EscapePrefix(folders[index])));
             clauses.Add($"{columnSql} COLLATE Latin1_General_100_CI_AS LIKE {name} ESCAPE '{EscapeCharacter}'");
         }
 
@@ -145,17 +149,20 @@ public static class QueryBuilder
     {
         StringBuilder builder = new(folder.Length + 8);
 
-        foreach (char c in folder)
+        foreach (char character in folder)
         {
-            if (c is EscapeCharacter or '%' or '_' or '[')
+            if (character is EscapeCharacter
+                             or '%'
+                             or '_'
+                             or '[')
             {
                 builder.Append(EscapeCharacter);
             }
 
-            builder.Append(c);
+            builder.Append(character);
         }
 
-        if (folder[^1] != '\\')
+        if (folder[^1] is not '\\')
         {
             builder.Append(value: '\\');
         }

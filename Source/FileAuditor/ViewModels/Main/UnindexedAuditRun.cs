@@ -22,10 +22,10 @@ public sealed class UnindexedAuditRun(UnindexedAuditViewModel audit, UnindexedAu
     public override void Update(TimeSpan elapsed, bool isFinished) => audit.Update(_progress, elapsed, isFinished);
 
     /// <inheritdoc />
-    protected override async Task<(string Status, string? Error)> RunAsync(CancellationToken ct)
+    protected override async Task<(string Status, string? Error)> RunAsync(CancellationToken cancellationToken)
     {
-        ErrorOr<UnindexedReport> outcome = await runner.RunAsync(request, _progress, ct);
+        ErrorOr<UnindexedReport> outcome = await runner.RunAsync(request, _progress, cancellationToken);
 
-        return outcome.IsError ? DescribeError(outcome.FirstError) : DescribeResult(outcome.Value.Kind, outcome.Value.FailureMessage);
+        return outcome.IsError ? DescribeError(outcome.FirstError) : DescribeResult(outcome.Value.Kinds, outcome.Value.FailureMessage);
     }
 }

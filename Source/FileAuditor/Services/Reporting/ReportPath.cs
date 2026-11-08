@@ -8,7 +8,10 @@ namespace FileAuditor.Services.Reporting;
 public sealed record ReportPath(string Directory, string FileName, bool IsComplete, bool IsCustom)
 {
     /// <summary>Gets the folder as shown in the Location box: a built folder always ends with a backslash, a custom one is shown as typed.</summary>
-    public string DisplayDirectory => IsCustom || Directory.EndsWith(Path.DirectorySeparatorChar) ? Directory : Directory + Path.DirectorySeparatorChar;
+    public string DisplayDirectory
+        => IsCustom || Directory.EndsWith(Path.DirectorySeparatorChar)
+               ? Directory
+               : Directory + Path.DirectorySeparatorChar;
 
     /// <summary>Gets the full path of the report file.</summary>
     public string FullPath => Path.Combine(Directory, FileName);

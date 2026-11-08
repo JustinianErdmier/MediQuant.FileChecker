@@ -17,7 +17,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     {
         _dialogues = dialogues;
 
-        Report = new ReportViewModel(shared, AuditDirection.Unindexed);
+        Report = new ReportViewModel(shared, AuditDirections.Unindexed);
         Audit  = new UnindexedAuditViewModel();
 
         Folders.CollectionChanged += OnFoldersChanged;
@@ -28,15 +28,14 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
 
     /// <summary>Gets or sets the Exclude summary: the extension blacklist in normal form, changed only through its editor.</summary>
     [ ObservableProperty ]
-    public partial string ExcludeText { get; set; } = "";
+    public partial string ExcludeText { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the File types summary: the extension whitelist in normal form, changed only through its editor.</summary>
     [ ObservableProperty ]
     public partial string FileTypesText { get; set; } = FileTypeList.Format(FileTypeList.Defaults);
 
     /// <summary>Gets the folders to check, in the order listed.</summary>
-    public ObservableCollection<ScanFolderItem> Folders { get; } =
-        [];
+    public ObservableCollection<ScanFolderItem> Folders { get; } = [];
 
     /// <summary>Gets the Report group for the unindexed-files direction.</summary>
     public ReportViewModel Report { get; }
@@ -73,8 +72,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     public AppSettings ApplyTo(AppSettings settings)
         => Report.ApplyTo(settings with
         {
-            ScanFolders = Folders.Select(folder => new ScanFolder(folder.Path, folder.IncludeSubfolders))
-                                 .ToArray(),
+            ScanFolders = [.. Folders.Select(folder => new ScanFolder(folder.Path, folder.IncludeSubfolders))],
             FileTypes = Entries(FileTypesText),
             ExcludeTypes = Entries(ExcludeText)
         });
@@ -85,18 +83,14 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     {
         Folders.Clear();
 
-        foreach (ScanFolder folder in settings.ScanFolders
-                                      ??
-                                      [])
+        foreach (ScanFolder folder in settings.ScanFolders ?? [])
         {
             Folders.Add(new ScanFolderItem(folder.Path, folder.IncludeSubfolders));
         }
 
         FileTypesText = FileTypeList.Format(settings.FileTypes ?? FileTypeList.Defaults);
 
-        ExcludeText = FileTypeList.Format(settings.ExcludeTypes
-                                          ??
-                                          []);
+        ExcludeText = FileTypeList.Format(settings.ExcludeTypes ?? []);
 
         Report.Load(settings);
     }
@@ -137,16 +131,12 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     // A change to the list or to a row's checkbox is an input change, like a change to either box.
     private void OnFoldersChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        foreach (ScanFolderItem item in e.OldItems?.OfType<ScanFolderItem>()
-                                        ??
-                                        [])
+        foreach (ScanFolderItem item in e.OldItems?.OfType<ScanFolderItem>() ?? [])
         {
             item.PropertyChanged -= OnFolderChanged;
         }
 
-        foreach (ScanFolderItem item in e.NewItems?.OfType<ScanFolderItem>()
-                                        ??
-                                        [])
+        foreach (ScanFolderItem item in e.NewItems?.OfType<ScanFolderItem>() ?? [])
         {
             item.PropertyChanged += OnFolderChanged;
         }
@@ -154,7 +144,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         OnPropertyChanged(nameof(Folders));
     }
 
-    private void OnFolderChanged(object? sender, PropertyChangedEventArgs e) => OnPropertyChanged(nameof(Folders));
+    private void OnFolderChanged(object? sender, PropertyChangedEventArgs eventArgs) => OnPropertyChanged(nameof(Folders));
 
     private static string[] Entries(string text) => FileTypeList.Split(text);
 }

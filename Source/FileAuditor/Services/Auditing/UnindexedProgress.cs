@@ -8,7 +8,7 @@ public sealed class UnindexedProgress
 {
     private long _indexed;
 
-    private volatile string _phase = "";
+    private volatile string _phase = string.Empty;
 
     private volatile Stopwatch? _scanClock;
 

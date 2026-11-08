@@ -4,8 +4,5 @@ namespace FileAuditor.Views.Groups;
 public partial class ProjectSettingsView : UserControl
 {
     /// <summary>Initialises a new instance of the <see cref="ProjectSettingsView" /> class.</summary>
-    public ProjectSettingsView()
-    {
-        InitializeComponent();
-    }
+    public ProjectSettingsView() => InitializeComponent();
 }

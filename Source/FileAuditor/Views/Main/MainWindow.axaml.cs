@@ -19,19 +19,19 @@ public partial class MainWindow : ClassicWindow
     }
 
     /// <inheritdoc />
-    protected override void OnClosing(WindowClosingEventArgs e)
+    protected override void OnClosing(WindowClosingEventArgs eventArgs)
     {
-        base.OnClosing(e);
+        base.OnClosing(eventArgs);
 
         if (_closeApproved
-            || e.Cancel
+            || eventArgs.Cancel
             || DataContext is not MainWindowViewModel viewModel)
         {
             return;
         }
 
         // The question is asynchronous, so cancel this close and repeat it once the user has answered.
-        e.Cancel = true;
+        eventArgs.Cancel = true;
 
         if (!_isAsking)
         {
@@ -40,15 +40,17 @@ public partial class MainWindow : ClassicWindow
     }
 
     /// <inheritdoc />
-    protected override void OnDataContextChanged(EventArgs e)
+    protected override void OnDataContextChanged(EventArgs eventArgs)
     {
-        base.OnDataContextChanged(e);
+        base.OnDataContextChanged(eventArgs);
 
-        if (DataContext is MainWindowViewModel viewModel)
+        if (DataContext is not MainWindowViewModel viewModel)
         {
-            viewModel.AboutRequested += async (_, _) => await new AboutWindow().ShowDialog(this);
-            viewModel.ExitRequested  += (_,       _) => Close();
+            return;
         }
+
+        viewModel.AboutRequested += async (_, _) => await new AboutWindow().ShowDialog(this);
+        viewModel.ExitRequested  += (_,       _) => Close();
     }
 
     private async Task CloseWhenConfirmedAsync(MainWindowViewModel viewModel)
