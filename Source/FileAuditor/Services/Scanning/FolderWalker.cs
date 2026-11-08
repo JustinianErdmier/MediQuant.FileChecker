@@ -47,7 +47,8 @@ public sealed class FolderWalker
     /// <param name="folders">The input folders; each path is normalised with <see cref="NormaliseFolder" />, which the caller may have done already.</param>
     /// <param name="filter">Decides which files are reported, and under which file type.</param>
     /// <param name="onFile">Called for each file found; may be called concurrently from several threads.</param>
-    /// <param name="onUnverified">Called for each folder that could not be listed; may be called concurrently from several threads.</param>
+    /// <param name="onUnverified">Called for each folder that could not be listed, each link that was not followed (a folder or a file) and each entry whose link status could not be read;
+    ///     may be called concurrently from several threads.</param>
     /// <param name="ct">Stops the walk promptly; see the cancellation note on the type.</param>
     /// <returns>A task that completes when no folder is queued or being listed, or the walk was stopped.</returns>
     public Task WalkAsync(IReadOnlyList<ScanFolder> folders, FileTypeFilter filter, Action<ScannedFile> onFile, Action<UnverifiedFolder> onUnverified,
@@ -71,13 +72,23 @@ public sealed class FolderWalker
 
         foreach (Root root in all)
         {
-            if (IsLink(new DirectoryInfo(root.Path)))
+            // An input whose link status cannot be read is not walked either: it is reported as unverified.
+            switch (Classify(new DirectoryInfo(root.Path), out string? failure))
             {
-                onUnverified(LinkNotFollowed(root.Path));
-            }
-            else
-            {
-                roots.Add(root);
+                case LinkState.Link:
+                    onUnverified(LinkNotFollowed(root.Path));
+
+                    break;
+
+                case LinkState.Unknown:
+                    onUnverified(Unclassifiable(root.Path, failure));
+
+                    break;
+
+                default:
+                    roots.Add(root);
+
+                    break;
             }
         }
 
@@ -170,17 +181,34 @@ public sealed class FolderWalker
         return Path.EndsInDirectorySeparator(full) ? full : full + Path.DirectorySeparatorChar;
     }
 
-    // Whether the entry is a junction or symbolic link (it has a link target); any other reparse point, or an entry that cannot be read, is not a link.
-    private static bool IsLink(FileSystemInfo info)
+    // Whether the entry is a junction or symbolic link (it has a link target). Any other reparse point is an ordinary entry, but an entry whose link target cannot
+    // be read is Unknown, never assumed ordinary: the caller reports it and does not walk or check it.
+    private static LinkState Classify(FileSystemInfo info, out string? failure)
     {
+        failure = null;
+
         try
         {
-            return info.LinkTarget is not null;
+            return info.LinkTarget is not null ? LinkState.Link : LinkState.Ordinary;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return false;
+            failure = ex.Message;
+
+            return LinkState.Unknown;
         }
+    }
+
+    private static UnverifiedFolder Unclassifiable(string path, string? message)
+        => new(path, CheckOutcome.UnverifiedOther, "Could not tell whether this is a link", message);
+
+    private enum LinkState
+    {
+        Ordinary,
+
+        Link,
+
+        Unknown
     }
 
     private static UnverifiedFolder LinkNotFollowed(string path) => new(path, CheckOutcome.UnverifiedLinkNotFollowed, ReasonText: null, SystemMessage: null);
@@ -188,7 +216,7 @@ public sealed class FolderWalker
     /// <summary>An input folder: its normalised path, the path as entered, and its scope.</summary>
     private sealed record Root(string Path, string Entered, bool IncludeSubfolders);
 
-    private readonly record struct Entry(string Name, bool IsDirectory, bool IsLink);
+    private readonly record struct Entry(string Name, bool IsDirectory, bool IsReparsePoint);
 
     private sealed class Walk
     {
@@ -315,14 +343,27 @@ public sealed class FolderWalker
                     continue;
                 }
 
-                // A file that is a link is reported, not checked.
-                if (entry.IsLink)
+                // A file that is a link is reported, not checked; one whose status cannot be read is reported too. Only a matching reparse point is probed.
+                string file = folder + entry.Name;
+
+                string? failure = null;
+
+                switch (entry.IsReparsePoint ? Classify(new FileInfo(file), out failure) : LinkState.Ordinary)
                 {
-                    _onUnverified(LinkNotFollowed(folder + entry.Name));
-                }
-                else
-                {
-                    _onFile(new ScannedFile(folder + entry.Name, owner.Entered, type));
+                    case LinkState.Link:
+                        _onUnverified(LinkNotFollowed(file));
+
+                        break;
+
+                    case LinkState.Unknown:
+                        _onUnverified(Unclassifiable(file, failure));
+
+                        break;
+
+                    default:
+                        _onFile(new ScannedFile(file, owner.Entered, type));
+
+                        break;
                 }
             }
         }
@@ -337,19 +378,29 @@ public sealed class FolderWalker
                 return;
             }
 
-            if (sub.IsLink)
+            // A folder's status is probed only for a reparse point, and before the folder is queued; one that cannot be classified is not walked.
+            string? failure = null;
+
+            switch (sub.IsReparsePoint ? Classify(new DirectoryInfo(path), out failure) : LinkState.Ordinary)
             {
-                _onUnverified(LinkNotFollowed(path));
-            }
-            else
-            {
-                Enqueue(path);
+                case LinkState.Link:
+                    _onUnverified(LinkNotFollowed(path));
+
+                    break;
+
+                case LinkState.Unknown:
+                    _onUnverified(Unclassifiable(path, failure));
+
+                    break;
+
+                default:
+                    Enqueue(path);
+
+                    break;
             }
         }
 
-        // A reparse point is a link only when it has a link target; the check is made for reparse points alone, so ordinary entries cost nothing extra.
-        private static Entry ToEntry(ref FileSystemEntry e)
-            => new(e.FileName.ToString(), e.IsDirectory, (e.Attributes & FileAttributes.ReparsePoint) != 0 && IsLink(e.ToFileSystemInfo()));
+        private static Entry ToEntry(ref FileSystemEntry e) => new(e.FileName.ToString(), e.IsDirectory, (e.Attributes & FileAttributes.ReparsePoint) != 0);
 
         private static bool Covers(Root root, string folder)
             => root.Path.Equals(folder, StringComparison.OrdinalIgnoreCase)

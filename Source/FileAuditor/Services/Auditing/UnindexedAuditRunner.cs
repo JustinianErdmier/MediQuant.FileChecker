@@ -99,6 +99,7 @@ public sealed class UnindexedAuditRunner
                                     progress.RecordUnverified();
                                 },
                                 ct);
+
         AuditResultKind kind = ct.IsCancellationRequested ? AuditResultKind.StoppedByUser : AuditResultKind.Completed;
 
         progress.Phase = "Writing report...";

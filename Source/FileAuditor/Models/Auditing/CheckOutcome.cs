@@ -1,6 +1,6 @@
 namespace FileAuditor.Models.Auditing;
 
-/// <summary>The single outcome every audited path lands in (SDD §6.3). The Unverified members are declared in the order the report lists them.</summary>
+/// <summary>The single outcome every audited path lands in (SDD §6.3). Each report sets the order in which it lists the Unverified members.</summary>
 public enum CheckOutcome
 {
     /// <summary>The file exists (and, when empty files are reported, has a length greater than zero).</summary>
@@ -26,6 +26,7 @@ public enum CheckOutcome
 
     /// <summary>The unindexed audit met a junction or symbolic link (a folder or a file) and did not follow or check it.</summary>
     UnverifiedLinkNotFollowed,
+
     /// <summary>The path is malformed or contains illegal characters.</summary>
     UnverifiedInvalidCharacters,
 

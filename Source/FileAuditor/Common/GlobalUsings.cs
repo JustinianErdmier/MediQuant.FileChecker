@@ -38,7 +38,6 @@ global using CommunityToolkit.Mvvm.Input;
 global using ErrorOr;
 
 global using Microsoft.Data.SqlClient;
-global using Microsoft.Win32.SafeHandles;
 
 global using FileAuditor.Common.Errors;
 global using FileAuditor.Common.Extensions;
