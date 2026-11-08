@@ -17,7 +17,7 @@
         <StackPanel Spacing="4"
                     Margin="4">
             <CheckBox x:Name="SaveProjectSettingsBox"
-                      Content="Save project settings _with the report"
+                      Content="Save project settin_gs"
                       IsChecked="{Binding Shared.SaveProjectSettings}" />
             <TextBlock Text="{Binding Message}"
                        TextWrapping="Wrap" />

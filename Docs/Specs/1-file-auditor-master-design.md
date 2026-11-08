@@ -147,7 +147,7 @@ Types dialogue) and milestone 4.1's (the Project Settings group, disabled rather
 │ │                              │ │ ID column:   [        ] (Opt.)│ │
 │ └──────────────────────────────┘ └───────────────────────────────┘ │
 │ ┌ Project Settings ──────────────────────────────────────────────┐ │
-│ │ [x] Save project settings with the report                      │ │
+│ │ [x] Save project settings                                      │ │
 │ │ Saved as FileAuditorSettings.json in the same folder as the .. │ │
 │ └────────────────────────────────────────────────────────────────┘ │
 │  ┌─────────────┐ Unindexed Files                                   │
@@ -189,7 +189,7 @@ The diagram shows the Missing Files tab with the Report group in its built state
 │ │                              │ │ ID column:   [        ] (Opt.)│ │
 │ └──────────────────────────────┘ └───────────────────────────────┘ │
 │ ┌ Project Settings ──────────────────────────────────────────────┐ │
-│ │ [x] Save project settings with the report                      │ │
+│ │ [x] Save project settings                                      │ │
 │ │ Saved as FileAuditorSettings.json in the same folder as the .. │ │
 │ └────────────────────────────────────────────────────────────────┘ │
 │  Missing Files  ┌───────────────┐                                  │
@@ -288,7 +288,7 @@ dropped, sorted). **Cancel** discards every change, including a Reset. The Folde
 
 Each tab shows a complete Report group. Its values are **one set shared by every tab**: change one on a tab and every other tab shows the change. The only per-tab item is
 the **File name**, which belongs to the tab's direction (names are in §4), and, on the Unindexed Files tab only, the **Group file types by** option below it. The *Save project
-settings with the report* checkbox lives in the Project Settings group (§5.3a), outside this group, and is shared too.
+settings* checkbox lives in the Project Settings group (§5.3a), outside this group, and is shared too.
 
 - **Use a custom report location and file name**: checkbox, unchecked by default. It is the group's first control, because it decides whether the rest apply.
 - **Project folder**: text input with watermark `D12345`.
@@ -311,7 +311,7 @@ settings with the report* checkbox lives in the Project Settings group (§5.3a),
 ### 5.3a Project Settings group
 
 A group box headed **Project Settings**, full width, between the Database / File Index Table row and the tab control (`ProjectSettingsView`, owned by the main window, so it is
-the same on both tabs). It holds the *Save project settings with the report* checkbox (access key `W`) and, below it, a wrapping status message. The checkbox's behaviour is
+the same on both tabs). It holds the *Save project settings* checkbox (access key `G`) and, below it, a wrapping status message. The checkbox's behaviour is
 unchanged from milestone 2:
 
 - It is **ticked by default** — on launch, after *Open project...* and after *Close project* — and its state is not stored in the settings file; it is a per-session preference.
@@ -388,7 +388,7 @@ A small modal, fixed-size Win9x About dialog: the app icon, **File Auditor**, **
 | Help Topics     | The user-guide address (`HelpLinks.UserGuideUrl`) is not empty                                                              |
 
 The report path is complete when, *built*: Project folder is filled (an Audit Stage is always selected); *custom*: Location and the tab's File name are filled. All inputs,
-including the *Save project settings with the report* checkbox, are disabled while a run is in progress. Start and View Report follow the selected tab; Stop follows the
+including the *Save project settings* checkbox, are disabled while a run is in progress. Start and View Report follow the selected tab; Stop follows the
 running audit.
 
 **One run at a time.** While either direction runs, both tabs' Start buttons are disabled and every input is locked: the shared groups, the Folders to Check group (the list, its
@@ -746,7 +746,7 @@ direction adds its folder list (`ScanFolders`: each folder's path and *Include s
 (`GroupByFoundExtension`) and its own custom file name (`UnindexedCustomFileName`, default `FileAuditorUnindexedReport.txt`). A file without them loads with an empty folder list,
 the 19 built-in file types, an empty blacklist, *Listed type* grouping and the default name; a folder entry without a path is dropped, and an invalid entry in either type list is
 dropped on its own while the others are kept. Older files load, but their custom file names fall back to the defaults; no migration is attempted. The remembered answers to the
-three file-type warnings (§6.5.1) are not stored either. No credentials. The *Save project settings with the report* checkbox is not stored in it. The file is written with a temp
+three file-type warnings (§6.5.1) are not stored either. No credentials. The *Save project settings* checkbox is not stored in it. The file is written with a temp
 file + `File.Move(overwrite: true)`; a save never creates a folder. A null string value or an undefined enum value in the file falls back, field by field, to its default; other
 values are kept. Window size and position are not saved — the window is fixed-size. The milestone 2 spec (`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`) has the
 full prompt texts.
@@ -917,7 +917,7 @@ Settled by the build (milestone 1), with no change in behaviour (milestone 4's a
 - **Window size and access keys (milestone 4, size revised in 4.1):** the window is 640 × 668 pixels (outer), measured at the current display scale; the tab control fills the
   remaining row. On the Unindexed tab, *File t_ypes:* is `Y` and *E_xclude:* is `X`; *Add...*, *Remove*, both *Edit...* buttons and the *Group file types by* radios carry none,
   because every letter is taken. In the File Types dialogue *New*, *Edit*, *Delete* and *Clear* (milestone 4.1) and *Reset* are `N`, `E`, `D`, `L` and `R`, and *OK* and *Cancel*
-  carry none. In the Project Settings group the checkbox's access key is `W`.
+  carry none. In the Project Settings group the checkbox's access key is `G`; its label no longer says *with the report*, which the status message covers.
 - **Concurrency and memory (milestone 4):** up to 16 folder listings at once; index paths held as 128-bit MD5 hashes (§6.5.2); the statistics refresh every 250 ms.
 - **Progress bar (milestone 4):** the Unindexed audit's moving block (§5.4a) is drawn by the view from a timer-driven column split, because the theme's marquee has a blank gap.
 - **Full-path validation:** a path is accepted as absolute only if `Path.IsPathFullyQualified` says so, so `C:x` and `\x` (which would resolve against the application's
