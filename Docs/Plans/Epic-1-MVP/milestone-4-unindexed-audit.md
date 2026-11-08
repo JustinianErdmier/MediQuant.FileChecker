@@ -31,24 +31,24 @@ place milestone 4 must touch (above `IsTabbed`).
   The app is driven with Windows UI Automation from PowerShell. Close everything you start.
 - Version stays `1.0.0`. No new packages. No compatibility with older project files beyond SDD §8's "they load; new fields take defaults".
 - Exact copy, verbatim:
-  - Tab header `Unindexed Files`; group `Folders to Check`; column header `Include subfolders`; buttons `Add...`, `Remove`, `Reset`; labels `File t_ypes:` and
-    `E_xclude:`. In the Unindexed tab's Report group, below File name: label `Group file types by:` with radio buttons `Listed type` (default) and
-    `Found extension`.
-  - Unindexed report: built `FileAuditorUnindexedReport_<Audit Stage>.txt`; custom default `FileAuditorUnindexedReport.txt`; title `File Auditor Unindexed Report`
-    over 29 `=`; sections `Unindexed Files (n)` / `Unverified Folders (n)` underlined with `-` to their length; empty texts `No unindexed files.` /
-    `No unverified folders.`; Summary labels `Total files:`, `Indexed:`, `Unindexed:`, `Unverified:`; header `Folders:` lines with ` (with subfolders)`,
-    `File types:` and `Exclude:` (space-separated, sorted; `Exclude:` reads `(none)` when empty) and `Grouped by:` (`Listed type` / `Found extension`). Layout
-    exactly as spec §3.7.
-  - Statistics labels on the tab: `Total files:`, `Indexed:`, `Unindexed:`, `Unverified:`, `Elapsed:`, `Files/second:` (no `Remaining:`).
-  - Status phases: `Loading the index...`, `Checking files...`, `Writing report...`.
-  - Pre-flight errors: `Add at least one folder to check.`; `This folder is not a full path:\n{path}`; `This folder does not exist:\n{path}`;
-    `This folder is listed twice:\n{path}`; `Add at least one file type.`; `This file type is not valid:\n{entry}`;
-    `The Exclude list contains {entry}, which matches every file, so nothing would be checked. Remove it to run the audit.`;
-    `Both reports would have the same file name:\n{name}\n\nGive each tab's report its own name.` (paths through `PathText.Breakable`).
-  - Pre-flight warnings (warning icon, buttons `_Continue` / `Cancel`), each remembered for the session once *Continue* is chosen:
-    `File types contains {entry}, which matches every file, so the other file types are redundant.\n\nDo you want to continue?`;
-    `File types contains {entry}, which matches every file, so every file will be checked except the excluded types.\n\nDo you want to continue?`;
-    `These types are in both File types and Exclude, so they will not be checked:\n{entries}\n\nDo you want to continue?`.
+    - Tab header `Unindexed Files`; group `Folders to Check`; column header `Include subfolders`; buttons `Add...`, `Remove`, `Reset`; labels `File t_ypes:` and
+      `E_xclude:`. In the Unindexed tab's Report group, below File name: label `Group file types by:` with radio buttons `Listed type` (default) and
+      `Found extension`.
+    - Unindexed report: built `FileAuditorUnindexedReport_<Audit Stage>.txt`; custom default `FileAuditorUnindexedReport.txt`; title `File Auditor Unindexed Report`
+      over 29 `=`; sections `Unindexed Files (n)` / `Unverified Folders (n)` underlined with `-` to their length; empty texts `No unindexed files.` /
+      `No unverified folders.`; Summary labels `Total files:`, `Indexed:`, `Unindexed:`, `Unverified:`; header `Folders:` lines with ` (with subfolders)`,
+      `File types:` and `Exclude:` (space-separated, sorted; `Exclude:` reads `(none)` when empty) and `Grouped by:` (`Listed type` / `Found extension`). Layout
+      exactly as spec §3.7.
+    - Statistics labels on the tab: `Total files:`, `Indexed:`, `Unindexed:`, `Unverified:`, `Elapsed:`, `Files/second:` (no `Remaining:`).
+    - Status phases: `Loading the index...`, `Checking files...`, `Writing report...`.
+    - Pre-flight errors: `Add at least one folder to check.`; `This folder is not a full path:\n{path}`; `This folder does not exist:\n{path}`;
+      `This folder is listed twice:\n{path}`; `Add at least one file type.`; `This file type is not valid:\n{entry}`;
+      `The Exclude list contains {entry}, which matches every file, so nothing would be checked. Remove it to run the audit.`;
+      `Both reports would have the same file name:\n{name}\n\nGive each tab's report its own name.` (paths through `PathText.Breakable`).
+    - Pre-flight warnings (warning icon, buttons `_Continue` / `Cancel`), each remembered for the session once *Continue* is chosen:
+      `File types contains {entry}, which matches every file, so the other file types are redundant.\n\nDo you want to continue?`;
+      `File types contains {entry}, which matches every file, so every file will be checked except the excluded types.\n\nDo you want to continue?`;
+      `These types are in both File types and Exclude, so they will not be checked:\n{entries}\n\nDo you want to continue?`.
 - Default file types (spec §3.3, sorted when shown): `.bmp .doc .docx .eml .gif .jpeg .jpg .msg .odt .pdf .png .ppt .pptx .rtf .tif .tiff .xls .xlsx .xps`.
 - Project-file properties added to `AppSettings`: `ScanFolder[]? ScanFolders` (null → empty), `string[]? FileTypes` (null → the defaults),
   `string[]? ExcludeTypes` (null → empty), `bool GroupByFoundExtension = false`, `string UnindexedCustomFileName = "FileAuditorUnindexedReport.txt"`.
@@ -66,8 +66,8 @@ place milestone 4 must touch (above `IsTabbed`).
 1. **Scale.** A person with a 3-million-row table and a folder tree of hundreds of thousands of files expects the run to finish in minutes with modest memory —
    Task 2 step 4 loads 1,000,000 LocalDB rows and reports the set's memory; Task 4 step 4 runs end to end over a generated tree of at least 100,000 files.
 2. **Case and whitespace.** Index `U:\X\A.PDF ` and disk `u:\x\a.pdf` must count as indexed (anti-goal 1) — Task 2 step 4 and Task 4 step 4.
-3. **An unreadable folder deep in a tree.** A person expects that folder listed once under *Unverified Folders* and its siblings still checked — Task 3 step 4
-   (deny-list ACE on one subfolder).
+3. **An unreadable folder deep in a tree.** A person expects that folder listed once under *Unverified Folders* and its siblings still checked — Task 3 step 4 (deny-list ACE on one
+   subfolder).
 4. **Links and nested inputs.** A junction loop must not hang or double-count; a file under two input folders appears once, under the deepest whose scope covers
    it — Task 3 step 4 (`mklink /J` loop; nested inputs with mixed *Include subfolders*).
 5. **Pattern surprises.** `*.pdf` must match `Report.pdf`; `zip.*` must match `Backup.zip.001` but not `Backup.zip` or `Backup.zip.001.bak`; `.gitignore` and
@@ -88,14 +88,14 @@ place milestone 4 must touch (above `IsTabbed`).
 **Interfaces:**
 
 - Produces: `ScanFolder`; the five `AppSettings` properties (Global Constraints).
-  - `static class FileTypeList` — `IReadOnlyList<string> Defaults`; `ErrorOr<string[]> Parse(string text)` (split on whitespace and commas; strip a leading `*.`
-    or `.`, then add a single leading `.`; lower-case; drop duplicates; invalid per spec §4 — empty, an empty part, a path separator, or a forbidden file-name
-    character other than `*` and `?`; error message per Global Constraints); `string Format(IEnumerable<string> types)` (sorted, space-separated).
-  - `sealed class FileTypePattern` — built from one normalised entry: `string Text`, `int PartCount`, `int WildcardCount`, `bool IsWildcardOnly`,
-    `bool Matches(string fileName)` (spec §3.3 rules), `string FoundExtension(string fileName)` (the name's last `PartCount` parts, lower case, with a dot).
-  - `sealed class FileTypeFilter(IReadOnlyList<string> include, IReadOnlyList<string> exclude)` — `FileTypePattern? Match(string fileName)`: `null` if any
-    exclude pattern matches or no include pattern does; otherwise the **most specific** matching include pattern (most parts, then fewest wildcards, then
-    alphabetical). Patterns are compiled once; `Match` is safe to call concurrently.
+    - `static class FileTypeList` — `IReadOnlyList<string> Defaults`; `ErrorOr<string[]> Parse(string text)` (split on whitespace and commas; strip a leading `*.`
+      or `.`, then add a single leading `.`; lower-case; drop duplicates; invalid per spec §4 — empty, an empty part, a path separator, or a forbidden file-name
+      character other than `*` and `?`; error message per Global Constraints); `string Format(IEnumerable<string> types)` (sorted, space-separated).
+    - `sealed class FileTypePattern` — built from one normalised entry: `string Text`, `int PartCount`, `int WildcardCount`, `bool IsWildcardOnly`,
+      `bool Matches(string fileName)` (spec §3.3 rules), `string FoundExtension(string fileName)` (the name's last `PartCount` parts, lower case, with a dot).
+    - `sealed class FileTypeFilter(IReadOnlyList<string> include, IReadOnlyList<string> exclude)` — `FileTypePattern? Match(string fileName)`: `null` if any
+      exclude pattern matches or no include pattern does; otherwise the **most specific** matching include pattern (most parts, then fewest wildcards, then
+      alphabetical). Patterns are compiled once; `Match` is safe to call concurrently.
 
 - [x] **Step 1:** Add `ScanFolder` and the `AppSettings` properties; `SettingsStore` normalises them (null list → empty / defaults; null folder paths dropped; file
   types re-parsed through `FileTypeList.Parse`, invalid entries dropped).
@@ -104,12 +104,12 @@ place milestone 4 must touch (above `IsTabbed`).
 - [x] **Step 3:** `ReportPathResolver.Resolve` uses `UnindexedCustomFileName` for the Unindexed direction with a custom location; `ReportViewModel` maps it in
   `ApplyTo`/`Load` (remove milestone 3's "no setting yet" fallback and its doc remark).
 - [x] **Step 4: Verify.** Clean build. A scratch harness asserting every row of spec §3.3's table, plus:
-  - `Parse("pdf .PDF *.pdf tar.gz  .nii.gz, ZIP.*")` → `.nii.gz .pdf .tar.gz .zip.*`; `Parse("a/b")`, `Parse("a..b")`, `Parse(".")` → errors.
-  - `*.pdf` matches `Report.pdf`; `zip.0??` matches `Backup.zip.001` but not `Backup.zip.01`; `.gitignore`, `README` and `x.` match nothing.
-  - Filter include `[.gz, .tar.gz]` → `scan.tar.gz` matches `.tar.gz`; include `[.gz]` exclude `[.tar.gz]` → `scan.tar.gz` is `null`, `x.gz` is `.gz`;
-    include `[zip.*, zip.001]` → `B.zip.001` matches `.zip.001`; `FoundExtension("B.ZIP.002")` for `zip.*` → `.zip.002`.
-  - A project file round-trips folders, both lists and the grouping choice through `SettingsStore`; two equal settings with separate arrays compare unchanged.
-  - Run the app: an untouched window still closes with no save prompt.
+    - `Parse("pdf .PDF *.pdf tar.gz  .nii.gz, ZIP.*")` → `.nii.gz .pdf .tar.gz .zip.*`; `Parse("a/b")`, `Parse("a..b")`, `Parse(".")` → errors.
+    - `*.pdf` matches `Report.pdf`; `zip.0??` matches `Backup.zip.001` but not `Backup.zip.01`; `.gitignore`, `README` and `x.` match nothing.
+    - Filter include `[.gz, .tar.gz]` → `scan.tar.gz` matches `.tar.gz`; include `[.gz]` exclude `[.tar.gz]` → `scan.tar.gz` is `null`, `x.gz` is `.gz`;
+      include `[zip.*, zip.001]` → `B.zip.001` matches `.zip.001`; `FoundExtension("B.ZIP.002")` for `zip.*` → `.zip.002`.
+    - A project file round-trips folders, both lists and the grouping choice through `SettingsStore`; two equal settings with separate arrays compare unchanged.
+    - Run the app: an untouched window still closes with no save prompt.
 - [x] **Step 5: Commit** — `feat(✨): add scan folders and file types to project settings`.
 
 ### Task 2: Loading the index as path hashes
@@ -122,14 +122,14 @@ place milestone 4 must touch (above `IsTabbed`).
 **Interfaces:**
 
 - Produces:
-  - `sealed record PathQuery(string Sql, IReadOnlyList<KeyValuePair<string, string>> Parameters)`.
-  - `QueryBuilder.BuildPaths(string table, string pathColumn, IReadOnlyList<string> folders) : ErrorOr<PathQuery>` — `SELECT [col] AS [Path] FROM [t]` plus,
-    for 1–20 folders, `WHERE [col] COLLATE Latin1_General_100_CI_AS LIKE @p0 ESCAPE '|' OR …` with each parameter `folder` (trailing `\` ensured) with `|`, `%`, `_`
-    and `[` escaped by `|`, followed by `%`. Values are parameters, never concatenated.
-  - `IndexTableReader.ReadPathsAsync(string connectionString, PathQuery query, Action<string> onPath, CancellationToken ct) : Task<ErrorOr<Success>>` — the same
-    cancellation and error mapping as `ReadAsync`; null values are skipped.
-  - `sealed class IndexPathSet` — `void Add(string path)`, `bool Contains(string path)`, `int Count`; key = MD5 of the UTF-16 bytes of
-    `path.Trim().ToUpperInvariant()` as `UInt128`, in a `HashSet<UInt128>`. Thread-safe for concurrent `Contains` after loading (single-threaded `Add`).
+    - `sealed record PathQuery(string Sql, IReadOnlyList<KeyValuePair<string, string>> Parameters)`.
+    - `QueryBuilder.BuildPaths(string table, string pathColumn, IReadOnlyList<string> folders) : ErrorOr<PathQuery>` — `SELECT [col] AS [Path] FROM [t]` plus,
+      for 1–20 folders, `WHERE [col] COLLATE Latin1_General_100_CI_AS LIKE @p0 ESCAPE '|' OR …` with each parameter `folder` (trailing `\` ensured) with `|`, `%`, `_`
+      and `[` escaped by `|`, followed by `%`. Values are parameters, never concatenated.
+    - `IndexTableReader.ReadPathsAsync(string connectionString, PathQuery query, Action<string> onPath, CancellationToken ct) : Task<ErrorOr<Success>>` — the same
+      cancellation and error mapping as `ReadAsync`; null values are skipped.
+    - `sealed class IndexPathSet` — `void Add(string path)`, `bool Contains(string path)`, `int Count`; key = MD5 of the UTF-16 bytes of
+      `path.Trim().ToUpperInvariant()` as `UInt128`, in a `HashSet<UInt128>`. Thread-safe for concurrent `Contains` after loading (single-threaded `Add`).
 
 - [x] **Step 1:** `BuildPaths` and `PathQuery` (the existing `Build` stays for the missing direction).
 - [x] **Step 2:** `ReadPathsAsync`.
@@ -151,22 +151,22 @@ place milestone 4 must touch (above `IsTabbed`).
 
 - Consumes: Task 1's `ScanFolder`, `FileTypeFilter`; the existing `Win32ErrorMapper.Map` / `CheckOutcome` reasons.
 - Produces:
-  - `sealed record ScannedFile(string Path, string InputFolder, FileTypePattern Type)`.
-  - `sealed record UnverifiedFolder(string Path, CheckOutcome Reason, string? ReasonText, string? SystemMessage)` (path ends with `\`).
-  - `sealed class FolderWalker` — `Task WalkAsync(IReadOnlyList<ScanFolder> folders, FileTypeFilter filter, Action<ScannedFile> onFile,
+    - `sealed record ScannedFile(string Path, string InputFolder, FileTypePattern Type)`.
+    - `sealed record UnverifiedFolder(string Path, CheckOutcome Reason, string? ReasonText, string? SystemMessage)` (path ends with `\`).
+    - `sealed class FolderWalker` — `Task WalkAsync(IReadOnlyList<ScanFolder> folders, FileTypeFilter filter, Action<ScannedFile> onFile,
     Action<UnverifiedFolder> onUnverified, CancellationToken ct)`; `onFile` may be called concurrently.
 
 - [x] **Step 1: Listing.** One non-recursive listing per folder (`FileSystemEnumerable` or `Directory.EnumerateFileSystemEntries` with `EnumerationOptions`:
   `AttributesToSkip = Hidden | System`, `IgnoreInaccessible = false`, `ReturnSpecialDirectories = false`), so attributes come from the listing with no per-file
   call. Subfolders queue for listing when their input folder includes subfolders. At most 16 listings run at once.
 - [x] **Step 2: Rules (spec §3.2).**
-  - A listing that throws → `onUnverified` with the mapped reason; nothing beneath it is listed. Only that folder is reported, not each of its descendants.
-  - Files for which `filter.Match` returns null are skipped (not counted anywhere).
-  - Links (junctions, symbolic links, DFS) are listed like folders; a folder whose resolved target (`DirectoryInfo.ResolveLinkTarget(returnFinalTarget: true)`
-    for links, else the full path; compared ignoring case) was already listed in this run is skipped.
-  - Each file is reported once (dedupe by full path, ignoring case) under the **deepest** input folder whose scope covers it (the folder itself, plus its
-    subfolders when ticked).
-  - Cancellation stops new listings promptly and returns.
+    - A listing that throws → `onUnverified` with the mapped reason; nothing beneath it is listed. Only that folder is reported, not each of its descendants.
+    - Files for which `filter.Match` returns null are skipped (not counted anywhere).
+    - Links (junctions, symbolic links, DFS) are listed like folders; a folder whose resolved target (`DirectoryInfo.ResolveLinkTarget(returnFinalTarget: true)`
+      for links, else the full path; compared ignoring case) was already listed in this run is skipped.
+    - Each file is reported once (dedupe by full path, ignoring case) under the **deepest** input folder whose scope covers it (the folder itself, plus its
+      subfolders when ticked).
+    - Cancellation stops new listings promptly and returns.
 - [x] **Step 3:** XML docs on the scope and attribution rules.
 - [x] **Step 4: Verify.** Clean build. Harness over a scratch tree: hidden and system files skipped; `.txt`/`.json` skipped with the defaults; with include
   `[.gz]` and exclude `[.tar.gz]`, `a.gz` is reported and `b.tar.gz` is not;
@@ -188,21 +188,21 @@ place milestone 4 must touch (above `IsTabbed`).
 
 - Consumes: Tasks 1–3; `AuditRequest(AppSettings Settings, ReportPath ReportPath)`; `ReportWriter.Write`; `AuditErrors.StoppedBeforeChecking`; `AuditResultKind`.
 - Produces:
-  - `UnindexedProgress` — thread-safe `Phase`, `TotalFiles`, `Indexed`, `Unindexed`, `Unverified`, `void Record(bool indexed)`, `void RecordUnverified()`.
-  - `sealed record UnindexedReport(AppSettings Settings, DateTime StartedUtc, DateTime FinishedUtc, AuditResultKind Kind, IReadOnlyList<ScannedFile> Unindexed,
+    - `UnindexedProgress` — thread-safe `Phase`, `TotalFiles`, `Indexed`, `Unindexed`, `Unverified`, `void Record(bool indexed)`, `void RecordUnverified()`.
+    - `sealed record UnindexedReport(AppSettings Settings, DateTime StartedUtc, DateTime FinishedUtc, AuditResultKind Kind, IReadOnlyList<ScannedFile> Unindexed,
     IReadOnlyList<UnverifiedFolder> Unverified, long TotalFiles, long Indexed)`.
-  - `UnindexedAuditRunner.RunAsync(AuditRequest request, UnindexedProgress progress, CancellationToken ct) : Task<ErrorOr<UnindexedReport>>` — phases per Global
-    Constraints; SQL failure while loading → its error (no report); Stop while loading → `AuditErrors.StoppedBeforeChecking`; Stop while walking → a
-    `StoppedByUser` report; report write failure → `Report.Unwritable`.
-  - `UnindexedReportBuilder.Build(UnindexedReport report) : string`; `static class ReportFormat` holding the helpers both builders share (label padding,
-    counts, timestamps, elapsed, flattening, the common header lines).
+    - `UnindexedAuditRunner.RunAsync(AuditRequest request, UnindexedProgress progress, CancellationToken ct) : Task<ErrorOr<UnindexedReport>>` — phases per Global
+      Constraints; SQL failure while loading → its error (no report); Stop while loading → `AuditErrors.StoppedBeforeChecking`; Stop while walking → a
+      `StoppedByUser` report; report write failure → `Report.Unwritable`.
+    - `UnindexedReportBuilder.Build(UnindexedReport report) : string`; `static class ReportFormat` holding the helpers both builders share (label padding,
+      counts, timestamps, elapsed, flattening, the common header lines).
 
 - [x] **Step 1:** Extract `ReportFormat` from `ReportBuilder` without changing its output (compare a built missing report before and after, byte for byte).
 - [x] **Step 2:** `UnindexedProgress`, `UnindexedReport`, `UnindexedAuditRunner` (load the set, then walk, checking each file with `Contains` as it arrives).
 - [x] **Step 3:** `UnindexedReportBuilder` — exactly spec §3.7: header (no ID column line; `File types:`, `Exclude:`, `Grouped by:`), Summary, *Unindexed Files*
   grouped by input folder (input order) → `  [<type> (n)]` (alphabetical), where `<type>` is the matched pattern's `Text` (*Listed type*) or its
-  `FoundExtension` (*Found extension*, per `settings.GroupByFoundExtension`) → paths sorted ordinal-ignore-case, indented two spaces;
-  *Unverified Folders* by the SDD §6.3 reason order with *Other errors*
+  `FoundExtension` (*Found extension*, per `settings.GroupByFoundExtension`) → paths sorted ordinal-ignore-case, indented two spaces; *Unverified Folders* by the SDD §6.3 reason
+  order with *Other errors*
   columns; the stopped report has no *Not checked* line.
 - [x] **Step 4: Verify.** Clean build. Harness against LocalDB: a generated tree of at least 100,000 files over two input folders, with the index holding all but a
   known 50 (some differing only in case or trailing spaces in the index) plus a deny-list subfolder → the report lists exactly those 50, grouped and sorted as

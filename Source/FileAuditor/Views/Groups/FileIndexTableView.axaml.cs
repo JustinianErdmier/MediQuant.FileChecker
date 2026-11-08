@@ -4,8 +4,5 @@ namespace FileAuditor.Views.Groups;
 public partial class FileIndexTableView : UserControl
 {
     /// <summary>Initialises a new instance of the <see cref="FileIndexTableView" /> class.</summary>
-    public FileIndexTableView()
-    {
-        InitializeComponent();
-    }
+    public FileIndexTableView() => InitializeComponent();
 }

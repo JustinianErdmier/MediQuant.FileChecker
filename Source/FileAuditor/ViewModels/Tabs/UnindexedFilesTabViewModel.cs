@@ -17,7 +17,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     {
         _dialogues = dialogues;
 
-        Report = new ReportViewModel(shared, AuditDirection.Unindexed);
+        Report = new ReportViewModel(shared, AuditDirections.Unindexed);
         Audit  = new UnindexedAuditViewModel();
 
         Folders.CollectionChanged += OnFoldersChanged;
@@ -28,7 +28,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
 
     /// <summary>Gets or sets the Exclude summary: the extension blacklist in normal form, changed only through its editor.</summary>
     [ ObservableProperty ]
-    public partial string ExcludeText { get; set; } = "";
+    public partial string ExcludeText { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the File types summary: the extension whitelist in normal form, changed only through its editor.</summary>
     [ ObservableProperty ]
@@ -72,8 +72,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     public AppSettings ApplyTo(AppSettings settings)
         => Report.ApplyTo(settings with
         {
-            ScanFolders = Folders.Select(folder => new ScanFolder(folder.Path, folder.IncludeSubfolders))
-                                 .ToArray(),
+            ScanFolders = [.. Folders.Select(folder => new ScanFolder(folder.Path, folder.IncludeSubfolders))],
             FileTypes = Entries(FileTypesText),
             ExcludeTypes = Entries(ExcludeText)
         });
@@ -90,17 +89,16 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         }
 
         FileTypesText = FileTypeList.Format(settings.FileTypes ?? FileTypeList.Defaults);
-        ExcludeText   = FileTypeList.Format(settings.ExcludeTypes ?? []);
+
+        ExcludeText = FileTypeList.Format(settings.ExcludeTypes ?? []);
 
         Report.Load(settings);
     }
 
-    private static string[] Entries(string text) => FileTypeList.Split(text);
-
     [ RelayCommand ]
     private async Task EditFileTypesAsync()
     {
-        string[]? edited = _dialogues is null ? null : await _dialogues.EditFileTypesAsync("Edit File Types", Entries(FileTypesText), canReset: true);
+        string[]? edited = _dialogues is null ? null : await _dialogues.EditFileTypesAsync(title: "Edit File Types", Entries(FileTypesText), canReset: true);
 
         if (edited is not null)
         {
@@ -111,7 +109,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
     [ RelayCommand ]
     private async Task EditExcludeAsync()
     {
-        string[]? edited = _dialogues is null ? null : await _dialogues.EditFileTypesAsync("Edit Exclude List", Entries(ExcludeText), canReset: false);
+        string[]? edited = _dialogues is null ? null : await _dialogues.EditFileTypesAsync(title: "Edit Exclude List", Entries(ExcludeText), canReset: false);
 
         if (edited is not null)
         {
@@ -146,5 +144,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         OnPropertyChanged(nameof(Folders));
     }
 
-    private void OnFolderChanged(object? sender, PropertyChangedEventArgs e) => OnPropertyChanged(nameof(Folders));
+    private void OnFolderChanged(object? sender, PropertyChangedEventArgs eventArgs) => OnPropertyChanged(nameof(Folders));
+
+    private static string[] Entries(string text) => FileTypeList.Split(text);
 }

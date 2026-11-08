@@ -12,7 +12,7 @@ public sealed partial class MissingFilesTabViewModel : ObservableObject
     /// <param name="shared">The report location values every tab shares.</param>
     public MissingFilesTabViewModel(ReportLocationState shared)
     {
-        Report = new ReportViewModel(shared, AuditDirection.Missing);
+        Report = new ReportViewModel(shared, AuditDirections.Missing);
         Audit  = new AuditViewModel();
     }
 
@@ -29,7 +29,11 @@ public sealed partial class MissingFilesTabViewModel : ObservableObject
     /// <summary>Copies this tab's inputs into the given settings.</summary>
     /// <param name="settings">The settings to start from.</param>
     /// <returns>A copy of <paramref name="settings" /> carrying this tab's inputs.</returns>
-    public AppSettings ApplyTo(AppSettings settings) => Report.ApplyTo(settings with { ReportEmptyFiles = ReportEmptyFiles });
+    public AppSettings ApplyTo(AppSettings settings)
+        => Report.ApplyTo(settings with
+        {
+            ReportEmptyFiles = ReportEmptyFiles
+        });
 
     /// <summary>Sets this tab's inputs from the given settings.</summary>
     /// <param name="settings">The settings to load.</param>

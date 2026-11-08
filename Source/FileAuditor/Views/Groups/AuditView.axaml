@@ -7,7 +7,7 @@
              xmlns:mainVm="clr-namespace:FileAuditor.ViewModels.Main"
              mc:Ignorable="d"
              d:DesignWidth="480"
-             d:DesignHeight="170"
+             d:DesignHeight="153"
              x:Class="FileAuditor.Views.Groups.AuditView"
              x:DataType="vm:AuditViewModel">
     <Design.DataContext>
@@ -17,15 +17,19 @@
                  Margin="4,2">
         <StackPanel Margin="4"
                     Spacing="6">
-            <Grid ColumnDefinitions="90,*,96,*"
-                  RowDefinitions="Auto,Auto,Auto,Auto"
+            <Grid ColumnDefinitions="80,84,70,84,82,*"
+                  RowDefinitions="Auto,Auto,Auto"
                   RowSpacing="3">
                 <TextBlock Text="Total files:" />
                 <TextBlock Grid.Column="1"
                            Text="{Binding TotalFiles}" />
                 <TextBlock Grid.Column="2"
-                           Text="Elapsed:" />
+                           Text="Missing:" />
                 <TextBlock Grid.Column="3"
+                           Text="{Binding Missing}" />
+                <TextBlock Grid.Column="4"
+                           Text="Elapsed:" />
+                <TextBlock Grid.Column="5"
                            Text="{Binding Elapsed}" />
                 <TextBlock Grid.Row="1"
                            Text="Checked:" />
@@ -34,26 +38,28 @@
                            Text="{Binding Checked}" />
                 <TextBlock Grid.Row="1"
                            Grid.Column="2"
-                           Text="Remaining:" />
+                           Text="Unverified:" />
                 <TextBlock Grid.Row="1"
                            Grid.Column="3"
+                           Text="{Binding Unverified}" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="4"
+                           Text="Remaining:" />
+                <TextBlock Grid.Row="1"
+                           Grid.Column="5"
                            Text="{Binding Remaining}" />
                 <TextBlock Grid.Row="2"
-                           Text="Missing:" />
-                <TextBlock Grid.Row="2"
-                           Grid.Column="1"
-                           Text="{Binding Missing}" />
-                <TextBlock Grid.Row="2"
                            Grid.Column="2"
-                           Text="Files/second:" />
+                           Text="Skipped:" />
                 <TextBlock Grid.Row="2"
                            Grid.Column="3"
+                           Text="{Binding Skipped}" />
+                <TextBlock Grid.Row="2"
+                           Grid.Column="4"
+                           Text="Files/second:" />
+                <TextBlock Grid.Row="2"
+                           Grid.Column="5"
                            Text="{Binding FilesPerSecond}" />
-                <TextBlock Grid.Row="3"
-                           Text="Unverified:" />
-                <TextBlock Grid.Row="3"
-                           Grid.Column="1"
-                           Text="{Binding Unverified}" />
             </Grid>
             <ProgressBar Minimum="0"
                          Maximum="100"
@@ -78,6 +84,7 @@
                         MinHeight="23"
                         HorizontalContentAlignment="Center"
                         Margin="6,0,0,0"
+                        IsEnabled="{Binding IsStopEnabled}"
                         Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).StopCommand}" />
             </Grid>
         </StackPanel>

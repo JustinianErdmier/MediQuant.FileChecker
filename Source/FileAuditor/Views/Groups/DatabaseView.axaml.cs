@@ -4,8 +4,5 @@ namespace FileAuditor.Views.Groups;
 public partial class DatabaseView : UserControl
 {
     /// <summary>Initialises a new instance of the <see cref="DatabaseView" /> class.</summary>
-    public DatabaseView()
-    {
-        InitializeComponent();
-    }
+    public DatabaseView() => InitializeComponent();
 }

@@ -6,34 +6,34 @@ public sealed class IndexTableReader
     /// <summary>Counts the rows in the index table.</summary>
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The audit query.</param>
-    /// <param name="ct">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
+    /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
     /// <returns>The row count, or <c>Sql.QueryFailed</c> when SQL Server reports an error.</returns>
-    public async Task<ErrorOr<long>> CountAsync(string connectionString, AuditQuery query, CancellationToken ct)
+    public async Task<ErrorOr<long>> CountAsync(string connectionString, AuditQuery query, CancellationToken cancellationToken)
     {
         try
         {
             await using SqlConnection connection = new(connectionString);
 
-            await connection.OpenAsync(ct);
+            await connection.OpenAsync(cancellationToken);
 
-            await using SqlCommand command = new(query.CountSql, connection)
-            {
-                CommandTimeout = 0
-            };
+            await using SqlCommand command = new(query.CountSql, connection);
 
-            await using CancellationTokenRegistration registration = ct.Register(command.Cancel);
-            object?                                   result       = await command.ExecuteScalarAsync(ct);
+            command.CommandTimeout = 0;
+
+            await using CancellationTokenRegistration registration = cancellationToken.Register(command.Cancel);
+
+            object? result = await command.ExecuteScalarAsync(cancellationToken);
 
             return Convert.ToInt64(result, CultureInfo.InvariantCulture);
         }
-        catch (SqlException ex) when (!ct.IsCancellationRequested)
+        catch (SqlException exception) when (!cancellationToken.IsCancellationRequested)
         {
-            return SqlErrors.QueryFailed(ex.Message);
+            return SqlErrors.QueryFailed(exception.Message);
         }
         catch (SqlException)
         {
             // SqlClient may fault a cancelled command with a SqlException; report it as the cancellation it is.
-            throw new OperationCanceledException(ct);
+            throw new OperationCanceledException(cancellationToken);
         }
     }
 
@@ -41,31 +41,30 @@ public sealed class IndexTableReader
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The audit query.</param>
     /// <param name="onRow">Called once per row, in order.</param>
-    /// <param name="ct">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
+    /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
     /// <returns>Success, or <c>Sql.QueryFailed</c> when SQL Server reports an error.</returns>
-    public async Task<ErrorOr<Success>> ReadAsync(string connectionString, AuditQuery query, Func<IndexRow, ValueTask> onRow, CancellationToken ct)
+    public async Task<ErrorOr<Success>> ReadAsync(string connectionString, AuditQuery query, Func<IndexRow, ValueTask> onRow, CancellationToken cancellationToken)
     {
         try
         {
             await using SqlConnection connection = new(connectionString);
 
-            await connection.OpenAsync(ct);
+            await connection.OpenAsync(cancellationToken);
 
-            await using SqlCommand command = new(query.SelectSql, connection)
-            {
-                CommandTimeout = 0
-            };
+            await using SqlCommand command = new(query.SelectSql, connection);
 
-            await using CancellationTokenRegistration registration = ct.Register(command.Cancel);
-            await using SqlDataReader                 reader       = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, ct);
+            command.CommandTimeout = 0;
+
+            await using CancellationTokenRegistration registration = cancellationToken.Register(command.Cancel);
+            await using SqlDataReader                 reader       = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
 
             try
             {
-                while (await reader.ReadAsync(ct))
+                while (await reader.ReadAsync(cancellationToken))
                 {
                     // SequentialAccess requires the columns to be read in order.
-                    string  path = await ReadStringAsync(reader, ordinal: 0, ct) ?? "";
-                    string? id   = query.HasIdColumn ? await ReadStringAsync(reader, ordinal: 1, ct) : null;
+                    string  path = await ReadStringAsync(reader, ordinal: 0, cancellationToken) ?? string.Empty;
+                    string? id   = query.HasIdColumn ? await ReadStringAsync(reader, ordinal: 1, cancellationToken) : null;
 
                     await onRow(new IndexRow(id, path));
                 }
@@ -80,14 +79,14 @@ public sealed class IndexTableReader
 
             return Result.Success;
         }
-        catch (SqlException ex) when (!ct.IsCancellationRequested)
+        catch (SqlException exception) when (!cancellationToken.IsCancellationRequested)
         {
-            return SqlErrors.QueryFailed(ex.Message);
+            return SqlErrors.QueryFailed(exception.Message);
         }
         catch (SqlException)
         {
             // SqlClient may fault a cancelled command with a SqlException; report it as the cancellation it is.
-            throw new OperationCanceledException(ct);
+            throw new OperationCanceledException(cancellationToken);
         }
     }
 
@@ -95,20 +94,19 @@ public sealed class IndexTableReader
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The path query.</param>
     /// <param name="onPath">Called once per non-null path, one call at a time.</param>
-    /// <param name="ct">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
+    /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
     /// <returns>Success, or <c>Sql.QueryFailed</c> when SQL Server reports an error.</returns>
-    public async Task<ErrorOr<Success>> ReadPathsAsync(string connectionString, PathQuery query, Action<string> onPath, CancellationToken ct)
+    public async Task<ErrorOr<Success>> ReadPathsAsync(string connectionString, PathQuery query, Action<string> onPath, CancellationToken cancellationToken)
     {
         try
         {
             await using SqlConnection connection = new(connectionString);
 
-            await connection.OpenAsync(ct);
+            await connection.OpenAsync(cancellationToken);
 
-            await using SqlCommand command = new(query.Sql, connection)
-            {
-                CommandTimeout = 0
-            };
+            await using SqlCommand command = new(query.Sql, connection);
+
+            command.CommandTimeout = 0;
 
             foreach (KeyValuePair<string, string> parameter in query.Parameters)
             {
@@ -121,14 +119,14 @@ public sealed class IndexTableReader
                 });
             }
 
-            await using CancellationTokenRegistration registration = ct.Register(command.Cancel);
-            await using SqlDataReader                 reader       = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, ct);
+            await using CancellationTokenRegistration registration = cancellationToken.Register(command.Cancel);
+            await using SqlDataReader                 reader       = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
 
             try
             {
-                while (await reader.ReadAsync(ct))
+                while (await reader.ReadAsync(cancellationToken))
                 {
-                    string? path = await ReadStringAsync(reader, ordinal: 0, ct);
+                    string? path = await ReadStringAsync(reader, ordinal: 0, cancellationToken);
 
                     if (path is not null)
                     {
@@ -146,25 +144,25 @@ public sealed class IndexTableReader
 
             return Result.Success;
         }
-        catch (SqlException ex) when (!ct.IsCancellationRequested)
+        catch (SqlException exception) when (!cancellationToken.IsCancellationRequested)
         {
-            return SqlErrors.QueryFailed(ex.Message);
+            return SqlErrors.QueryFailed(exception.Message);
         }
         catch (SqlException)
         {
             // SqlClient may fault a cancelled command with a SqlException; report it as the cancellation it is.
-            throw new OperationCanceledException(ct);
+            throw new OperationCanceledException(cancellationToken);
         }
     }
 
-    private static async Task<string?> ReadStringAsync(SqlDataReader reader, int ordinal, CancellationToken ct)
+    private static async Task<string?> ReadStringAsync(SqlDataReader reader, int ordinal, CancellationToken cancellationToken)
     {
-        if (await reader.IsDBNullAsync(ordinal, ct))
+        if (await reader.IsDBNullAsync(ordinal, cancellationToken))
         {
             return null;
         }
 
-        object value = await reader.GetFieldValueAsync<object>(ordinal, ct);
+        object value = await reader.GetFieldValueAsync<object>(ordinal, cancellationToken);
 
         return value as string ?? Convert.ToString(value, CultureInfo.InvariantCulture);
     }

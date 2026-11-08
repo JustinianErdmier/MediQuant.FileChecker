@@ -1,13 +1,11 @@
 namespace FileAuditor.Services.Scanning;
 
-/// <summary>
-///     The paths of the index table, kept as 128-bit hashes so that millions of rows cost about 48 bytes each (measured, with the set) instead of about 200.
-/// </summary>
+/// <summary>The paths of the index table, kept as 128-bit hashes so that millions of rows cost about 48 bytes each (measured, with the set) instead of about 200.</summary>
 /// <remarks>
-///     A path's key is the MD5 hash of the UTF-16 bytes of <c>path.Trim().ToUpperInvariant()</c>. MD5 is used for its speed and even spread, not for security.
-///     At 128 bits the chance of two different paths sharing a key is negligible (about 10^-25 for ten million paths), so a file is never reported as unindexed
-///     because of a collision (spec anti-goal 1). A collision could only ever hide an unindexed file, and not in any realistic table. <see cref="Add" /> must be
-///     called from one thread; once loading has finished, <see cref="Contains" /> is safe from any number of threads at once.
+///     A path's key is the MD5 hash of the UTF-16 bytes of <c>path.Trim().ToUpperInvariant()</c>. MD5 is used for its speed and even spread, not for security. At 128 bits the
+///     chance of two different paths sharing a key is negligible (about 10^-25 for ten million paths), so a file is never reported as unindexed because of a collision (spec anti-goal
+///     1). A collision could only ever hide an unindexed file, and not in any realistic table. <see cref="Add" /> must be called from one thread; once loading has finished,
+///     <see cref="Contains" /> is safe from any number of threads at once.
 /// </remarks>
 public sealed class IndexPathSet
 {
@@ -33,14 +31,17 @@ public sealed class IndexPathSet
 
     private static UInt128 Hash(string path)
     {
-        ReadOnlySpan<char> trimmed = path.AsSpan().Trim();
-        Span<byte>         digest  = stackalloc byte[16];
+        ReadOnlySpan<char> trimmed = path.AsSpan()
+                                         .Trim();
+
+        Span<byte> digest = stackalloc byte[16];
 
         if (trimmed.Length <= StackLimit)
         {
             Span<char> upper = stackalloc char[trimmed.Length];
 
             trimmed.ToUpperInvariant(upper);
+
             MD5.HashData(MemoryMarshal.AsBytes(upper), digest);
         }
         else
@@ -50,6 +51,7 @@ public sealed class IndexPathSet
             try
             {
                 trimmed.ToUpperInvariant(rented);
+
                 MD5.HashData(MemoryMarshal.AsBytes(rented.AsSpan(start: 0, trimmed.Length)), digest);
             }
             finally

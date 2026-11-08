@@ -4,8 +4,8 @@
 
 Ledger for [`Docs/Plans/Epic-1-MVP/milestone-2-project-settings.md`](../../Plans/Epic-1-MVP/milestone-2-project-settings.md), executed on branch
 `feat/milestone-2-project-settings` (cut from `main` at `ae6a1ca`). The spec is
-[`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`](../../Specs/Epic-1-MVP/milestone-2-project-settings-design.md), approved 2026-11-06; the master SDD
-([`Docs/Specs/1-file-auditor-master-design.md`](../../Specs/1-file-auditor-master-design.md)) was amended in Task 5 to match the build.
+[`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`](../../Specs/Epic-1-MVP/milestone-2-project-settings-design.md), approved 2026-11-06; the master SDD ([
+`Docs/Specs/1-file-auditor-master-design.md`](../../Specs/1-file-auditor-master-design.md)) was amended in Task 5 to match the build.
 Tasks 1 to 5 are complete; each of Tasks 1 to 4 passed its task review.
 
 While the run was in progress the live ledger was kept outside the repository (in the SDD working folder); this document is that ledger cleaned up.
@@ -14,14 +14,14 @@ While the run was in progress the live ledger was kept outside the repository (i
 
 Decisions taken without the user, each with what it costs if wrong.
 
-| #  | Task       | Ruling                                                                                                                                                          | Why                                                                                                                                              | Cost if wrong                                                                                                    |
-|----|------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| R1 | Pre-flight | Implementers drove the app with Windows UI Automation from PowerShell rather than computer use, as in milestone 1.                                              | Computer use cannot be granted to a locally built app that is not installed.                                                                     | Visual-only defects are caught only where a screenshot was captured (screenshots via `CopyFromScreen` cover that). |
-| R2 | Pre-flight | The live ledger lived outside the repository during the run and was cleaned into this document by Task 5.                                                       | Writing the docs ledger between tasks would have added commits outside the task reviews, as in milestone 1.                                      | None.                                                                                                            |
-| R3 | 2          | An opened project whose report location is incomplete saves back to its own file without asking.                                                                | The project's file is already known, so the report location is not needed; spec §3.7's "incomplete" case applies only to a never-saved project.  | A user who blanked the Project folder still gets the old file updated.                                           |
-| R4 | 3          | Every close, including an operating-system logoff or shutdown close, waits on the save rule's prompts.                                                          | The spec says "every close".                                                                                                                     | A logoff with unsaved changes may be held by a prompt.                                                           |
-| R5 | 3          | A title-bar ✕ or Esc on the save question counts as No (remembered for the session), per the plan's Global Constraints.                                       | The plan says closing a dialogue is the declining answer.                                                                                        | A "never mind" at close leaves without saving.                                                                   |
-| R6 | 2          | Overwrite stays the default button on the existing-file prompt.                                                                                                 | It matches milestone 1's report-overwrite prompt.                                                                                               | Enter overwrites another project's file.                                                                         |
+| #  | Task       | Ruling                                                                                                                   | Why                                                                                                                                             | Cost if wrong                                                                                                      |
+|----|------------|--------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| R1 | Pre-flight | Implementers drove the app with Windows UI Automation from PowerShell rather than computer use, as in milestone 1.       | Computer use cannot be granted to a locally built app that is not installed.                                                                    | Visual-only defects are caught only where a screenshot was captured (screenshots via `CopyFromScreen` cover that). |
+| R2 | Pre-flight | The live ledger lived outside the repository during the run and was cleaned into this document by Task 5.                | Writing the docs ledger between tasks would have added commits outside the task reviews, as in milestone 1.                                     | None.                                                                                                              |
+| R3 | 2          | An opened project whose report location is incomplete saves back to its own file without asking.                         | The project's file is already known, so the report location is not needed; spec §3.7's "incomplete" case applies only to a never-saved project. | A user who blanked the Project folder still gets the old file updated.                                             |
+| R4 | 3          | Every close, including an operating-system logoff or shutdown close, waits on the save rule's prompts.                   | The spec says "every close".                                                                                                                    | A logoff with unsaved changes may be held by a prompt.                                                             |
+| R5 | 3          | A title-bar ✕ or Esc on the save question counts as No (remembered for the session), per the plan's Global Constraints. | The plan says closing a dialogue is the declining answer.                                                                                       | A "never mind" at close leaves without saving.                                                                     |
+| R6 | 2          | Overwrite stays the default button on the existing-file prompt.                                                          | It matches milestone 1's report-overwrite prompt.                                                                                               | Enter overwrites another project's file.                                                                           |
 
 ## User decisions
 
@@ -109,10 +109,11 @@ f4a5f8f feat(✨): save settings per project beside the report
 93843cc feat(✨): add three-button dialogues and a project file picker
 9d522fc docs(📝): add the milestone 2 project settings design and plan
 ```
-25da644 docs(📝): sync the SDD with the final-review fixes
-eed820e fix(🐛): refuse non-project JSON and tidy settings saves
-8515420 fix(🐛): stop save points and project commands overlapping
-54acf57 docs(📝): sync the SDD with project settings and close the milestone 2 ledger
+
+25da644 docs (📝): sync the SDD with the final-review fixes
+eed820e fix (🐛): refuse non-project JSON and tidy settings saves
+8515420 fix (🐛): stop save points and project commands overlapping
+54acf57 docs (📝): sync the SDD with project settings and close the milestone 2 ledger
 ed1a230
 
 ## Final review

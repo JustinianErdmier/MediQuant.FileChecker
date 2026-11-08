@@ -11,6 +11,8 @@ public sealed class AuditProgress
 
     private volatile string _phase = "";
 
+    private long _skipped;
+
     private long _total;
 
     private long _unverified;
@@ -35,6 +37,12 @@ public sealed class AuditProgress
         set => _phase = value;
     }
 
+    /// <summary>Gets the number of rows processed so far: those checked plus those skipped.</summary>
+    public long Processed => Checked + Skipped;
+
+    /// <summary>Gets the number of rows skipped so far because their path value was a skip marker; they are not part of <see cref="Checked" />.</summary>
+    public long Skipped => Interlocked.Read(ref _skipped);
+
     /// <summary>Gets the table's row count; meaningful once <see cref="HasTotal" /> is <see langword="true" />.</summary>
     public long TotalFiles => Interlocked.Read(ref _total);
 
@@ -49,16 +57,21 @@ public sealed class AuditProgress
         _checkingClock = Stopwatch.StartNew();
     }
 
-    /// <summary>Records one checked row.</summary>
-    /// <param name="outcome">The row's outcome.</param>
-    public void Record(CheckOutcome outcome)
+    /// <summary>Records one processed row: a checked one, or a skipped one.</summary>
+    /// <param name="outcomes">The row's outcome.</param>
+    public void Record(CheckOutcomes outcomes)
     {
-        switch (outcome)
+        switch (outcomes)
         {
-            case CheckOutcome.Found:
+            case CheckOutcomes.Skipped:
+                Interlocked.Increment(ref _skipped);
+
+                return;
+
+            case CheckOutcomes.Found:
                 break;
 
-            case CheckOutcome.MissingEmpty or CheckOutcome.MissingDoesNotExist:
+            case CheckOutcomes.MissingEmpty or CheckOutcomes.MissingDoesNotExist:
                 Interlocked.Increment(ref _missing);
 
                 break;

@@ -10,18 +10,15 @@ public sealed partial class DatabaseViewModel : ObservableObject
 
     /// <summary>Initialises a new instance populated from the given settings.</summary>
     /// <param name="settings">The settings to load.</param>
-    public DatabaseViewModel(AppSettings settings)
-    {
-        Load(settings);
-    }
+    public DatabaseViewModel(AppSettings settings) => Load(settings);
 
     /// <summary>Gets or sets the database name.</summary>
     [ ObservableProperty ]
-    public partial string Database { get; set; } = "";
+    public partial string Database { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the SQL Server instance name.</summary>
     [ ObservableProperty ]
-    public partial string Server { get; set; } = "";
+    public partial string Server { get; set; } = string.Empty;
 
     /// <summary>Copies this group's inputs into the given settings.</summary>
     /// <param name="settings">The settings to start from.</param>

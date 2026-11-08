@@ -6,7 +6,7 @@ public static class SqlIdentifier
     /// <summary>Wraps an identifier part in square brackets, doubling any closing bracket.</summary>
     /// <param name="part">The unquoted identifier part.</param>
     /// <returns>The bracket-quoted part.</returns>
-    public static string Quote(string part) => "[" + part.Replace(oldValue: "]", newValue: "]]") + "]";
+    public static string Quote(string part) => $"[{part.Replace(oldValue: "]", newValue: "]]")}]";
 
     /// <summary>Splits a dotted, optionally bracketed name such as <c>dbo.My Table</c> or <c>[dbo].[Odd]]Name]</c> into its unquoted parts.</summary>
     /// <param name="text">The text entered by the user.</param>
@@ -16,55 +16,58 @@ public static class SqlIdentifier
     {
         string trimmed = text.Trim();
 
-        if (trimmed.Length == 0)
+        if (trimmed is [])
         {
             return QueryErrors.InvalidIdentifier(text);
         }
 
-        List<string> parts =
-            [];
+        List<string> parts = [];
 
-        int i = 0;
+        int index = 0;
 
         while (true)
         {
-            while (i < trimmed.Length
-                   && char.IsWhiteSpace(trimmed[i]))
+            while (index < trimmed.Length
+                   && char.IsWhiteSpace(trimmed[index]))
             {
-                i++;
+                index++;
             }
 
             StringBuilder part        = new();
-            bool          isBracketed = i < trimmed.Length && trimmed[i] == '[';
+            bool          isBracketed = index < trimmed.Length && trimmed[index] is '[';
 
             if (isBracketed)
             {
-                i++;
+                index++;
+
                 bool closed = false;
 
-                while (i < trimmed.Length)
+                while (index < trimmed.Length)
                 {
-                    char c = trimmed[i];
+                    char character = trimmed[index];
 
-                    if (c == ']')
+                    if (character is ']')
                     {
-                        if (i + 1             < trimmed.Length
-                            && trimmed[i + 1] == ']')
+                        if (index + 1 < trimmed.Length
+                            && trimmed[index + 1] is ']')
                         {
                             part.Append(value: ']');
-                            i += 2;
+
+                            index += 2;
 
                             continue;
                         }
 
                         closed = true;
-                        i++;
+
+                        index++;
 
                         break;
                     }
 
-                    part.Append(c);
-                    i++;
+                    part.Append(character);
+
+                    index++;
                 }
 
                 if (!closed)
@@ -72,30 +75,31 @@ public static class SqlIdentifier
                     return QueryErrors.InvalidIdentifier(text);
                 }
 
-                while (i < trimmed.Length
-                       && char.IsWhiteSpace(trimmed[i]))
+                while (index < trimmed.Length
+                       && char.IsWhiteSpace(trimmed[index]))
                 {
-                    i++;
+                    index++;
                 }
 
-                if (i             < trimmed.Length
-                    && trimmed[i] != '.')
+                if (index < trimmed.Length
+                    && trimmed[index] is not '.')
                 {
                     return QueryErrors.InvalidIdentifier(text);
                 }
             }
             else
             {
-                while (i             < trimmed.Length
-                       && trimmed[i] != '.')
+                while (index < trimmed.Length
+                       && trimmed[index] is not '.')
                 {
-                    if (trimmed[i] is '[' or ']')
+                    if (trimmed[index] is '[' or ']')
                     {
                         return QueryErrors.InvalidIdentifier(text);
                     }
 
-                    part.Append(trimmed[i]);
-                    i++;
+                    part.Append(trimmed[index]);
+
+                    index++;
                 }
             }
 
@@ -104,21 +108,21 @@ public static class SqlIdentifier
                                : part.ToString()
                                      .Trim();
 
-            if (value.Length == 0)
+            if (value is [])
             {
                 return QueryErrors.InvalidIdentifier(text);
             }
 
             parts.Add(value);
 
-            if (i >= trimmed.Length)
+            if (index >= trimmed.Length)
             {
                 break;
             }
 
-            i++; // Skip the dot; a trailing dot yields an empty final part and is rejected above.
+            index++; // Skip the dot; a trailing dot yields an empty final part and is rejected above.
 
-            if (i >= trimmed.Length)
+            if (index >= trimmed.Length)
             {
                 return QueryErrors.InvalidIdentifier(text);
             }

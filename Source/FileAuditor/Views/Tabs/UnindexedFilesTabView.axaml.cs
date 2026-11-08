@@ -4,12 +4,9 @@ namespace FileAuditor.Views.Tabs;
 public partial class UnindexedFilesTabView : UserControl
 {
     /// <summary>Initialises a new instance of the <see cref="UnindexedFilesTabView" /> class.</summary>
-    public UnindexedFilesTabView()
-    {
-        InitializeComponent();
-    }
+    public UnindexedFilesTabView() => InitializeComponent();
 
-    private async void OnAddClick(object? sender, RoutedEventArgs e)
+    private async void OnAddClick(object? sender, RoutedEventArgs eventArgs)
     {
         if (DataContext is not UnindexedFilesTabViewModel viewModel
             || TopLevel.GetTopLevel(this) is not { } topLevel)

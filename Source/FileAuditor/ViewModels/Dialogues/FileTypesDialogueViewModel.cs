@@ -5,7 +5,7 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
 {
     /// <summary>Initialises a new instance with placeholder content, for the XAML designer.</summary>
     public FileTypesDialogueViewModel()
-        : this("Edit File Types", FileTypeList.Defaults, canReset: true)
+        : this(title: "Edit File Types", FileTypeList.Defaults, canReset: true)
     { }
 
     /// <summary>Initialises a new instance.</summary>
@@ -62,12 +62,12 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
         {
             string text = entry.Text.Trim();
 
-            if (text.Length == 0)
+            if (text is [])
             {
                 continue;
             }
 
-            if (text.Any(c => char.IsWhiteSpace(c) || c == ','))
+            if (text.Any(character => char.IsWhiteSpace(character) || character is ','))
             {
                 return FileTypeList.InvalidEntry(text);
             }
@@ -92,7 +92,7 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
 
         Entries.Remove(item);
 
-        SelectedEntry = Entries.Count == 0 ? null : Entries[Math.Min(index, Entries.Count - 1)];
+        SelectedEntry = Entries is [] ? null : Entries[Math.Min(index, Entries.Count - 1)];
     }
 
     private bool CanClear() => Entries.Count > 0;

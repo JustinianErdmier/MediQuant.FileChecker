@@ -5,21 +5,17 @@ public static class ReportBuilder
 {
     private const string ColumnGap = ReportFormat.ColumnGap;
 
-    private static readonly CheckOutcome[] MissingOrder =
-    [
-        CheckOutcome.MissingEmpty,
-        CheckOutcome.MissingDoesNotExist
-    ];
+    private static readonly CheckOutcomes[] MissingOrder = [CheckOutcomes.MissingEmpty, CheckOutcomes.MissingDoesNotExist];
 
-    private static readonly CheckOutcome[] UnverifiedOrder =
+    private static readonly CheckOutcomes[] UnverifiedOrder =
     [
-        CheckOutcome.UnverifiedDriveOrShareNotFound,
-        CheckOutcome.UnverifiedPermissionDenied,
-        CheckOutcome.UnverifiedNetworkUnreachable,
-        CheckOutcome.UnverifiedPathTooLong,
-        CheckOutcome.UnverifiedInvalidCharacters,
-        CheckOutcome.UnverifiedPathEmpty,
-        CheckOutcome.UnverifiedOther
+        CheckOutcomes.UnverifiedDriveOrShareNotFound,
+        CheckOutcomes.UnverifiedPermissionDenied,
+        CheckOutcomes.UnverifiedNetworkUnreachable,
+        CheckOutcomes.UnverifiedPathTooLong,
+        CheckOutcomes.UnverifiedInvalidCharacters,
+        CheckOutcomes.UnverifiedPathEmpty,
+        CheckOutcomes.UnverifiedOther
     ];
 
     /// <summary>Builds the report text.</summary>
@@ -27,15 +23,20 @@ public static class ReportBuilder
     /// <returns>The report, with CRLF line endings and a trailing line break.</returns>
     public static string Build(AuditReport report)
     {
-        List<string> lines =
-            [];
+        List<string> lines = [];
 
         AddHeader(lines, report);
+
         lines.Add(string.Empty);
+
         AddSummary(lines, report);
+
         lines.Add(string.Empty);
+
         AddSection(lines, title: "Missing Files", emptyText: "No missing files.", MissingOrder, report);
+
         lines.Add(string.Empty);
+
         AddSection(lines, title: "Unverified Files", emptyText: "No unverified files.", UnverifiedOrder, report);
 
         return ReportFormat.Join(lines);
@@ -48,16 +49,19 @@ public static class ReportBuilder
         lines.Add(item: "File Auditor Missing Report");
         lines.Add(item: "===========================");
         lines.Add(string.Empty);
+
         ReportFormat.AddConnectionLines(lines, settings);
+
         lines.Add(Labelled(label: "ID column:", HasIdColumn(settings) ? settings.IdColumn : "(none)"));
         lines.Add(Labelled(label: "Empty files:", settings.ReportEmptyFiles ? "Reported as missing" : "Not reported"));
+
         ReportFormat.AddProjectLines(lines, settings);
         ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Result, report.FailureMessage);
     }
 
     private static void AddSummary(List<string> lines, AuditReport report)
     {
-        long missing    = report.Problems.Count(result => result.Outcome is CheckOutcome.MissingEmpty or CheckOutcome.MissingDoesNotExist);
+        long missing    = report.Problems.Count(result => result.Outcomes is CheckOutcomes.MissingEmpty or CheckOutcomes.MissingDoesNotExist);
         long unverified = report.Problems.Count - missing;
 
         lines.Add(item: "Summary");
@@ -66,34 +70,31 @@ public static class ReportBuilder
         lines.Add(Labelled(label: "Found:", Count(report.FoundCount)));
         lines.Add(Labelled(label: "Missing:", Count(missing)));
         lines.Add(Labelled(label: "Unverified:", Count(unverified)));
+        lines.Add(Labelled(label: "Skipped:", Count(report.SkippedCount)));
 
-        if (report.Result != AuditResultKind.Completed)
+        if (report.Result is not AuditResultKinds.Completed)
         {
-            lines.Add(Labelled(label: "Not checked:", Count(report.TotalFiles - report.FoundCount - report.Problems.Count)));
+            lines.Add(Labelled(label: "Not checked:", Count(report.TotalFiles - report.FoundCount - report.Problems.Count - report.SkippedCount)));
         }
     }
 
-    private static void AddSection(List<string> lines, string title, string emptyText, CheckOutcome[] order, AuditReport report)
+    private static void AddSection(List<string> lines, string title, string emptyText, CheckOutcomes[] order, AuditReport report)
     {
-        List<(CheckOutcome Outcome, List<CheckResult> Results)> groups =
-            [];
-
-        foreach (CheckOutcome outcome in order)
-        {
-            List<CheckResult> results = report.Problems
-                                              .Where(result => result.Outcome == outcome)
-                                              .OrderBy(result => result.Row.Path, StringComparer.OrdinalIgnoreCase)
-                                              .ThenBy(result => result.Row.Path, StringComparer.Ordinal)
-                                              .ThenBy(result => result.Row.Id        ?? string.Empty, StringComparer.Ordinal)
-                                              .ThenBy(result => result.Reason        ?? string.Empty, StringComparer.Ordinal)
-                                              .ThenBy(result => result.SystemMessage ?? string.Empty, StringComparer.Ordinal)
-                                              .ToList();
-
-            if (results.Count > 0)
-            {
-                groups.Add((outcome, results));
-            }
-        }
+        List<(CheckOutcomes Outcome, List<CheckResult> Results)> groups =
+        [
+            .. from outcome in order
+               let results = (List<CheckResult>)
+               [
+                   .. report.Problems.Where(result => result.Outcomes == outcome)
+                            .OrderBy(result => result.Row.Path, StringComparer.OrdinalIgnoreCase)
+                            .ThenBy(result => result.Row.Path, StringComparer.Ordinal)
+                            .ThenBy(result => result.Row.Id        ?? string.Empty, StringComparer.Ordinal)
+                            .ThenBy(result => result.Reason        ?? string.Empty, StringComparer.Ordinal)
+                            .ThenBy(result => result.SystemMessage ?? string.Empty, StringComparer.Ordinal)
+               ]
+               where results.Count > 0
+               select (outcome, results)
+        ];
 
         int    total   = groups.Sum(group => group.Results.Count);
         string heading = $"{title} ({Count(total)})";
@@ -101,7 +102,7 @@ public static class ReportBuilder
         lines.Add(heading);
         lines.Add(new string(c: '-', heading.Length));
 
-        if (groups.Count == 0)
+        if (groups.Count is 0)
         {
             lines.Add(emptyText);
 
@@ -116,22 +117,20 @@ public static class ReportBuilder
             }
 
             lines.Add($"[{GroupTitle(groups[index].Outcome)} ({Count(groups[index].Results.Count)})]");
+
             AddFileLines(lines, groups[index].Outcome, groups[index].Results, report.Settings);
         }
     }
 
-    private static void AddFileLines(List<string> lines, CheckOutcome outcome, List<CheckResult> results, AppSettings settings)
+    private static void AddFileLines(List<string> lines, CheckOutcomes outcomes, List<CheckResult> results, AppSettings settings)
     {
         bool hasId = HasIdColumn(settings);
 
-        string[] ids = results.Select(result => hasId ? $"{settings.IdColumn} {Flatten(result.Row.Id ?? string.Empty)}" : string.Empty)
-                              .ToArray();
+        string[] ids = [.. results.Select(result => hasId ? $"{settings.IdColumn} {Flatten(result.Row.Id ?? string.Empty)}" : string.Empty)];
 
-        string[] paths = results.Select(result => Flatten(result.Row.Path))
-                                .ToArray();
+        string[] paths = [.. results.Select(result => Flatten(result.Row.Path))];
 
-        string[] reasons = results.Select(result => Flatten(result.Reason ?? string.Empty))
-                                  .ToArray();
+        string[] reasons = [.. results.Select(result => Flatten(result.Reason ?? string.Empty))];
 
         int idWidth     = ids.Max(id => id.Length);
         int pathWidth   = paths.Max(path => path.Length);
@@ -150,7 +149,7 @@ public static class ReportBuilder
 
             line.Append(paths[index]);
 
-            if (outcome == CheckOutcome.UnverifiedOther)
+            if (outcomes is CheckOutcomes.UnverifiedOther)
             {
                 line.Append(new string(c: ' ', pathWidth - paths[index].Length))
                     .Append(ColumnGap);
@@ -167,19 +166,19 @@ public static class ReportBuilder
         }
     }
 
-    private static string GroupTitle(CheckOutcome outcome)
-        => outcome switch
+    private static string GroupTitle(CheckOutcomes outcomes)
+        => outcomes switch
         {
-            CheckOutcome.MissingEmpty                   => "Empty",
-            CheckOutcome.MissingDoesNotExist            => "Does not exist",
-            CheckOutcome.UnverifiedDriveOrShareNotFound => "Drive or share not found",
-            CheckOutcome.UnverifiedPermissionDenied     => "Permission denied",
-            CheckOutcome.UnverifiedNetworkUnreachable   => "Network location unreachable",
-            CheckOutcome.UnverifiedPathTooLong          => "Path too long",
-            CheckOutcome.UnverifiedInvalidCharacters    => "Invalid characters in path",
-            CheckOutcome.UnverifiedPathEmpty            => "Path is empty in the index table",
-            CheckOutcome.UnverifiedOther                => "Other errors",
-            var _                                       => outcome.ToString()
+            CheckOutcomes.MissingEmpty                   => "Empty",
+            CheckOutcomes.MissingDoesNotExist            => "Does not exist",
+            CheckOutcomes.UnverifiedDriveOrShareNotFound => "Drive or share not found",
+            CheckOutcomes.UnverifiedPermissionDenied     => "Permission denied",
+            CheckOutcomes.UnverifiedNetworkUnreachable   => "Network location unreachable",
+            CheckOutcomes.UnverifiedPathTooLong          => "Path too long",
+            CheckOutcomes.UnverifiedInvalidCharacters    => "Invalid characters in path",
+            CheckOutcomes.UnverifiedPathEmpty            => "Path is empty in the index table",
+            CheckOutcomes.UnverifiedOther                => "Other errors",
+            var _                                        => outcomes.ToString()
         };
 
     private static string Labelled(string label, string value) => ReportFormat.Labelled(label, value);

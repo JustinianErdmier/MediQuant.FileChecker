@@ -11,7 +11,7 @@ public static class ReportWriter
     /// <returns>Success, or <see cref="ReportErrors.Unwritable" /> when the file cannot be written.</returns>
     public static ErrorOr<Success> Write(string fullPath, string content)
     {
-        string tempPath = fullPath + ".tmp";
+        string tempPath = $"{fullPath}.tmp";
 
         try
         {
@@ -20,7 +20,10 @@ public static class ReportWriter
 
             return Result.Success;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        catch (Exception exception) when (exception is IOException
+                                                       or UnauthorizedAccessException
+                                                       or ArgumentException
+                                                       or NotSupportedException)
         {
             TryDelete(tempPath);
 
@@ -34,7 +37,10 @@ public static class ReportWriter
         {
             File.Delete(path);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        catch (Exception exception) when (exception is IOException
+                                                       or UnauthorizedAccessException
+                                                       or ArgumentException
+                                                       or NotSupportedException)
         {
             // Best effort: the original failure is the one worth reporting.
         }

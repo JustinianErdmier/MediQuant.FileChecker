@@ -3,28 +3,29 @@ namespace FileAuditor.Services.Reporting;
 /// <summary>The formatting rules both plain-text reports share (SDD §7): label padding, invariant counts, local timestamps, one-line values and the common header lines.</summary>
 public static class ReportFormat
 {
+    /// <summary>The width, in characters, used to align report labels and continued values.</summary>
+    private const int LabelWidth = 17;
+
     /// <summary>The gap between the columns of an Other errors line.</summary>
     public const string ColumnGap = "   ";
 
     /// <summary>The line ending of every report.</summary>
     public const string NewLine = "\r\n";
 
-    private const int LabelWidth = 17;
-
     /// <summary>Joins the lines into the report text.</summary>
     /// <param name="lines">The report's lines.</param>
     /// <returns>The report, with CRLF line endings and a trailing line break.</returns>
     public static string Join(IEnumerable<string> lines)
     {
-        StringBuilder builder = new();
+        StringBuilder stringBuilder = new();
 
         foreach (string line in lines)
         {
-            builder.Append(line)
-                   .Append(NewLine);
+            stringBuilder.Append(line)
+                         .Append(NewLine);
         }
 
-        return builder.ToString();
+        return stringBuilder.ToString();
     }
 
     /// <summary>Adds the Server, Database, Table and Path column lines.</summary>
@@ -49,8 +50,8 @@ public static class ReportFormat
         }
 
         lines.Add(Labelled(label: "Project folder:", settings.ProjectFolder));
-        lines.Add(Labelled(label: "Project stage:", settings.ProjectStage.ToString()));
-        lines.Add(Labelled(label: "Audit stage:", settings.AuditStage.ToString()));
+        lines.Add(Labelled(label: "Project stage:", settings.ProjectStages.ToString()));
+        lines.Add(Labelled(label: "Audit stage:", settings.AuditStages.ToString()));
     }
 
     /// <summary>Adds the blank line and the Started, Finished, Elapsed and Result lines.</summary>
@@ -59,7 +60,7 @@ public static class ReportFormat
     /// <param name="finishedUtc">When the run finished, in UTC.</param>
     /// <param name="result">How the run ended.</param>
     /// <param name="failureMessage">The failure message, used only for a failed run.</param>
-    public static void AddTimingLines(List<string> lines, DateTime startedUtc, DateTime finishedUtc, AuditResultKind result, string? failureMessage)
+    public static void AddTimingLines(List<string> lines, DateTime startedUtc, DateTime finishedUtc, AuditResultKinds result, string? failureMessage)
     {
         lines.Add(string.Empty);
         lines.Add(Labelled(label: "Started:", Timestamp(startedUtc.ToLocalTime())));
@@ -108,11 +109,11 @@ public static class ReportFormat
                .Replace(oldChar: '\n', newChar: ' ')
                .Replace(oldChar: '\r', newChar: ' ');
 
-    private static string ResultText(AuditResultKind result, string? failureMessage)
+    private static string ResultText(AuditResultKinds result, string? failureMessage)
         => result switch
         {
-            AuditResultKind.Completed     => "Completed",
-            AuditResultKind.StoppedByUser => "Stopped by user",
-            var _                         => $"Failed — {Flatten(failureMessage ?? string.Empty)}".TrimEnd()
+            AuditResultKinds.Completed     => "Completed",
+            AuditResultKinds.StoppedByUser => "Stopped by user",
+            var _                          => $"Failed — {Flatten(failureMessage ?? string.Empty)}".TrimEnd()
         };
 }

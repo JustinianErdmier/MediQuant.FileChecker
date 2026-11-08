@@ -5,12 +5,12 @@ namespace FileAuditor.Services.Settings;
 /// <param name="TickCheckbox"><see langword="true" /> when the user answered Yes to the save prompt, so the checkbox should be ticked.</param>
 public sealed record SavePointResult(bool Proceed, bool TickCheckbox)
 {
+    /// <summary>Gets the result for "the user cancelled; back out".</summary>
+    public static SavePointResult Cancel { get; } = new(Proceed: false, TickCheckbox: false);
+
     /// <summary>Gets the result for "carry on, leave the checkbox alone".</summary>
     public static SavePointResult Go { get; } = new(Proceed: true, TickCheckbox: false);
 
     /// <summary>Gets the result for "carry on, and tick the checkbox".</summary>
     public static SavePointResult GoAndTick { get; } = new(Proceed: true, TickCheckbox: true);
-
-    /// <summary>Gets the result for "the user cancelled; back out".</summary>
-    public static SavePointResult Cancel { get; } = new(Proceed: false, TickCheckbox: false);
 }

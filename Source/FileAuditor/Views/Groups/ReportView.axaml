@@ -20,7 +20,7 @@
             <CheckBox Grid.ColumnSpan="3"
                       Content="_Use a custom report location and file name"
                       IsChecked="{Binding Shared.UseCustomLocation}" />
-            <!-- The built location's inputs are disabled, not hidden, while a custom location is used. -->
+            <!--The built location's inputs are disabled, not hidden, while a custom location is used.-->
             <StackPanel Grid.Row="1"
                         Grid.ColumnSpan="3"
                         Spacing="4"

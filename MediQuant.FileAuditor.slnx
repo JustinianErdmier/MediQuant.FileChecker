@@ -7,6 +7,7 @@
         <File Path="Docs/Ledgers/Epic-1-MVP/milestone-3-ledger.md" />
         <File Path="Docs/Ledgers/Epic-1-MVP/milestone-4-ledger.md" />
         <File Path="Docs/Ledgers/Epic-1-MVP/milestone-4.1-ledger.md" />
+        <File Path="Docs/Ledgers/Epic-1-MVP/milestone-5-ledger.md" />
     </Folder>
     <Folder Name="/Docs/Plans/" />
     <Folder Name="/Docs/Plans/Epic-1-MVP/">
@@ -15,6 +16,7 @@
         <File Path="Docs/Plans/Epic-1-MVP/milestone-3-direction-tabs.md" />
         <File Path="Docs/Plans/Epic-1-MVP/milestone-4-unindexed-audit.md" />
         <File Path="Docs/Plans/Epic-1-MVP/milestone-4.1-layout-follow-up.md" />
+        <File Path="Docs/Plans/Epic-1-MVP/milestone-5-skipped-rows-and-run-stats.md" />
     </Folder>
     <Folder Name="/Docs/Specs/">
         <File Path="Docs/Specs/1-file-auditor-master-design.md" />

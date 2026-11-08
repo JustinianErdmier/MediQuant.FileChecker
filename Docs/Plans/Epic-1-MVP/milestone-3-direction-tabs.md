@@ -27,11 +27,11 @@ this plan must leave room for its second tab but builds none of it. The master S
   `(localdb)\MSSQLLocalDB` is available for a real audit run: create a scratch database and table, and drop them afterwards. Close the app when done.
 - Version stays `1.0.0`. No compatibility with project files saved by milestone 2's build is required.
 - Exact copy, verbatim:
-  - Tab header: `Missing Files`. Group on that tab: `Options`, holding the existing checkbox `Report empt_y (zero-byte) files as missing`.
-  - Report names: built `FileAuditorMissingReport_<Audit Stage>.txt`; custom default `FileAuditorMissingReport.txt`.
-  - Report title lines: `File Auditor Missing Report` and `===========================` (27 `=`).
-  - Help menu: `_Help Topics` with `HotKey="F1"` / `InputGesture="F1"`, then a separator, then the existing `_About File Auditor`.
-  - The user-guide address: `public const string UserGuideUrl = "";` in `Source/FileAuditor/Common/Links/HelpLinks.cs` (static class `HelpLinks`).
+    - Tab header: `Missing Files`. Group on that tab: `Options`, holding the existing checkbox `Report empt_y (zero-byte) files as missing`.
+    - Report names: built `FileAuditorMissingReport_<Audit Stage>.txt`; custom default `FileAuditorMissingReport.txt`.
+    - Report title lines: `File Auditor Missing Report` and `===========================` (27 `=`).
+    - Help menu: `_Help Topics` with `HotKey="F1"` / `InputGesture="F1"`, then a separator, then the existing `_About File Auditor`.
+    - The user-guide address: `public const string UserGuideUrl = "";` in `Source/FileAuditor/Common/Links/HelpLinks.cs` (static class `HelpLinks`).
 - Project file property renamed: `CustomFileName` → `MissingCustomFileName` (default `FileAuditorMissingReport.txt`).
 - The pair rule (SDD §12): every public `*ViewModel` has a sibling `*View.axaml`. Shared state that has no view of its own is **not** named `*ViewModel`.
 - `MainWindow.axaml` stays at 100 lines or fewer.
@@ -84,14 +84,14 @@ this plan must leave room for its second tab but builds none of it. The master S
 
 - Consumes: Task 1's `AuditDirection`, `Resolve(settings, direction)`.
 - Produces:
-  - `ReportLocationState : ObservableObject` — the shared Report values: `UseCustomLocation`, `ProjectFolder`, the four stage booleans, `IsBuilt`,
-    `IsAuditStageEnabled`, the custom location, `SaveProjectSettings`; `ApplyTo(AppSettings)` / `Load(AppSettings)` for the shared fields (not
-    `SaveProjectSettings`, which stays out of the file).
-  - `ReportViewModel(ReportLocationState shared, AuditDirection direction)` — `Shared`, `Direction`, `Location` (display text), `FileName`, `Current : ReportPath`;
-    `ApplyTo`/`Load` for its own custom file name. Raises `Current` changes when the shared state changes.
-  - `MissingFilesTabViewModel(ReportLocationState shared)` — `ReportEmptyFiles`, `Report : ReportViewModel` (Missing), `Audit : AuditViewModel`; `ApplyTo`/`Load`
-    for `ReportEmptyFiles` and the report's custom name.
-  - `MainWindowViewModel`: `ReportLocation : ReportLocationState`, `MissingFiles : MissingFilesTabViewModel`, `SelectedTabIndex : int`, `StatusAudit :
+    - `ReportLocationState : ObservableObject` — the shared Report values: `UseCustomLocation`, `ProjectFolder`, the four stage booleans, `IsBuilt`,
+      `IsAuditStageEnabled`, the custom location, `SaveProjectSettings`; `ApplyTo(AppSettings)` / `Load(AppSettings)` for the shared fields (not
+      `SaveProjectSettings`, which stays out of the file).
+    - `ReportViewModel(ReportLocationState shared, AuditDirection direction)` — `Shared`, `Direction`, `Location` (display text), `FileName`, `Current : ReportPath`;
+      `ApplyTo`/`Load` for its own custom file name. Raises `Current` changes when the shared state changes.
+    - `MissingFilesTabViewModel(ReportLocationState shared)` — `ReportEmptyFiles`, `Report : ReportViewModel` (Missing), `Audit : AuditViewModel`; `ApplyTo`/`Load`
+      for `ReportEmptyFiles` and the report's custom name.
+    - `MainWindowViewModel`: `ReportLocation : ReportLocationState`, `MissingFiles : MissingFilesTabViewModel`, `SelectedTabIndex : int`, `StatusAudit :
     AuditViewModel` (the running tab's Audit while one runs, else the selected tab's). Existing commands keep their names.
 
 - [x] **Step 1: Move the checkbox.** *Report empty files as missing* leaves `FileIndexTableViewModel` / `FileIndexTableView` for the Missing Files tab's **Options**
@@ -107,13 +107,13 @@ this plan must leave room for its second tab but builds none of it. The master S
   a tab.
 - [x] **Step 5:** Keep `IsEditable`, the busy gate and save-on-close behaviour unchanged; `AuditView`'s `$parent[Window]` command bindings still resolve.
 - [x] **Step 6: Verify.** Clean build. In the running app (UI Automation):
-  - The window shows Database, File Index Table, then the tab control with *Missing Files* (Options, Report, Audit), then the status bar; screenshot it.
-  - Change project folder, stage, custom flag, custom location: Location/File name update as before; File name stays the missing report's.
-  - Save a project (Start or close with the box ticked), *Close project*, *Open project...* it again: every value returns, including *Report empty files*.
-    Open a project and close without changes: no save prompt.
-  - F5 starts, Ctrl+R views the report, Esc stops; access keys are unique (list every `_` key on the window).
-  - Real run on LocalDB: create a scratch database with a small index table (a few existing and missing files under the scratch folder), run, and check the report
-    title and name, and that the body matches milestone 2's layout. Stop mid-run and close mid-run still behave as before. Drop the scratch database.
+    - The window shows Database, File Index Table, then the tab control with *Missing Files* (Options, Report, Audit), then the status bar; screenshot it.
+    - Change project folder, stage, custom flag, custom location: Location/File name update as before; File name stays the missing report's.
+    - Save a project (Start or close with the box ticked), *Close project*, *Open project...* it again: every value returns, including *Report empty files*.
+      Open a project and close without changes: no save prompt.
+    - F5 starts, Ctrl+R views the report, Esc stops; access keys are unique (list every `_` key on the window).
+    - Real run on LocalDB: create a scratch database with a small index table (a few existing and missing files under the scratch folder), run, and check the report
+      title and name, and that the body matches milestone 2's layout. Stop mid-run and close mid-run still behave as before. Drop the scratch database.
 - [x] **Step 7: Commit** — `feat(✨): put the missing-files audit in a tab with a shared report location`.
 
 ### Task 3: Help Topics

@@ -3,37 +3,43 @@ namespace FileAuditor.Services.Scanning;
 /// <summary>One normalised file type entry, such as <c>.pdf</c>, <c>.tar.gz</c> or <c>.zip.0??</c>, compiled for matching file names (milestone 4 spec §3.3).</summary>
 public sealed class FileTypePattern
 {
+    /// <summary>Stores the normalised file type pattern as dot-separated extension parts, excluding the leading dot.</summary>
     private readonly string[] _parts;
 
     /// <summary>Initialises a new instance.</summary>
     /// <param name="entry">A normalised entry: lower case with one leading dot, as <see cref="FileTypeList.Parse" /> returns it.</param>
     public FileTypePattern(string entry)
     {
-        Text   = entry;
-        _parts = entry.TrimStart('.').Split('.');
+        Text = entry;
 
-        WildcardCount  = entry.Count(c => c is '*' or '?');
-        IsWildcardOnly = _parts.All(part => part.All(c => c is '*' or '?'));
+        _parts = entry.TrimStart(trimChar: '.')
+                      .Split(separator: '.');
+
+        WildcardCount  = entry.Count(character => character is '*' or '?');
+        IsWildcardOnly = _parts.All(part => part.All(character => character is '*' or '?'));
 
         // One part of wildcards with a '*' and at most one '?': every extension has at least one character, so only then does it accept every extension. '?' alone accepts
         // only one-character extensions, '?*?' only longer ones, and '.*.*' only names with two extensions.
-        MatchesEverything = _parts.Length == 1 && IsWildcardOnly && entry.Contains(value: '*') && entry.Count(c => c == '?') <= 1;
+        MatchesEverything = _parts is [var _]
+                            && IsWildcardOnly
+                            && entry.Contains(value: '*')
+                            && entry.Count(character => character is '?') <= 1;
     }
-
-    /// <summary>Gets the normalised entry.</summary>
-    public string Text { get; }
-
-    /// <summary>Gets the number of dot-separated parts.</summary>
-    public int PartCount => _parts.Length;
-
-    /// <summary>Gets the number of <c>*</c> and <c>?</c> characters.</summary>
-    public int WildcardCount { get; }
 
     /// <summary>Gets a value indicating whether every part is only <c>*</c> and <c>?</c>.</summary>
     public bool IsWildcardOnly { get; }
 
     /// <summary>Gets a value indicating whether the entry accepts every extension: a single part made only of wildcards, with a <c>*</c> and at most one <c>?</c>.</summary>
     public bool MatchesEverything { get; }
+
+    /// <summary>Gets the number of dot-separated parts.</summary>
+    public int PartCount => _parts.Length;
+
+    /// <summary>Gets the normalised entry.</summary>
+    public string Text { get; }
+
+    /// <summary>Gets the number of <c>*</c> and <c>?</c> characters.</summary>
+    public int WildcardCount { get; }
 
     /// <summary>Determines whether a file name matches: the entry's parts equal the name's last parts, after a non-empty stem, ignoring case.</summary>
     /// <param name="fileName">The file name, without a folder.</param>
@@ -42,7 +48,7 @@ public sealed class FileTypePattern
     {
         ReadOnlySpan<char> name = fileName;
 
-        int firstDot = name.IndexOf('.');
+        int firstDot = name.IndexOf(value: '.');
 
         // No dot, or a leading dot: no stem, so no extension.
         if (firstDot <= 0)
@@ -52,9 +58,10 @@ public sealed class FileTypePattern
 
         int end = name.Length;
 
-        for (int i = _parts.Length - 1; i >= 0; i--)
+        for (int partIndex = _parts.Length - 1; partIndex >= 0; partIndex--)
         {
-            int dot = name[..end].LastIndexOf('.');
+            int dot = name[..end]
+                .LastIndexOf(value: '.');
 
             if (dot < firstDot)
             {
@@ -63,8 +70,8 @@ public sealed class FileTypePattern
 
             ReadOnlySpan<char> part = name[(dot + 1)..end];
 
-            if (part.Length == 0
-                || !GlobMatches(_parts[i], part))
+            if (part is []
+                || !GlobMatches(_parts[partIndex], part))
             {
                 return false;
             }
@@ -82,12 +89,13 @@ public sealed class FileTypePattern
     {
         int start = fileName.Length;
 
-        for (int i = 0; i < _parts.Length; i++)
+        for (int partIndex = 0; partIndex < _parts.Length; partIndex++)
         {
-            start = fileName.LastIndexOf('.', start - 1);
+            start = fileName.LastIndexOf(value: '.', start - 1);
         }
 
-        return fileName[start..].ToLowerInvariant();
+        return fileName[start..]
+            .ToLowerInvariant();
     }
 
     // Glob match of one part: '*' is any run (including none), '?' exactly one character; case-insensitive. The pattern is already lower case.
@@ -101,13 +109,13 @@ public sealed class FileTypePattern
         while (t < text.Length)
         {
             if (p < pattern.Length
-                && pattern[p] == '*')
+                && pattern[p] is '*')
             {
                 star     = p++;
                 starText = t;
             }
             else if (p < pattern.Length
-                     && (pattern[p] == '?' || pattern[p] == char.ToLowerInvariant(text[t])))
+                     && (pattern[p] is '?' || pattern[p] == char.ToLowerInvariant(text[t])))
             {
                 p++;
                 t++;
@@ -124,7 +132,7 @@ public sealed class FileTypePattern
         }
 
         while (p < pattern.Length
-               && pattern[p] == '*')
+               && pattern[p] is '*')
         {
             p++;
         }

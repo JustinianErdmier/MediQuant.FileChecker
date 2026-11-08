@@ -12,13 +12,13 @@ public sealed class AuditRunner
     /// <summary>Runs the audit.</summary>
     /// <param name="request">The settings and report path.</param>
     /// <param name="progress">Receives the live statistics.</param>
-    /// <param name="ct">Stops the run; whatever was checked is reported.</param>
+    /// <param name="cancellationToken">Stops the run; whatever was checked is reported.</param>
     /// <returns>
-    ///     The report that was written for a completed, stopped or mid-run failed audit; a <c>Sql.QueryFailed</c> error when SQL Server failed before any row was checked;
-    ///     <c>Audit.ReadFailed</c> when the row stream failed for another reason before any row was checked; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while counting;
-    ///     or <c>Report.Unwritable</c> when the report could not be written.
+    ///     The report that was written for a completed, stopped or mid-run failed audit; a <c>Sql.QueryFailed</c> error when SQL Server failed before any row was processed;
+    ///     <c>Audit.ReadFailed</c> when the row stream failed for another reason before any row was processed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while
+    ///     counting; or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
-    public async Task<ErrorOr<AuditReport>> RunAsync(AuditRequest request, AuditProgress progress, CancellationToken ct)
+    public async Task<ErrorOr<AuditReport>> RunAsync(AuditRequest request, AuditProgress progress, CancellationToken cancellationToken)
     {
         AppSettings settings   = request.Settings;
         DateTime    startedUtc = DateTime.UtcNow;
@@ -39,7 +39,7 @@ public sealed class AuditRunner
 
         try
         {
-            counted = await _reader.CountAsync(connectionString, query, ct);
+            counted = await _reader.CountAsync(connectionString, query, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -58,8 +58,7 @@ public sealed class AuditRunner
 
         FileChecker checker = new(settings.ReportEmptyFiles);
 
-        ConcurrentBag<CheckResult> problems =
-            [];
+        ConcurrentBag<CheckResult> problems = [];
 
         Channel<IndexRow> channel = Channel.CreateBounded<IndexRow>(new BoundedChannelOptions(ChannelCapacity)
         {
@@ -67,8 +66,8 @@ public sealed class AuditRunner
             FullMode     = BoundedChannelFullMode.Wait
         });
 
-        // Cancelled by the caller's token, and by this method when the consumer dies so the reader is never left blocked on a full channel.
-        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        // Cancelled by the caller's token, and by this method when the consumer dies, so the reader is never left blocked on a full channel.
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         ErrorOr<Success> readResult = Result.Success;
 
@@ -99,17 +98,17 @@ public sealed class AuditRunner
                                         {
                                             CheckResult result = checker.Check(row);
 
-                                            if (result.Outcome != CheckOutcome.Found)
+                                            if (result.Outcomes is not (CheckOutcomes.Found or CheckOutcomes.Skipped))
                                             {
                                                 problems.Add(result);
                                             }
 
-                                            progress.Record(result.Outcome);
+                                            progress.Record(result.Outcomes);
 
                                             return ValueTask.CompletedTask;
                                         });
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             stopped = true;
         }
@@ -126,32 +125,33 @@ public sealed class AuditRunner
         {
             await producer;
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             stopped = true;
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            // Anything but a user stop or a SQL error: report it like a mid-run SQL failure, keeping what was checked.
-            readResult = AuditErrors.ReadFailed(ex.Message);
+            // Anything but a user stop, or a SQL error: report it like a mid-run SQL failure, keeping what was checked.
+            readResult = AuditErrors.ReadFailed(exception.Message);
         }
 
-        long            checkedCount   = progress.Checked;
-        AuditResultKind kind           = AuditResultKind.Completed;
-        string?         failureMessage = null;
+        long             checkedCount   = progress.Checked;
+        long             skippedCount   = progress.Skipped;
+        AuditResultKinds kinds          = AuditResultKinds.Completed;
+        string?          failureMessage = null;
 
         if (stopped)
         {
-            kind = AuditResultKind.StoppedByUser;
+            kinds = AuditResultKinds.StoppedByUser;
         }
         else if (readResult.IsError)
         {
-            if (checkedCount == 0)
+            if (checkedCount + skippedCount is 0)
             {
                 return readResult.Errors;
             }
 
-            kind           = AuditResultKind.Failed;
+            kinds          = AuditResultKinds.Failed;
             failureMessage = readResult.FirstError.Description;
         }
 
@@ -161,10 +161,11 @@ public sealed class AuditRunner
         AuditReport report = new(settings,
                                  startedUtc,
                                  DateTime.UtcNow,
-                                 kind,
+                                 kinds,
                                  failureMessage,
-                                 Math.Max(total, checkedCount),
+                                 Math.Max(total, checkedCount + skippedCount),
                                  checkedCount - problems.Count,
+                                 skippedCount,
                                  problems.ToArray());
 
         ErrorOr<Success> written = ReportWriter.Write(request.ReportPath.FullPath, ReportBuilder.Build(report));

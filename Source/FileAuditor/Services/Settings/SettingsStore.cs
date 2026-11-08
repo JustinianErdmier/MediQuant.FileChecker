@@ -17,9 +17,12 @@ public sealed class SettingsStore
         {
             json = File.ReadAllText(filePath);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+        catch (Exception exception) when (exception is IOException
+                                                       or UnauthorizedAccessException
+                                                       or NotSupportedException
+                                                       or ArgumentException)
         {
-            return SettingsErrors.Unreadable(ex.Message);
+            return SettingsErrors.Unreadable(exception.Message);
         }
 
         try
@@ -38,9 +41,9 @@ public sealed class SettingsStore
 
             return Normalise(settings);
         }
-        catch (JsonException ex)
+        catch (JsonException exception)
         {
-            return SettingsErrors.Unreadable(ex.Message);
+            return SettingsErrors.Unreadable(exception.Message);
         }
     }
 
@@ -50,7 +53,7 @@ public sealed class SettingsStore
     /// <returns><see cref="Result.Success" />, or <see cref="SettingsErrors.Unwritable" /> when the write fails, including when the folder does not exist.</returns>
     public ErrorOr<Success> Save(AppSettings settings, string filePath)
     {
-        string tempPath = filePath + ".tmp";
+        string tempPath = $"{filePath}.tmp";
 
         try
         {
@@ -59,18 +62,24 @@ public sealed class SettingsStore
 
             return Result.Success;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+        catch (Exception exception) when (exception is IOException
+                                                       or UnauthorizedAccessException
+                                                       or NotSupportedException
+                                                       or ArgumentException)
         {
             try
             {
                 File.Delete(tempPath);
             }
-            catch (Exception deleteEx) when (deleteEx is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+            catch (Exception deleteException) when (deleteException is IOException
+                                                                       or UnauthorizedAccessException
+                                                                       or NotSupportedException
+                                                                       or ArgumentException)
             {
                 // Best effort only; the original failure is the one to report.
             }
 
-            return SettingsErrors.Unwritable(ex.Message);
+            return SettingsErrors.Unwritable(exception.Message);
         }
     }
 
@@ -80,7 +89,7 @@ public sealed class SettingsStore
     {
         using JsonDocument document = JsonDocument.Parse(json);
 
-        if (document.RootElement.ValueKind != JsonValueKind.Object)
+        if (document.RootElement.ValueKind is not JsonValueKind.Object)
         {
             return false;
         }
@@ -106,13 +115,13 @@ public sealed class SettingsStore
             PathColumn = settings.PathColumn       ?? defaults.PathColumn,
             IdColumn = settings.IdColumn           ?? defaults.IdColumn,
             ProjectFolder = settings.ProjectFolder ?? defaults.ProjectFolder,
-            ProjectStage = Enum.IsDefined(settings.ProjectStage) ? settings.ProjectStage : defaults.ProjectStage,
-            AuditStage = Enum.IsDefined(settings.AuditStage) ? settings.AuditStage : defaults.AuditStage,
-            CustomLocation = settings.CustomLocation ?? defaults.CustomLocation,
+            ProjectStages = Enum.IsDefined(settings.ProjectStages) ? settings.ProjectStages : defaults.ProjectStages,
+            AuditStages = Enum.IsDefined(settings.AuditStages) ? settings.AuditStages : defaults.AuditStages,
+            CustomLocation = settings.CustomLocation               ?? defaults.CustomLocation,
             MissingCustomFileName = settings.MissingCustomFileName ?? defaults.MissingCustomFileName,
             ScanFolders = NormaliseFolders(settings.ScanFolders),
             FileTypes = NormaliseTypes(settings.FileTypes, defaults.FileTypes!),
-            ExcludeTypes = NormaliseTypes(settings.ExcludeTypes, fallback: []),
+            ExcludeTypes = NormaliseTypes(settings.ExcludeTypes, []),
             UnindexedCustomFileName = settings.UnindexedCustomFileName ?? defaults.UnindexedCustomFileName
         };
     }
@@ -124,12 +133,12 @@ public sealed class SettingsStore
            ?? [];
 
     // A null list takes the fallback (a copy, never the shared default array). A null element is dropped. Each valid entry is normalised; an invalid one is kept as
-    // written (trimmed), so that the tab shows it and the pre-flight names it when Start is pressed (spec §4), instead of the file silently losing it.
+    // written (trimmed), so that the tab shows it, and the pre-flight names it when Start is pressed (spec §4), instead of the file silently losing it.
     private static string[] NormaliseTypes(string[]? types, string[] fallback)
     {
         if (types is null)
         {
-            return [ ..fallback ];
+            return [.. fallback];
         }
 
         SortedSet<string> kept = new(StringComparer.Ordinal);
@@ -153,6 +162,6 @@ public sealed class SettingsStore
             }
         }
 
-        return kept.ToArray();
+        return [.. kept];
     }
 }

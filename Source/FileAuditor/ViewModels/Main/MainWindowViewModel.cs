@@ -1,45 +1,45 @@
-namespace FileAuditor.ViewModels.Main;
+﻿namespace FileAuditor.ViewModels.Main;
 
 /// <summary>The main window: composes the group and tab view models and owns the Start, Stop, View Report, About and Exit commands.</summary>
 public sealed partial class MainWindowViewModel : ObservableObject
 {
     private const int ProbeDebounceMilliseconds = 300;
 
-    private const int RefreshMilliseconds = 250;
-
     private const int ProbeTimeoutMilliseconds = 2000;
+
+    private const int RefreshMilliseconds = 250;
 
     private readonly DialogueService _dialogues;
 
-    private readonly PreflightChecker _preflight;
+    // Each direction's last run status (Completed, Stopped or Failed), shown in place of Ready until that direction runs again.
+    private readonly Dictionary<AuditDirections, string?> _lastRunStatus = new();
 
     private readonly AuditRunner _missingRunner = new();
 
-    private readonly UnindexedAuditRunner _unindexedRunner = new();
+    private readonly PreflightChecker _preflight;
 
     private readonly ProjectSettingsService _project;
 
-    // Each direction's last run status (Completed, Stopped or Failed), shown in place of Ready until that direction runs again.
-    private readonly Dictionary<AuditDirection, string?> _lastRunStatus = new();
+    private readonly UnindexedAuditRunner _unindexedRunner = new();
 
     private CancellationTokenSource? _auditCts;
 
-    // The direction whose audit is running, or null when none is.
-    private AuditDirection? _runningDirection;
-
     private Task _auditTask = Task.CompletedTask;
 
-    private CancellationTokenSource? _probeCts;
-
-    private bool _reportExists;
+    // True while Start, Open project or Close project is executing, including while their prompts are open. Those commands and closing the window must not overlap, and the
+    // inputs must not be edited under them.
+    private bool _isBusy;
 
     // Set while the checkbox is being changed by the code rather than the user (reverting an untick, ticking after a Yes, resetting a project), so those changes do not
     // raise the untick warning.
     private bool _isRevertingTick;
 
-    // True while Start, Open project or Close project is executing, including while their prompts are open. Those commands and closing the window must not overlap, and the
-    // inputs must not be edited under them.
-    private bool _isBusy;
+    private CancellationTokenSource? _probeCts;
+
+    private bool _reportExists;
+
+    // The direction whose audit is running, or null when none is.
+    private AuditDirections? _runningDirection;
 
     /// <summary>Initialises a new instance with the default settings, for the XAML designer.</summary>
     public MainWindowViewModel()
@@ -68,8 +68,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         MissingFiles    = new MissingFilesTabViewModel(ReportLocation);
         UnindexedFiles  = new UnindexedFilesTabViewModel(ReportLocation, dialogues);
 
-        Database.PropertyChanged            += OnInputChanged;
-        FileIndexTable.PropertyChanged      += OnInputChanged;
+        Database.PropertyChanged              += OnInputChanged;
+        FileIndexTable.PropertyChanged        += OnInputChanged;
         MissingFiles.PropertyChanged          += OnInputChanged;
         UnindexedFiles.PropertyChanged        += OnInputChanged;
         ReportLocation.PropertyChanged        += OnLocationChanged;
@@ -110,18 +110,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ ObservableProperty ]
     public partial int SelectedTabIndex { get; set; }
 
-    /// <summary>Gets the Unindexed Files tab.</summary>
-    public UnindexedFilesTabViewModel UnindexedFiles { get; }
-
     /// <summary>Gets the Audit group that drives the status bar: the running audit's while one runs, otherwise the selected tab's.</summary>
     public AuditStatusBase StatusAudit => AuditFor(_runningDirection ?? SelectedDirection);
 
+    /// <summary>Gets the Unindexed Files tab.</summary>
+    public UnindexedFilesTabViewModel UnindexedFiles { get; }
+
     // Maps the selected tab to its direction; the tabs are in the order of the XAML.
-    private AuditDirection SelectedDirection
+    private AuditDirections SelectedDirection
         => SelectedTabIndex switch
         {
-            1     => AuditDirection.Unindexed,
-            var _ => AuditDirection.Missing
+            1     => AuditDirections.Unindexed,
+            var _ => AuditDirections.Missing
         };
 
     private ReportViewModel SelectedReport => ReportFor(SelectedDirection);
@@ -137,9 +137,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public void RefreshReportState() => _ = ProbeReportAsync();
 
     /// <summary>
-    ///     Called whenever the window is asked to close. With an audit running the user is asked first, and on Yes the run is stopped and its report written. The project's
-    ///     settings are then saved or offered for saving under the same rule as Start. While Start, Open project or Close project is in progress (before any audit is running)
-    ///     the close is refused, so two save points never run at once; the user can close once that command's prompt has been answered.
+    ///     Called whenever the window is asked to close. With an audit running the user is asked first, and on Yes the run is stopped and its report written. The project's settings
+    ///     are then saved or offered for saving under the same rule as Start. While Start, Open project or Close project is in progress (before any audit is running) the close is
+    ///     refused, so two save points never run at once; the user can close once that command's prompt has been answered.
     /// </summary>
     /// <returns><see langword="true" /> when the window may close.</returns>
     public async Task<bool> ConfirmCloseAsync()
@@ -185,12 +185,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         RefreshReportState();
     }
 
-    private void OnInputChanged(object? sender, PropertyChangedEventArgs e) => UpdateCommands();
+    private void OnInputChanged(object? sender, PropertyChangedEventArgs eventArgs) => UpdateCommands();
 
-    // Keeps the busy flag in step with the three commands that must not overlap.
-    private void OnCommandChanged(object? sender, PropertyChangedEventArgs e)
+    // Keeps the busy flag in the step with the three commands that must not overlap.
+    private void OnCommandChanged(object? sender, PropertyChangedEventArgs eventArgs)
     {
-        if (e.PropertyName != nameof(IAsyncRelayCommand.IsRunning))
+        if (eventArgs.PropertyName is not nameof(IAsyncRelayCommand.IsRunning))
         {
             return;
         }
@@ -203,9 +203,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     // The shared location values matter to this class only for the save checkbox (the untick warning); every other change to them reaches it as a change of a report's
     // Current.
-    private void OnLocationChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnLocationChanged(object? sender, PropertyChangedEventArgs eventArgs)
     {
-        if (e.PropertyName != nameof(ReportLocationState.SaveProjectSettings)
+        if (eventArgs.PropertyName is not nameof(ReportLocationState.SaveProjectSettings)
             || ReportLocation.SaveProjectSettings
             || _project.UntickConfirmed
             || _isRevertingTick)
@@ -217,15 +217,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     // The resolved report path (Current) accompanies every change to a report's location or file name; everything else is ignored.
-    private void OnReportChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnReportChanged(object? sender, PropertyChangedEventArgs eventArgs)
     {
-        if (e.PropertyName != nameof(ReportViewModel.Current))
+        if (eventArgs.PropertyName is not nameof(ReportViewModel.Current))
         {
             return;
         }
 
         // The cached answer belongs to the old path, so drop it until the new path has been probed.
         _reportExists = false;
+
         UpdateCommands();
         RefreshReportState();
     }
@@ -235,14 +236,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         const string message = "If you untick this box, this project's settings will no longer be saved automatically. You will be asked whether to save them instead.\n\n"
                                + "Do you want to untick it?";
 
-        if (await _dialogues.ConfirmAsync(message, "_Untick"))
+        if (await _dialogues.ConfirmAsync(message, confirmText: "_Untick"))
         {
             _project.UntickConfirmed = true;
 
             return;
         }
 
-        SetSaveProjectSettings(true);
+        SetSaveProjectSettings(value: true);
     }
 
     private void SetSaveProjectSettings(bool value)
@@ -256,29 +257,30 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         _probeCts?.Cancel();
 
-        CancellationTokenSource cts = new();
+        CancellationTokenSource cancellationTokenSource = new();
 
-        _probeCts = cts;
+        _probeCts = cancellationTokenSource;
 
         ReportViewModel report = SelectedReport;
         ReportPath      path   = report.Current;
 
         try
         {
-            await Task.Delay(ProbeDebounceMilliseconds, cts.Token);
+            await Task.Delay(ProbeDebounceMilliseconds, cancellationTokenSource.Token);
 
             // File.Exists is acceptable here: it only decides whether the menu item and button are enabled, not an audit outcome.
-            bool exists = path.IsComplete && await Task.Run(() => File.Exists(path.FullPath), cts.Token);
+            bool exists = path.IsComplete && await Task.Run(() => File.Exists(path.FullPath), cancellationTokenSource.Token);
 
             // Back on the UI thread; a newer probe, a changed path or a changed tab makes this answer stale.
-            if (cts.IsCancellationRequested
+            if (cancellationTokenSource.IsCancellationRequested
                 || report != SelectedReport
-                || path != report.Current)
+                || path   != report.Current)
             {
                 return;
             }
 
             _reportExists = exists;
+
             ViewReportCommand.NotifyCanExecuteChanged();
         }
         catch (OperationCanceledException)
@@ -294,6 +296,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         StartCommand.NotifyCanExecuteChanged();
         StopCommand.NotifyCanExecuteChanged();
         ViewReportCommand.NotifyCanExecuteChanged();
+
         UpdateIdleStatus();
     }
 
@@ -306,40 +309,42 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        foreach (AuditDirection direction in Enum.GetValues<AuditDirection>())
+        foreach (AuditDirections direction in Enum.GetValues<AuditDirections>())
         {
-            AuditFor(direction).StatusMessage = _lastRunStatus.GetValueOrDefault(direction) ?? (CanStartFor(direction) ? "Ready" : "Enter the required details");
+            AuditFor(direction)
+                .StatusMessage = _lastRunStatus.GetValueOrDefault(direction) ?? (CanStartFor(direction) ? "Ready" : "Enter the required details");
         }
     }
 
     // Every direction has a tab. Checklist for adding another: the constructor's tab and Report PropertyChanged subscriptions (OnInputChanged and OnReportChanged); Snapshot;
     // LoadAll; ReportFor; AuditFor; SelectedDirection; StartAsync (the run and its pre-flight inputs); and the TabItem in MainWindow.axaml.
-    private ReportViewModel ReportFor(AuditDirection direction)
-        => direction switch
+    private ReportViewModel ReportFor(AuditDirections directions)
+        => directions switch
         {
-            AuditDirection.Missing   => MissingFiles.Report,
-            AuditDirection.Unindexed => UnindexedFiles.Report,
-            var _                    => throw new ArgumentOutOfRangeException(nameof(direction), direction, message: null)
+            AuditDirections.Missing   => MissingFiles.Report,
+            AuditDirections.Unindexed => UnindexedFiles.Report,
+            var _                     => throw new ArgumentOutOfRangeException(nameof(directions), directions, message: null)
         };
 
-    private AuditStatusBase AuditFor(AuditDirection direction)
+    private AuditStatusBase AuditFor(AuditDirections direction)
         => direction switch
         {
-            AuditDirection.Missing   => MissingFiles.Audit,
-            AuditDirection.Unindexed => UnindexedFiles.Audit,
-            var _                    => throw new ArgumentOutOfRangeException(nameof(direction), direction, message: null)
+            AuditDirections.Missing   => MissingFiles.Audit,
+            AuditDirections.Unindexed => UnindexedFiles.Audit,
+            var _                     => throw new ArgumentOutOfRangeException(nameof(direction), direction, message: null)
         };
 
     private bool CanStart() => CanStartFor(SelectedDirection);
 
-    private bool CanStartFor(AuditDirection direction)
+    private bool CanStartFor(AuditDirections direction)
         => !IsRunning
            && !_isBusy
            && !string.IsNullOrWhiteSpace(Database.Server)
            && !string.IsNullOrWhiteSpace(Database.Database)
            && !string.IsNullOrWhiteSpace(FileIndexTable.Table)
            && !string.IsNullOrWhiteSpace(FileIndexTable.PathColumn)
-           && ReportFor(direction).Current.IsComplete;
+           && ReportFor(direction)
+              .Current.IsComplete;
 
     private bool CanStop() => IsRunning;
 
@@ -350,9 +355,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ RelayCommand(CanExecute = nameof(CanStart)) ]
     private async Task StartAsync()
     {
-        AuditDirection direction = SelectedDirection;
-        AppSettings settings     = Snapshot();
-        ReportPath? reportPath   = await _preflight.RunAsync(settings, direction);
+        AuditDirections direction  = SelectedDirection;
+        AppSettings     settings   = Snapshot();
+        ReportPath?     reportPath = await _preflight.RunAsync(settings, direction);
 
         if (reportPath is null)
         {
@@ -368,14 +373,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         if (savePoint.TickCheckbox)
         {
-            SetSaveProjectSettings(true);
+            SetSaveProjectSettings(value: true);
         }
 
         AuditRequest request = new(settings, reportPath);
 
         AuditRun run;
 
-        if (direction == AuditDirection.Unindexed)
+        if (direction is AuditDirections.Unindexed)
         {
             run = new UnindexedAuditRun(UnindexedFiles.Audit, _unindexedRunner, request);
         }
@@ -389,21 +394,25 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await _auditTask;
     }
 
-    private async Task RunAuditAsync(AuditRun run, AuditDirection direction)
+    private async Task RunAuditAsync(AuditRun run, AuditDirections direction)
     {
         AuditStatusBase audit = run.Audit;
 
-        Stopwatch               clock = Stopwatch.StartNew();
-        CancellationTokenSource cts   = new();
+        Stopwatch               clock                   = Stopwatch.StartNew();
+        CancellationTokenSource cancellationTokenSource = new();
 
-        _auditCts = cts;
+        _auditCts = cancellationTokenSource;
 
         audit.Reset();
         run.Begin();
 
         audit.StatusMessage = run.Phase;
-        _runningDirection   = direction;
-        IsRunning           = true;
+
+        _runningDirection = direction;
+
+        audit.IsStopEnabled = true;
+
+        IsRunning = true;
 
         DispatcherTimer timer = new()
         {
@@ -411,36 +420,48 @@ public sealed partial class MainWindowViewModel : ObservableObject
         };
 
         timer.Tick += (_, _) => Refresh(run, clock, isFinished: false);
+
         timer.Start();
 
-        (string status, string? error) = await run.ExecuteAsync(cts.Token);
+        string? status = null;
+        string? error  = null;
 
-        timer.Stop();
-        clock.Stop();
-        Refresh(run, clock, isFinished: true);
+        try
+        {
+            (status, error) = await run.ExecuteAsync(cancellationTokenSource.Token);
 
-        _auditCts = null;
-        cts.Dispose();
+            timer.Stop();
+            clock.Stop();
 
-        // The final status is shown before any error dialogue, so the window behind it already reads correctly.
-        _lastRunStatus[direction] = status;
-        audit.StatusMessage       = status;
-        _runningDirection         = null;
-        IsRunning                 = false;
+            Refresh(run, clock, isFinished: true);
+        }
+        finally
+        {
+            // The resets always happen, even if the final refresh throws, so the window is never left looking busy. The final status is shown before any error dialogue,
+            // so the window behind it already reads correctly.
+            timer.Stop();
+
+            _auditCts = null;
+
+            cancellationTokenSource.Dispose();
+
+            if (status is not null)
+            {
+                _lastRunStatus[direction] = status;
+
+                audit.StatusMessage = status;
+            }
+
+            _runningDirection = null;
+
+            audit.IsStopEnabled = false;
+
+            IsRunning = false;
+        }
 
         if (error is not null)
         {
             await _dialogues.ShowErrorAsync(error);
-        }
-    }
-
-    private static void Refresh(AuditRun run, Stopwatch clock, bool isFinished)
-    {
-        run.Update(clock.Elapsed, isFinished);
-
-        if (!isFinished)
-        {
-            run.Audit.StatusMessage = run.Phase;
         }
     }
 
@@ -459,13 +480,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 UseShellExecute = true
             });
         }
-        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or FileNotFoundException)
+        catch (Exception exception) when (exception is Win32Exception
+                                                       or InvalidOperationException
+                                                       or FileNotFoundException)
         {
-            await _dialogues.ShowErrorAsync($"The report could not be opened:\n{PathText.Breakable(path)}\n\n{ex.Message}");
+            await _dialogues.ShowErrorAsync($"The report could not be opened:\n{PathText.Breakable(path)}\n\n{exception.Message}");
         }
     }
-
-    private static bool CanOpenHelpTopics() => !string.IsNullOrEmpty(HelpLinks.UserGuideUrl);
 
     [ RelayCommand(CanExecute = nameof(CanOpenHelpTopics)) ]
     private async Task HelpTopicsAsync()
@@ -477,9 +498,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 UseShellExecute = true
             });
         }
-        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or FileNotFoundException)
+        catch (Exception exception) when (exception is Win32Exception
+                                                       or InvalidOperationException
+                                                       or FileNotFoundException)
         {
-            await _dialogues.ShowErrorAsync($"The user guide could not be opened:\n{PathText.Breakable(HelpLinks.UserGuideUrl)}\n\n{ex.Message}");
+            await _dialogues.ShowErrorAsync($"The user guide could not be opened:\n{PathText.Breakable(HelpLinks.UserGuideUrl)}\n\n{exception.Message}");
         }
     }
 
@@ -508,8 +531,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        string startFolder = await ResolvePickerStartFolderAsync();
-        ProjectFilePick? pick = await _dialogues.PickProjectFileAsync(startFolder);
+        string           startFolder = await ResolvePickerStartFolderAsync();
+        ProjectFilePick? pick        = await _dialogues.PickProjectFileAsync(startFolder);
 
         if (pick is null)
         {
@@ -522,8 +545,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             AbandonOpen(savePoint);
 
-            await _dialogues.ShowErrorAsync(
-                $"The project could not be opened:\n{PathText.Breakable(pick.Name)}\n\nOnly files on a local or network drive can be opened.");
+            await _dialogues.ShowErrorAsync($"The project could not be opened:\n{PathText.Breakable(pick.Name)}\n\nOnly files on a local or network drive can be opened.");
 
             return;
         }
@@ -561,7 +583,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         if (savePoint.TickCheckbox)
         {
-            SetSaveProjectSettings(true);
+            SetSaveProjectSettings(value: true);
         }
     }
 
@@ -569,15 +591,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task<string> ResolvePickerStartFolderAsync()
     {
         string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        ReportPath current = ReportLocation.ResolveFolder();
 
-        if (!current.IsComplete
-            || !Path.IsPathFullyQualified(current.Directory))
+        (string directory, string _, bool isComplete, bool _) = ReportLocation.ResolveFolder();
+
+        if (!isComplete
+            || !Path.IsPathFullyQualified(directory))
         {
             return profile;
         }
-
-        string directory = current.Directory;
 
         Task<bool> probe = Task.Run(() => Directory.Exists(directory));
 
@@ -592,11 +613,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         LoadAll(AppSettings.Default);
 
         _project.Reset();
-        SetSaveProjectSettings(true);
+
+        SetSaveProjectSettings(value: true);
 
         _lastRunStatus.Clear();
 
-        foreach (AuditDirection direction in Enum.GetValues<AuditDirection>())
+        foreach (AuditDirections direction in Enum.GetValues<AuditDirections>())
         {
             AuditFor(direction)
                 .Reset();
@@ -611,6 +633,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [ RelayCommand ]
     private void Exit() => ExitRequested?.Invoke(this, EventArgs.Empty);
+
+    private static void Refresh(AuditRun run, Stopwatch clock, bool isFinished)
+    {
+        run.Update(clock.Elapsed, isFinished);
+
+        if (!isFinished)
+        {
+            run.Audit.StatusMessage = run.Phase;
+        }
+    }
+
+    private static bool CanOpenHelpTopics() => !string.IsNullOrEmpty(HelpLinks.UserGuideUrl);
 
     /// <summary>Raised when the user asks for the About box.</summary>
     public event EventHandler? AboutRequested;

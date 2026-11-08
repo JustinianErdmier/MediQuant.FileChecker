@@ -1,7 +1,7 @@
-namespace FileAuditor.Models.Reporting;
+namespace FileAuditor.Common.Constants.Reporting;
 
 /// <summary>How an audit run ended.</summary>
-public enum AuditResultKind
+public enum AuditResultKinds
 {
     /// <summary>Every row was read and checked.</summary>
     Completed,

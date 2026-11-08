@@ -1,7 +1,7 @@
 namespace FileAuditor.Services.Checking;
 
-/// <summary>Classifies index paths as found, missing or unverified (SDD §6.3). Thread-safe; use one instance per run, because it caches what it learns about roots and directories.</summary>
-/// <param name="reportEmptyFiles">Whether a zero-length file is reported as <see cref="CheckOutcome.MissingEmpty" />.</param>
+/// <summary>Classifies index paths as found, missing, or unverified (SDD §6.3). Thread-safe; use one instance per run, because it caches what it learns about roots and directories.</summary>
+/// <param name="reportEmptyFiles">Whether a zero-length file is reported as <see cref="CheckOutcomes.MissingEmpty" />.</param>
 /// <remarks>
 ///     <c>File.Exists</c> and <c>Directory.Exists</c> are never used: they return <see langword="false" /> for every failure, which would report files that could not be checked
 ///     as missing.
@@ -12,22 +12,14 @@ public sealed class FileChecker(bool reportEmptyFiles)
 
     private const long RootReprobeIntervalMilliseconds = 5_000;
 
-    private static readonly char[] InvalidPathChars =
-    [
-        .. Path.GetInvalidPathChars(),
-        '*',
-        '?'
-    ];
+    private static readonly char[] InvalidPathChars = [.. Path.GetInvalidPathChars(), '*', '?'];
 
-    private static readonly char[] Separators =
-    [
-        '\\',
-        '/'
-    ];
+    private static readonly char[] Separators = ['\\', '/'];
 
     // Directories found unreachable, keyed with a trailing separator, with the outcome shared by every file under them.
     private readonly ConcurrentDictionary<string, MappedOutcome> _blockedDirectories = new(StringComparer.OrdinalIgnoreCase);
 
+    // ReSharper disable once GrammarMistakeInComment
     // When each reachable root was last confirmed reachable, in Environment.TickCount64 milliseconds. A not-found outcome only re-probes its root when this is stale,
     // so a healthy root with many missing files is not probed once per file.
     private readonly ConcurrentDictionary<string, long> _rootConfirmedAt = new(StringComparer.OrdinalIgnoreCase);
@@ -44,9 +36,9 @@ public sealed class FileChecker(bool reportEmptyFiles)
         {
             return CheckCore(row);
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            return ToResult(row, Win32ErrorMapper.Map(ex));
+            return ToResult(row, Win32ErrorMapper.Map(exception));
         }
     }
 
@@ -54,9 +46,14 @@ public sealed class FileChecker(bool reportEmptyFiles)
     {
         string path = row.Path;
 
+        if (SkipMarker.IsSkipped(path))
+        {
+            return ToResult(row, new MappedOutcome(CheckOutcomes.Skipped));
+        }
+
         if (string.IsNullOrWhiteSpace(path))
         {
-            return ToResult(row, new MappedOutcome(CheckOutcome.UnverifiedPathEmpty));
+            return ToResult(row, new MappedOutcome(CheckOutcomes.UnverifiedPathEmpty));
         }
 
         // Fully qualified, not merely rooted: "\x.txt" and "C:x.txt" would otherwise be resolved against the current directory.
@@ -65,14 +62,14 @@ public sealed class FileChecker(bool reportEmptyFiles)
                    .IndexOfAny(InvalidPathChars)
             >= 0)
         {
-            return ToResult(row, new MappedOutcome(CheckOutcome.UnverifiedInvalidCharacters));
+            return ToResult(row, new MappedOutcome(CheckOutcomes.UnverifiedInvalidCharacters));
         }
 
         // A single path component over the file-system limit cannot be checked; say so rather than report it missing.
         if (path.Split(Separators)
                 .Any(segment => segment.Length > MaxSegmentLength))
         {
-            return ToResult(row, new MappedOutcome(CheckOutcome.UnverifiedPathTooLong));
+            return ToResult(row, new MappedOutcome(CheckOutcomes.UnverifiedPathTooLong));
         }
 
         string root = AsDirectoryKey(Path.GetPathRoot(path) ?? string.Empty);
@@ -101,29 +98,29 @@ public sealed class FileChecker(bool reportEmptyFiles)
         {
             FileAttributes attributes = File.GetAttributes(path);
 
-            if ((attributes & FileAttributes.Directory) != 0)
+            if ((attributes & FileAttributes.Directory) is not 0)
             {
-                return ToResult(row, new MappedOutcome(CheckOutcome.UnverifiedOther, Reason: "Path is a directory", SystemMessage: "The path refers to a directory, not a file."));
+                return ToResult(row, new MappedOutcome(CheckOutcomes.UnverifiedOther, Reason: "Path is a directory", SystemMessage: "The path refers to a directory, not a file."));
             }
 
-            if (reportEmptyFiles && new FileInfo(path).Length == 0)
+            if (reportEmptyFiles && new FileInfo(path).Length is 0)
             {
-                return ToResult(row, new MappedOutcome(CheckOutcome.MissingEmpty));
+                return ToResult(row, new MappedOutcome(CheckOutcomes.MissingEmpty));
             }
 
-            return ToResult(row, new MappedOutcome(CheckOutcome.Found));
+            return ToResult(row, new MappedOutcome(CheckOutcomes.Found));
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            own = Win32ErrorMapper.Map(ex);
+            own = Win32ErrorMapper.Map(exception);
         }
 
-        CheckResult result = own.Outcome is CheckOutcome.UnverifiedPermissionDenied or CheckOutcome.UnverifiedNetworkUnreachable or CheckOutcome.UnverifiedOther
+        CheckResult result = own.Outcomes is CheckOutcomes.UnverifiedPermissionDenied or CheckOutcomes.UnverifiedNetworkUnreachable or CheckOutcomes.UnverifiedOther
                                  ? LocaliseFailure(row, own, ancestors)
                                  : ToResult(row, own);
 
         // The root was reachable when it was cached, but a share or drive can disappear mid-run; a not-found outcome is only trustworthy if the root is still there.
-        if (result.Outcome == CheckOutcome.MissingDoesNotExist
+        if (result.Outcomes is CheckOutcomes.MissingDoesNotExist
             && RootHasVanished(root) is { } vanished)
         {
             return ToResult(row, vanished);
@@ -183,20 +180,19 @@ public sealed class FileChecker(bool reportEmptyFiles)
             {
                 File.GetAttributes(directory);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                MappedOutcome mapped = Win32ErrorMapper.Map(ex);
+                MappedOutcome mapped = Win32ErrorMapper.Map(exception);
 
-                if (mapped.Outcome is CheckOutcome.UnverifiedPermissionDenied or CheckOutcome.UnverifiedNetworkUnreachable or CheckOutcome.UnverifiedOther)
+                switch (mapped.Outcomes)
                 {
-                    _blockedDirectories.TryAdd(directory, mapped);
+                    case CheckOutcomes.UnverifiedPermissionDenied or CheckOutcomes.UnverifiedNetworkUnreachable or CheckOutcomes.UnverifiedOther:
+                        _blockedDirectories.TryAdd(directory, mapped);
 
-                    return ToResult(row, mapped);
-                }
+                        return ToResult(row, mapped);
 
-                if (mapped.Outcome == CheckOutcome.MissingDoesNotExist)
-                {
-                    return ToResult(row, mapped);
+                    case CheckOutcomes.MissingDoesNotExist:
+                        return ToResult(row, mapped);
                 }
             }
         }
@@ -214,12 +210,12 @@ public sealed class FileChecker(bool reportEmptyFiles)
 
             return null;
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            MappedOutcome mapped = Win32ErrorMapper.Map(ex);
+            MappedOutcome mapped = Win32ErrorMapper.Map(exception);
 
-            return mapped.Outcome is CheckOutcome.MissingDoesNotExist or CheckOutcome.UnverifiedDriveOrShareNotFound
-                       ? new MappedOutcome(CheckOutcome.UnverifiedDriveOrShareNotFound)
+            return mapped.Outcomes is CheckOutcomes.MissingDoesNotExist or CheckOutcomes.UnverifiedDriveOrShareNotFound
+                       ? new MappedOutcome(CheckOutcomes.UnverifiedDriveOrShareNotFound)
                        : mapped;
         }
     }
@@ -227,8 +223,7 @@ public sealed class FileChecker(bool reportEmptyFiles)
     /// <summary>Lists the file's ancestor directories, deepest first, stopping before the root. Keys carry a trailing separator.</summary>
     private static List<string> GetAncestors(string path, string root)
     {
-        List<string> ancestors =
-            [];
+        List<string> ancestors = [];
 
         string? directory = Path.GetDirectoryName(path);
 
@@ -250,5 +245,5 @@ public sealed class FileChecker(bool reportEmptyFiles)
 
     private static string AsDirectoryKey(string directory) => directory.Length > 0 && directory[^1] is '\\' or '/' ? directory : directory + '\\';
 
-    private static CheckResult ToResult(IndexRow row, MappedOutcome mapped) => new(row, mapped.Outcome, mapped.Reason, mapped.SystemMessage);
+    private static CheckResult ToResult(IndexRow row, MappedOutcome mapped) => new(row, mapped.Outcomes, mapped.Reason, mapped.SystemMessage);
 }

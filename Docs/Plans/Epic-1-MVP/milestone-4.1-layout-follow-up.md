@@ -38,12 +38,12 @@ The user's request, verbatim in substance:
   the built app with Windows UI Automation from PowerShell. **Before any keystroke or click, confirm FileAuditor.exe is the foreground window**; prefer UI
   Automation patterns over SendKeys. Never open a report in an external program. Close the app when done.
 - Exact copy:
-  - Group header: `Project Settings`. Checkbox: `Save project settings _with the report` (unchanged text and access key).
-  - Status message, one of:
-    - ticked, and no settings file is open or the open file is in the report folder: `Saved as FileAuditorSettings.json in the same folder as the audit reports.`
-    - ticked, and the open settings file is in a different folder from the report folder: `Saved to the opened settings file, in a different folder from the audit reports.`
-    - unticked: `This project's settings are not being saved.`
-  - Editor button: `C_lear` — access key **L**, unique within the dialogue (N, E, D, R are taken; C is not used so the label reads as Clear).
+    - Group header: `Project Settings`. Checkbox: `Save project settings _with the report` (unchanged text and access key).
+    - Status message, one of:
+        - ticked, and no settings file is open or the open file is in the report folder: `Saved as FileAuditorSettings.json in the same folder as the audit reports.`
+        - ticked, and the open settings file is in a different folder from the report folder: `Saved to the opened settings file, in a different folder from the audit reports.`
+        - unticked: `This project's settings are not being saved.`
+    - Editor button: `C_lear` — access key **L**, unique within the dialogue (N, E, D, R are taken; C is not used so the label reads as Clear).
 - Folder comparison for the status message uses the same normalisation as the save rule (`SameFolder` in `ProjectSettingsService`). An incomplete report
   location counts as "no mismatch" when no file is open, and as "different" when a file is open and the location is incomplete.
 - The window stays 640 px wide and fixed-size; its height becomes whatever the Missing Files tab needs with nothing clipped. `MainWindow.axaml` ≤ 100 lines.
@@ -70,8 +70,8 @@ The user's request, verbatim in substance:
 - Modify: `Views/Groups/ReportView.axaml`, `Views/Main/MainWindow.axaml`, `ViewModels/Main/MainWindowViewModel.cs`, `Services/Settings/ProjectSettingsService.cs`
   (expose what the message needs, e.g. a `FilePath` change notification or a method returning whether the open file is in a given folder)
 
-- [x] **Step 1:** In `ReportView`, the project folder row and both stage groups are always visible; they are disabled while *Use a custom report location* is ticked
-  (as before milestone 4's change). Remove the save checkbox from `ReportView`.
+- [x] **Step 1:** In `ReportView`, the project folder row and both stage groups are always visible; they are disabled while *Use a custom report location* is ticked (as before
+  milestone 4's change). Remove the save checkbox from `ReportView`.
 - [x] **Step 2:** `ProjectSettingsView` (group `Project Settings`, full width, below the side-by-side top groups and above the tabs): the checkbox bound to the
   shared `SaveProjectSettings`, then the message (`TextWrapping="Wrap"`). `ProjectSettingsViewModel` computes the message per Global Constraints and raises it
   whenever an input changes. Disabled with the other inputs while a run or a busy command is under way.
