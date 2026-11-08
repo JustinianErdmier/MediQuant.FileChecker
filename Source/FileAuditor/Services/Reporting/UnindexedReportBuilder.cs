@@ -58,7 +58,7 @@ public static class UnindexedReportBuilder
         lines.Add(ReportFormat.Labelled(label: "Exclude:", exclude.Length == 0 ? "(none)" : FileTypeList.Format(exclude)));
         lines.Add(ReportFormat.Labelled(label: "Grouped by:", settings.GroupByFoundExtension ? "Found extension" : "Listed type"));
         ReportFormat.AddProjectLines(lines, settings);
-        ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Kind, failureMessage: null);
+        ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Kind, report.FailureMessage);
     }
 
     private static void AddSummary(List<string> lines, UnindexedReport report)
@@ -69,6 +69,11 @@ public static class UnindexedReportBuilder
         lines.Add(ReportFormat.Labelled(label: "Indexed:", ReportFormat.Count(report.Indexed)));
         lines.Add(ReportFormat.Labelled(label: "Unindexed:", ReportFormat.Count(report.Unindexed.Count)));
         lines.Add(ReportFormat.Labelled(label: "Unverified:", ReportFormat.Count(report.Unverified.Count)));
+
+        if (report.NotChecked > 0)
+        {
+            lines.Add(ReportFormat.Labelled(label: "Not checked:", $"{ReportFormat.Count(report.NotChecked)} (reached through links; the index could not be read for them)"));
+        }
     }
 
     private static void AddUnindexed(List<string> lines, UnindexedReport report)

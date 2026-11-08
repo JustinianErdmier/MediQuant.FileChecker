@@ -95,7 +95,6 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         Report.Load(settings);
     }
 
-
     private static string[] Entries(string text) => FileTypeList.Split(text);
 
     [ RelayCommand ]

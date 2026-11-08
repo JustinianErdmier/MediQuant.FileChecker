@@ -26,6 +26,6 @@ public sealed class UnindexedAuditRun(UnindexedAuditViewModel audit, UnindexedAu
     {
         ErrorOr<UnindexedReport> outcome = await runner.RunAsync(request, _progress, ct);
 
-        return outcome.IsError ? DescribeError(outcome.FirstError) : DescribeResult(outcome.Value.Kind, failureMessage: null);
+        return outcome.IsError ? DescribeError(outcome.FirstError) : DescribeResult(outcome.Value.Kind, outcome.Value.FailureMessage);
     }
 }

@@ -7,7 +7,6 @@ public static class FileTypeList
                                                    .Where(c => c is not ('*' or '?'))
                                                    .ToArray();
 
-
     /// <summary>Gets the built-in File types, sorted.</summary>
     public static IReadOnlyList<string> Defaults { get; } =
     [

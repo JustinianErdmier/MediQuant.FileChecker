@@ -109,18 +109,20 @@ public sealed class UnindexedAuditRunner
                                 },
                                 ct);
 
-        if (!ct.IsCancellationRequested
-            && !deferred.IsEmpty)
-        {
-            ErrorOr<Success> resolved = await ResolveDeferredAsync(settings, built.Value, paths, deferred, unindexed, progress, ct);
+        long    notChecked     = 0;
+        string? failureMessage = null;
 
-            if (resolved.IsError)
-            {
-                return resolved.Errors;
-            }
+        if (!deferred.IsEmpty)
+        {
+            // A failure here keeps everything already decided: the report is written as Failed, and the held-back files are in neither count.
+            (notChecked, failureMessage) = ct.IsCancellationRequested
+                                               ? (deferred.Count, null)
+                                               : await ResolveDeferredAsync(settings, built.Value, paths, deferred, unindexed, progress, ct);
         }
 
-        AuditResultKind kind = ct.IsCancellationRequested ? AuditResultKind.StoppedByUser : AuditResultKind.Completed;
+        AuditResultKind kind = failureMessage is not null ? AuditResultKind.Failed
+                               : ct.IsCancellationRequested ? AuditResultKind.StoppedByUser
+                               : AuditResultKind.Completed;
 
         progress.Phase = "Writing report...";
 
@@ -131,7 +133,9 @@ public sealed class UnindexedAuditRunner
                                      unindexed.ToArray(),
                                      unverified.ToArray(),
                                      progress.TotalFiles,
-                                     progress.Indexed);
+                                     progress.Indexed,
+                                     notChecked,
+                                     failureMessage);
 
         ErrorOr<Success> written = ReportWriter.Write(request.ReportPath.FullPath, UnindexedReportBuilder.Build(report));
 
@@ -145,9 +149,11 @@ public sealed class UnindexedAuditRunner
 
     // Decides the files that were reached through a link outside every input: loads the index rows under the link targets (all the rows were loaded already when
     // the first query had no filter), then counts each file as indexed when the index holds its target path. A stop while the rows load abandons these files:
-    // they were not checked, so they are in neither count.
-    private async Task<ErrorOr<Success>> ResolveDeferredAsync(AppSettings settings, PathQuery first, IndexPathSet paths, ConcurrentBag<ScannedFile> deferred,
-                                                              ConcurrentBag<ScannedFile> unindexed, UnindexedProgress progress, CancellationToken ct)
+    // they were not checked, so they are in neither count. A SQL failure does the same and yields its message. Returns how many files were not checked and the
+    // failure message, if any.
+    private async Task<(long NotChecked, string? FailureMessage)> ResolveDeferredAsync(AppSettings settings, PathQuery first, IndexPathSet paths,
+                                                                                       ConcurrentBag<ScannedFile> deferred, ConcurrentBag<ScannedFile> unindexed,
+                                                                                       UnindexedProgress progress, CancellationToken ct)
     {
         IndexPathSet targets = paths;
 
@@ -157,7 +163,7 @@ public sealed class UnindexedAuditRunner
 
             if (built.IsError)
             {
-                return built.Errors;
+                return (deferred.Count, built.FirstError.Description);
             }
 
             progress.Phase = "Loading the index...";
@@ -172,17 +178,17 @@ public sealed class UnindexedAuditRunner
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                return Result.Success;
+                return (deferred.Count, null);
             }
 
             if (loaded.IsError)
             {
-                return loaded.Errors;
+                return (deferred.Count, loaded.FirstError.Description);
             }
 
             if (ct.IsCancellationRequested)
             {
-                return Result.Success;
+                return (deferred.Count, null);
             }
 
             progress.Phase = "Checking files...";
@@ -200,7 +206,7 @@ public sealed class UnindexedAuditRunner
             progress.Record(indexed);
         }
 
-        return Result.Success;
+        return (0, null);
     }
 
     // The fewest folders whose prefixes cover every canonical path (a folder under another one is left out); once there are more than the prefix filter takes,
