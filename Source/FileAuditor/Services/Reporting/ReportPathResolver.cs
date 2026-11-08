@@ -12,7 +12,8 @@ public static class ReportPathResolver
 
     /// <summary>
     ///     Resolves the report path for an audit direction. Built:
-    ///     <c>U:\Projects\&lt;Project Folder&gt;\DE\&lt;Project Stage&gt;\FileAuditor&lt;Missing|Unindexed&gt;Report_&lt;Audit Stage&gt;.txt</c>, complete once the project folder is filled in.
+    ///     <c>U:\Projects\&lt;Project Folder&gt;\DE\&lt;Project Stage&gt;\FileAuditor&lt;Missing|Unindexed&gt;Report_&lt;Audit Stage&gt;.txt</c>,
+    ///     complete once the project folder is filled in.
     ///     Custom: the typed location and file name, complete once both are filled in.
     /// </summary>
     /// <remarks>
@@ -62,7 +63,10 @@ public static class ReportPathResolver
         };
     }
 
-    /// <summary>Determines whether a project folder is a single, valid folder name: not empty, not rooted, no separators, not <c>.</c> or <c>..</c>, no invalid characters.</summary>
+    /// <summary>
+    ///     Determines whether a project folder is a single, valid folder name: not empty, not rooted, no separators, not <c>.</c> or <c>..</c>, no invalid
+    ///     characters.
+    /// </summary>
     /// <param name="folder">The trimmed project folder.</param>
     /// <returns><see langword="true" /> when it can safely be combined into the built report path.</returns>
     public static bool IsSingleFolderName(string folder)

@@ -89,6 +89,10 @@ Fixed in the final-review fix wave; the shell-open item stays for later.
 `git log --oneline main..HEAD`, newest first (the commit that closes this ledger follows these):
 
 ```
+bc577bf docs(📝): sync the SDD with the final-review fixes
+f49c16c fix(🐛): compute Files/second over the whole run
+8608408 fix(🐛): judge the project folder from the shared location and route pre-flight per direction
+dd95ad0 docs(📝): sync the SDD with direction tabs and close the milestone 3 ledger
 ddce716 feat(✨): add a Help Topics item for the user guide
 fafbd45 feat(✨): put the missing-files audit in a tab with a shared report location
 ef35a0f feat(✨): name reports per audit direction
@@ -97,4 +101,10 @@ ef35a0f feat(✨): name reports per audit direction
 
 ## Final review
 
-Pending.
+The Opus whole-branch review of `097999b..dd95ad0` found 0 Critical, 3 Important and 10 Minor issues. The Important ones: the project file's folder was still judged
+from the selected tab's report while the SDD said the shared location (R4); the user-reported Files/second figure (R5); and pre-flight hard-wired to the missing
+direction, which would have sent a milestone 4 Start to the wrong report. One fix wave (`8608408`, `f49c16c`, `bc577bf`) addressed all three and the minors, and its
+Opus re-review found no Critical or Important issues. Its three small polish items (two doc lines and a blank line) went into the closing commit, together with
+re-wrapping two over-long XML doc lines in `ReportPathResolver`.
+
+**Incident in the fix wave:** to exercise the built `U:\Projects\…` location, the implementer mapped a temporary `U:` drive with `subst` and removed it afterwards.
