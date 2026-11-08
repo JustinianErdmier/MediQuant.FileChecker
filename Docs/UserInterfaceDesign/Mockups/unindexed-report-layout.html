@@ -1,0 +1,102 @@
+<style>
+  pre.rpt { font-family: Consolas, "Courier New", monospace; font-size: 12px; line-height: 1.35; background: #fff; color: #000; border: 1px solid #999; padding: 10px 12px; margin: 0; overflow-x: auto; white-space: pre; }
+  .note { font-size: 13px; margin-top: 8px; }
+</style>
+
+<h2>Unindexed report — grouped by input folder, then file type, then path</h2>
+<p class="subtitle">Same header and Summary style as today's report. Plain text, as it would look in Notepad.</p>
+
+<div class="split">
+
+<div class="mockup">
+<div class="mockup-header">A · Folder → file type → path (your instinct)</div>
+<div class="mockup-body">
+<pre class="rpt">File Auditor Unindexed Report
+=============================
+
+Server:          KDCSQL15
+Database:        InterimBJC_Soarian_DocStorage
+Table:           _DMS_Generic_Index
+Path column:     MQ_FullPath
+Folders:         U:\Projects\D12345\Images (with subfolders)
+                 U:\Projects\D12345\Scans
+File types:      .doc .docx .jpg .pdf .png .tif .tiff
+Project folder:  D12345
+Project stage:   Final
+Audit stage:     Interim
+
+Started:         2026-11-08 14:02:11
+Finished:        2026-11-08 14:03:40
+Elapsed:         00:01:29
+Result:          Completed
+
+Summary
+-------
+Total files:     48,210
+Indexed:         48,187
+Unindexed:       20
+Unverified:      3
+
+Unindexed Files (20)
+--------------------
+[U:\Projects\D12345\Images (17)]
+
+  [.pdf (2)]
+  U:\Projects\D12345\Images\2019\05\10871.pdf
+  U:\Projects\D12345\Images\2019\06\11002.pdf
+
+  [.tif (15)]
+  U:\Projects\D12345\Images\2019\04\10443.tif
+  U:\Projects\D12345\Images\2019\04\10502.tif
+  ...
+
+[U:\Projects\D12345\Scans (3)]
+
+  [.jpg (3)]
+  U:\Projects\D12345\Scans\IMG_0041.jpg
+  U:\Projects\D12345\Scans\IMG_0042.jpg
+  U:\Projects\D12345\Scans\IMG_0043.jpg
+
+Unverified (3)
+--------------
+[Permission denied (1)]
+U:\Projects\D12345\Images\Restricted\
+
+[Other errors (2)]
+U:\Projects\D12345\Images\2020\a.tif   I/O error   The semaphore timeout period has expired.
+U:\Projects\D12345\Images\2020\b.tif   I/O error   The semaphore timeout period has expired.</pre>
+</div>
+</div>
+
+<div class="mockup">
+<div class="mockup-header">B · Folder → path, with a file-type tally per folder</div>
+<div class="mockup-body">
+<pre class="rpt">...header and Summary as in A...
+
+Unindexed Files (20)
+--------------------
+[U:\Projects\D12345\Images (17)]
+.pdf 2 · .tif 15
+
+U:\Projects\D12345\Images\2019\04\10443.tif
+U:\Projects\D12345\Images\2019\04\10502.tif
+U:\Projects\D12345\Images\2019\05\10871.pdf
+U:\Projects\D12345\Images\2019\06\11002.pdf
+...
+
+[U:\Projects\D12345\Scans (3)]
+.jpg 3
+
+U:\Projects\D12345\Scans\IMG_0041.jpg
+U:\Projects\D12345\Scans\IMG_0042.jpg
+U:\Projects\D12345\Scans\IMG_0043.jpg
+
+Unverified (3)
+--------------
+...as in A...</pre>
+</div>
+</div>
+
+</div>
+
+<p class="note"><strong>A</strong> separates each file type, so you can act on "all the unindexed TIFFs" at once. <strong>B</strong> keeps each folder in plain path order (files from the same subfolder stay together, whatever their type) and just counts the types. Both always print the folder group, even when there is only one input folder. Unverified lists folders that could not be read (whole subtree skipped) and individual files that could not be read.</p>
