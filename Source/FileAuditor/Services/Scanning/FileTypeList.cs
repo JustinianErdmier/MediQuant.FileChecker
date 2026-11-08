@@ -36,7 +36,7 @@ public static class FileTypeList
         {
             string? normalised = Normalise(raw);
 
-            if (normalised is null)
+            if (string.IsNullOrWhiteSpace(normalised))
             {
                 return InvalidEntry(raw);
             }

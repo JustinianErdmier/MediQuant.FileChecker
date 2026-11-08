@@ -152,7 +152,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
 
             // The run may have ended while the question was open; cancelling a finished run is harmless.
-            _auditCts?.Cancel();
+            if (_auditCts is { } auditCts)
+            {
+                await auditCts.CancelAsync();
+            }
 
             await _auditTask;
         }
@@ -166,6 +169,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return savePoint.Proceed;
     }
 
+    // ReSharper disable once UnusedParameterInPartialMethod
     partial void OnIsRunningChanged(bool value)
     {
         OnPropertyChanged(nameof(IsEditable));
@@ -175,6 +179,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     // Each tab has its own Start, View Report and idle status, so a change of tab re-evaluates them all against the new tab's report.
+    // ReSharper disable once UnusedParameterInPartialMethod
     partial void OnSelectedTabIndexChanged(int value)
     {
         OnPropertyChanged(nameof(StatusAudit));
@@ -255,7 +260,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task ProbeReportAsync()
     {
-        _probeCts?.Cancel();
+        if (_probeCts is { } probeCts)
+        {
+            await probeCts.CancelAsync();
+        }
 
         CancellationTokenSource cancellationTokenSource = new();
 
@@ -424,7 +432,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         timer.Start();
 
         string? status = null;
-        string? error  = null;
+        string? error;
 
         try
         {

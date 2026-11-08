@@ -28,7 +28,7 @@ namespace FileAuditor.Services.Scanning;
 ///         reported) and returns once every worker has noticed. The caller must check the token afterwards to tell a stopped walk from a finished one.
 ///     </para>
 /// </summary>
-public sealed class FolderWalker
+public static class FolderWalker
 {
     // ReSharper disable once MemberCanBePrivate.Global
     /// <summary>The most folder listings that run at once; each listing over a network share is a round trip, so the parallelism is in listing.</summary>
@@ -52,7 +52,7 @@ public sealed class FolderWalker
     /// </param>
     /// <param name="cancellationToken">Stops the walk promptly; see the cancellation note on the type.</param>
     /// <returns>A task that completes when no folder is queued or being listed, or the walk was stopped.</returns>
-    public Task WalkAsync(IReadOnlyList<ScanFolder> folders,
+    public static Task WalkAsync(IReadOnlyList<ScanFolder> folders,
                           FileTypeFilter            filter,
                           Action<ScannedFile>       onFile,
                           Action<UnverifiedFolder>  onUnverified,
@@ -90,7 +90,7 @@ public sealed class FolderWalker
         {
             // Only a reparse point can be a link, so an ordinary input costs no extra probe, and a missing or unreachable one is left for its listing to classify. An input whose
             // link status cannot be read is not walked either: it is reported as unverified.
-            if (!IsReparsePoint(inputRoot.Path))
+            if (!HasReparsePointAttribute(inputRoot.Path))
             {
                 pathRoots.Add(inputRoot);
 
@@ -137,6 +137,7 @@ public sealed class FolderWalker
         }
 
         // Dedicated threads: the listings block, and the thread pool would ramp up to 16 blocked threads slowly.
+        // ReSharper disable AccessToDisposedClosure
         Task[] workers =
         [
             .. Enumerable.Range(start: 0, MaxConcurrentListings)
@@ -145,6 +146,7 @@ public sealed class FolderWalker
                                                             TaskCreationOptions.LongRunning,
                                                             TaskScheduler.Default))
         ];
+        // ReSharper restore AccessToDisposedClosure
 
         try
         {
@@ -237,7 +239,7 @@ public sealed class FolderWalker
     ///     A folder whose attributes cannot be read is treated as ordinary here, so its listing reports the real reason (drive not found, unreachable, permission denied) rather than
     ///     a link failure.
     /// </remarks>
-    private static bool IsReparsePoint(string path)
+    private static bool HasReparsePointAttribute(string path)
     {
         try
         {
@@ -324,6 +326,8 @@ public sealed class FolderWalker
         {
             Interlocked.Increment(ref _pending);
 
+            // The queue is unbounded, so Add never blocks; a token could throw before the workers start and leave _pending counted for an unqueued folder.
+            // ReSharper disable once MethodSupportsCancellation
             Queue.Add(folder);
         }
 

@@ -7,8 +7,6 @@ public sealed class AuditRunner
 
     private const int MaxParallelism = 32;
 
-    private readonly IndexTableReader _reader = new();
-
     /// <summary>Runs the audit.</summary>
     /// <param name="request">The settings and report path.</param>
     /// <param name="progress">Receives the live statistics.</param>
@@ -39,7 +37,7 @@ public sealed class AuditRunner
 
         try
         {
-            counted = await _reader.CountAsync(connectionString, query, cancellationToken);
+            counted = await IndexTableReader.CountAsync(connectionString, query, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -75,7 +73,9 @@ public sealed class AuditRunner
                                  {
                                      try
                                      {
-                                         readResult = await _reader.ReadAsync(connectionString, query, row => channel.Writer.WriteAsync(row, linked.Token), linked.Token);
+                                         // ReSharper disable AccessToDisposedClosure
+                                         readResult = await IndexTableReader.ReadAsync(connectionString, query, row => channel.Writer.WriteAsync(row, linked.Token), linked.Token);
+                                         // ReSharper restore AccessToDisposedClosure
                                      }
                                      finally
                                      {

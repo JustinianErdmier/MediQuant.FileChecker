@@ -17,9 +17,6 @@ public sealed class IndexPathSet
     /// <param name="capacity">The expected number of paths, to avoid growing the set repeatedly; 0 when unknown.</param>
     public IndexPathSet(int capacity = 0) => _keys = new HashSet<UInt128>(capacity);
 
-    /// <summary>Gets the number of distinct paths added.</summary>
-    public int Count => _keys.Count;
-
     /// <summary>Adds a path; not thread-safe.</summary>
     /// <param name="path">The path as stored in the index; surrounding whitespace and letter case are ignored.</param>
     public void Add(string path) => _keys.Add(Hash(path));

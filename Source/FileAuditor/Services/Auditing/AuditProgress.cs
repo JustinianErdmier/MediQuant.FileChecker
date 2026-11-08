@@ -37,9 +37,6 @@ public sealed class AuditProgress
         set => _phase = value;
     }
 
-    /// <summary>Gets the number of rows processed so far: those checked plus those skipped.</summary>
-    public long Processed => Checked + Skipped;
-
     /// <summary>Gets the number of rows skipped so far because their path value was a skip marker; they are not part of <see cref="Checked" />.</summary>
     public long Skipped => Interlocked.Read(ref _skipped);
 

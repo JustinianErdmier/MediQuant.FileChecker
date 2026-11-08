@@ -3,10 +3,6 @@ namespace FileAuditor.Services.Auditing;
 /// <summary>Runs one unindexed-files audit: loads the index paths as hashes, walks the folders checking each file as it is found, then writes the report (milestone 4 spec §3.5).</summary>
 public sealed class UnindexedAuditRunner
 {
-    private readonly IndexTableReader _reader = new();
-
-    private readonly FolderWalker _walker = new();
-
     /// <summary>Runs the audit.</summary>
     /// <param name="request">The settings and report path.</param>
     /// <param name="progress">Receives the live statistics.</param>
@@ -53,7 +49,7 @@ public sealed class UnindexedAuditRunner
 
         try
         {
-            loaded = await _reader.ReadPathsAsync(ConnectionStrings.Build(settings.Server, settings.Database), built.Value, paths.Add, cancellationToken);
+            loaded = await IndexTableReader.ReadPathsAsync(ConnectionStrings.Build(settings.Server, settings.Database), built.Value, paths.Add, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -81,7 +77,7 @@ public sealed class UnindexedAuditRunner
         ConcurrentBag<UnverifiedFolder> unverified = [];
 
         // The walker returns normally when stopped, so a stop is told apart by the token afterwards. An exception from a callback is a bug and surfaces as one.
-        await _walker.WalkAsync(folders,
+        await FolderWalker.WalkAsync(folders,
                                 filter,
                                 walked =>
                                 {

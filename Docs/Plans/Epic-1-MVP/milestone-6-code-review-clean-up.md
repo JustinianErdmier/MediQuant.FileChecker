@@ -119,14 +119,14 @@ Items:
 - Produces: `static class IndexTableReader` and `static class FolderWalker`, with the same method signatures, now static. `AuditRunner` and `UnindexedAuditRunner` lose their
   `_reader` and `_walker` fields.
 
-- [ ] **Step 1: Remove dead members.**
+- [x] **Step 1: Remove dead members.**
   - **2.** Remove `AuditProgress.Processed`.
   - **19.** Remove `IndexPathSet.Count`.
   - Confirm that neither is referenced in C# or XAML.
-- [ ] **Step 2: Make the stateless services static.**
+- [x] **Step 2: Make the stateless services static.**
   - **13, 26–28.** Make `FolderWalker` and `IndexTableReader` static classes and update their callers.
   - `FolderWalker.MaxConcurrentListings` may stay `public const`.
-- [ ] **Step 3: Add the closure suppressions.** Both are safe, for different reasons:
+- [x] **Step 3: Add the closure suppressions.** Both are safe, for different reasons:
   - **3.** The producer task is always awaited before `linked` is disposed. The normal path awaits `producer`, and the failure path awaits `Task.WhenAny(producer)` before
     rethrowing. Suppress with exactly:
     ```csharp
@@ -136,25 +136,25 @@ Items:
     ```
   - **16.** `Task.WhenAll(workers)` finishes every worker before `linked` is disposed. Use the same disable/restore pair around the `Task[] workers = …` statement in
     `FolderWalker`.
-- [ ] **Step 4: Fix the `FolderWalker` inspections.**
+- [x] **Step 4: Fix the `FolderWalker` inspections.**
   - **17.** `Entry.IsReparsePoint` hides the outer `IsReparsePoint(string)` method. Rename the outer method to `HasReparsePointAttribute(string path)`, keeping the record
     member's name.
   - **18.** `Queue.Add(folder)` in `Enqueue` stays without a token. The queue is unbounded, so `Add` never blocks. A token would only throw `OperationCanceledException` from
     the first `Enqueue` calls, which run before the workers start. That would break `WalkAsync`'s promise not to throw on cancellation, and would leave `_pending` counted
     for a folder that was never queued. Add `// ReSharper disable once MethodSupportsCancellation` with a one-line `//` reason.
-- [ ] **Step 5: Fix the `MainWindowViewModel` inspections.**
+- [x] **Step 5: Fix the `MainWindowViewModel` inspections.**
   - **29.** The CommunityToolkit generator declares `partial void OnIsRunningChanged(bool value)` and `partial void OnSelectedTabIndexChanged(int value)` with that parameter,
     and there is no parameterless overload. Put `// ReSharper disable once UnusedParameterInPartialMethod` above each method's doc comment.
   - **30.** Declare `string? error;` without the unused `= null`. `status` keeps its initialiser, because the `finally` block reads it.
   - **31.** In `ConfirmCloseAsync` and `ProbeReportAsync`, replace `_auditCts?.Cancel()` and `_probeCts?.Cancel()` with an awaited `CancelAsync()` on a non-null token source.
     That also moves the cancellation callbacks, including `SqlCommand.Cancel`, off the UI thread. The synchronous `Stop()` command is left as it is.
-- [ ] **Step 6: Fix `FileTypeList`.** **11.** Change `if (normalised is null)` to `if (string.IsNullOrWhiteSpace(normalised))`. `Normalise` returns `null` or `"." + entry`, so this
+- [x] **Step 6: Fix `FileTypeList`.** **11.** Change `if (normalised is null)` to `if (string.IsNullOrWhiteSpace(normalised))`. `Normalise` returns `null` or `"." + entry`, so this
   changes nothing at runtime, and `IsNullOrWhiteSpace`'s `NotNullWhen(false)` keeps `normalised` non-null after the check.
-- [ ] **Step 7: Check item 4.** Confirm that `PreflightChecker` declares `ScanFolder[] folders`, which the user already changed, and that `FindFolderProblems` still takes
+- [x] **Step 7: Check item 4.** Confirm that `PreflightChecker` declares `ScanFolder[] folders`, which the user already changed, and that `FindFolderProblems` still takes
   `IReadOnlyList<ScanFolder>`.
-- [ ] **Step 8: Build and run.** Build with 0 warnings. Then run one Missing audit and one Unindexed audit on LocalDB scratch data, using a scratch folder as the scan input. Both
+- [x] **Step 8: Build and run.** Build with 0 warnings. Then run one Missing audit and one Unindexed audit on LocalDB scratch data, using a scratch folder as the scan input. Both
   must finish with the expected counts.
-- [ ] **Step 9: Commit.** Use `refactor(♻️): make the stateless services static and clear the analyser warnings`.
+- [x] **Step 9: Commit.** Use `refactor(♻️): make the stateless services static and clear the analyser warnings`.
 
 ### Task 3: One switch convention (items 7, 14, 20, 21)
 
