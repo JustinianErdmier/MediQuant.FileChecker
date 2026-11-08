@@ -3,6 +3,8 @@ namespace FileAuditor.ViewModels.Groups;
 /// <summary>The Audit group and status bar: read-only run statistics as display strings, blank before the first run.</summary>
 public sealed partial class AuditViewModel : AuditStatusBase
 {
+    private readonly RemainingEstimator _remainingEstimator = new();
+
     /// <summary>Gets or sets the number of files checked so far, formatted with thousands separators.</summary>
     [ ObservableProperty ]
     public partial string Checked { get; set; } = "";
@@ -42,6 +44,8 @@ public sealed partial class AuditViewModel : AuditStatusBase
     /// <inheritdoc />
     public override void Reset()
     {
+        _remainingEstimator.Reset();
+
         TotalFiles     = "";
         Checked        = "";
         Missing        = "";
@@ -63,10 +67,8 @@ public sealed partial class AuditViewModel : AuditStatusBase
         long   total   = Math.Max(progress.TotalFiles, progress.Processed);
         long   done    = progress.Checked;
         long   handled = progress.Processed;
-        double seconds = progress.CheckingElapsed.TotalSeconds;
-        double rate    = seconds > 0 ? handled / seconds : 0;
 
-        // The displayed rate is over the whole run, the span the Elapsed box shows; Remaining keeps the checking-time rate, which excludes the counting phase.
+        // The displayed rate is over the whole run, the span the Elapsed box shows; Remaining uses the recent checking-time rate, which excludes the counting phase.
         double wholeRunSeconds = elapsed.TotalSeconds;
 
         TotalFiles     = progress.HasTotal ? total.ToString(format: "N0", CultureInfo.CurrentCulture) : "";
@@ -75,7 +77,7 @@ public sealed partial class AuditViewModel : AuditStatusBase
         Unverified     = progress.Unverified.ToString(format: "N0", CultureInfo.CurrentCulture);
         Skipped        = progress.Skipped.ToString(format: "N0", CultureInfo.CurrentCulture);
         Elapsed        = FormatTime(elapsed);
-        Remaining      = FormatTime(rate > 0 && total > handled ? TimeSpan.FromSeconds((total - handled) / rate) : TimeSpan.Zero);
+        Remaining      = _remainingEstimator.Next(handled, total, progress.CheckingElapsed, progress.HasTotal, isFinished);
         FilesPerSecond = wholeRunSeconds >= 1 ? (done / wholeRunSeconds).ToString(format: "N0", CultureInfo.CurrentCulture) : "";
 
         Percent       = total > 0 ? Math.Min(val1: 100, handled * 100.0 / total) : isFinished && progress.HasTotal ? 100 : 0;

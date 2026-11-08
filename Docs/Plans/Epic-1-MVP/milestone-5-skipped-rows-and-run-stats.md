@@ -130,22 +130,22 @@ The approved description, verbatim in substance:
   bool isFinished); public double? RecentRate { get; } }`, built on one `RecentRate`; `RecentRate` exposes its current value for Task 4. Neither type is a `*ViewModel` (no
   view), like `ReportLocationState`; `AuditViewModel` owns one estimator, resets it in `Reset()` and sets `Remaining` from `Next(...)` on every `Update`.
 
-- [ ] **Step 1:** Implement `RecentRate.Next` and `RemainingEstimator.Next`, called every refresh (about 250 ms), with this algorithm:
+- [x] **Step 1:** Implement `RecentRate.Next` and `RemainingEstimator.Next`, called every refresh (about 250 ms), with this algorithm:
     - `isFinished` → `00:00:00`. `!hasTotal`, or checking time under the 5 s warm-up → `Calculating...`. `processed >= total` → `00:00:00`.
     - **Rate (`RecentRate`):** an exponentially weighted moving average of the per-sample rate (`Δcount ÷ Δt`), weight `1 − e^(−Δt / 30 s)`. At the end of the
       warm-up it is seeded with the whole-warm-up average (`count ÷ elapsed`) so it starts sensibly. A sample with `Δt ≤ 0` is ignored.
     - **Target:** `(total − processed) ÷ rate`; a rate `≤ 0` keeps the last shown value (or `Calculating...` if nothing has been shown yet).
     - **Display:** the first shown value is the target; after that, each call subtracts `Δt` (wall time between calls, from the checking clock) from the shown value, then moves
       it toward the target by `1 − e^(−Δt / 3 s)` of the difference; never below zero. Formatted `hh:mm:ss` as today (hours may exceed 24).
-- [ ] **Step 2:** `AuditViewModel.Update` uses the estimator; remove the old inline formula. XML docs on the new type and members; the 30 s, 3 s and 5 s values are named
+- [x] **Step 2:** `AuditViewModel.Update` uses the estimator; remove the old inline formula. XML docs on the new type and members; the 30 s, 3 s and 5 s values are named
   constants with a comment on why.
-- [ ] **Step 3: Verify.** Clean build. In `FileAuditorM5Scratch`, a table sized for a 60–120 s run (calibrate the row count with a short trial; repeated paths to a few
+- [x] **Step 3: Verify.** Clean build. In `FileAuditorM5Scratch`, a table sized for a 60–120 s run (calibrate the row count with a short trial; repeated paths to a few
   existing scratch files keep the report small). If `\\localhost\C$` is reachable, make the first half of the rows UNC paths and the second half local paths so the speed
   changes mid-run; otherwise say so in the report. Sample *Elapsed* and *Remaining* by UI Automation once a second for the whole run and save the samples in the task report.
   Pass: `Calculating...` for the first ~5 s; from 30 s on, every 10 s window shows Remaining falling by 7–13 s, except up to 15 s after the speed change; no two consecutive
   samples differ by more than 5 s beyond the second that passed; in the last 10 s of checking Remaining reads 15 s or less; `00:00:00` once finished. Also run a table small
   enough to finish under 5 s (`Calculating...` then `00:00:00`). Drop the database.
-- [ ] **Step 4: Commit** — `feat(✨): estimate Remaining from the recent checking speed and count it down steadily`.
+- [x] **Step 4: Commit** — `feat(✨): estimate Remaining from the recent checking speed and count it down steadily`.
 
 ### Task 4: Three statistics columns and the recent rate
 
