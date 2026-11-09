@@ -18,17 +18,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>Each direction's last run status (Completed, Stopped or Failed), shown in place of Ready until that direction runs again.</summary>
     private readonly Dictionary<AuditDirections, string?> _lastRunStatus = new();
 
-    /// <summary>Runs the missing-files audit.</summary>
-    private readonly AuditRunner _missingRunner = new();
-
     /// <summary>Checks the inputs when Start is pressed, before the database is touched.</summary>
     private readonly PreflightChecker _preflight;
 
     /// <summary>Holds the open project's settings file and saves it when an audit starts.</summary>
     private readonly ProjectSettingsService _projectSettingsService;
-
-    /// <summary>Runs the unindexed-files audit.</summary>
-    private readonly UnindexedAuditRunner _unindexedRunner = new();
 
     /// <summary>Stops the running audit; <see langword="null" /> when none is running.</summary>
     private CancellationTokenSource? _auditCancellationSource;
@@ -276,14 +270,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
         const string message = "If you untick this box, this project's settings will no longer be saved automatically. You will be asked whether to save them instead.\n\n"
                                + "Do you want to untick it?";
 
-        if (await _dialogues.ConfirmAsync(message, confirmText: "_Untick"))
+        try
         {
-            _projectSettingsService.UntickConfirmed = true;
+            if (await _dialogues.ConfirmAsync(message, confirmText: "_Untick"))
+            {
+                _projectSettingsService.UntickConfirmed = true;
 
-            return;
+                return;
+            }
+
+            SetSaveProjectSettings(value: true);
         }
-
-        SetSaveProjectSettings(value: true);
+        catch (Exception exception)
+        {
+            UnexpectedErrorHandler.ReportRecoverable(exception);
+        }
     }
 
     /// <summary>Sets the save checkbox from the code, without raising the untick warning.</summary>
@@ -305,16 +306,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         _probeCancellationSource = cancellationTokenSource;
 
-        if (previous is not null)
-        {
-            await previous.CancelAsync();
-        }
-
-        ReportViewModel report = SelectedReport;
-        ReportPath      path   = report.Current;
-
         try
         {
+            if (previous is not null)
+            {
+                await previous.CancelAsync();
+            }
+
+            ReportViewModel report = SelectedReport;
+            ReportPath      path   = report.Current;
+
             await Task.Delay(ProbeDebounceMilliseconds, cancellationTokenSource.Token);
 
             // File.Exists is acceptable here: it only decides whether the menu item and button are enabled, not an audit outcome.
@@ -335,6 +336,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             // Superseded by a newer probe.
+        }
+        catch (Exception exception)
+        {
+            UnexpectedErrorHandler.ReportRecoverable(exception);
         }
     }
 
@@ -455,11 +460,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         if (direction is AuditDirections.Unindexed)
         {
-            run = new UnindexedAuditRun(UnindexedFiles.Audit, _unindexedRunner, request);
+            run = new UnindexedAuditRun(UnindexedFiles.Audit, request);
         }
         else
         {
-            run = new MissingAuditRun(MissingFiles.Audit, _missingRunner, request);
+            run = new MissingAuditRun(MissingFiles.Audit, request);
         }
 
         _auditTask = RunAuditAsync(run, direction);

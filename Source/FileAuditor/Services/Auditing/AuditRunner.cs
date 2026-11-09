@@ -1,7 +1,7 @@
 namespace FileAuditor.Services.Auditing;
 
 /// <summary>Runs one audit: counts the rows, streams them through a bounded channel to parallel file checks, then builds and writes the report.</summary>
-public sealed class AuditRunner
+public static class AuditRunner
 {
     /// <summary>How many index rows can wait between the reader and the file checks before the reader pauses.</summary>
     private const int ChannelCapacity = 10_000;
@@ -18,7 +18,7 @@ public sealed class AuditRunner
     ///     <c>Audit.ReadFailed</c> when the row stream failed for another reason before any row was processed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while
     ///     counting; or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
-    public async Task<ErrorOr<AuditReport>> RunAsync(AuditRequest request, AuditProgress progress, CancellationToken cancellationToken)
+    public static async Task<ErrorOr<AuditReport>> RunAsync(AuditRequest request, AuditProgress progress, CancellationToken cancellationToken)
     {
         AppSettings settings   = request.Settings;
         DateTime    startedUtc = DateTime.UtcNow;

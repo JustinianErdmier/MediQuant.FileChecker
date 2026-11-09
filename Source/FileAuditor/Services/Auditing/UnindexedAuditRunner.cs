@@ -1,7 +1,7 @@
 namespace FileAuditor.Services.Auditing;
 
 /// <summary>Runs one unindexed-files audit: loads the index paths as hashes, walks the folders checking each file as it is found, then writes the report.</summary>
-public sealed class UnindexedAuditRunner
+public static class UnindexedAuditRunner
 {
     /// <summary>Runs the audit.</summary>
     /// <param name="request">The settings and report path.</param>
@@ -11,7 +11,7 @@ public sealed class UnindexedAuditRunner
     ///     The report that was written for a completed or stopped audit; a SQL error when loading the index failed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped
     ///     while the index was loading; or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
-    public async Task<ErrorOr<UnindexedReport>> RunAsync(AuditRequest request, UnindexedProgress progress, CancellationToken cancellationToken)
+    public static async Task<ErrorOr<UnindexedReport>> RunAsync(AuditRequest request, UnindexedProgress progress, CancellationToken cancellationToken)
     {
         AppSettings settings   = request.Settings;
         DateTime    startedUtc = DateTime.UtcNow;

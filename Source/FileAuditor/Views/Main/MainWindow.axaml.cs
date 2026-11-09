@@ -51,8 +51,23 @@ public partial class MainWindow : ClassicWindow
             return;
         }
 
-        viewModel.AboutRequested += async (_, _) => await new AboutWindow().ShowDialog(this);
-        viewModel.ExitRequested  += (_,       _) => Close();
+        viewModel.AboutRequested += OnAboutRequested;
+        viewModel.ExitRequested  += (_, _) => Close();
+    }
+
+    /// <summary>Shows the About window as a dialogue over this window, and reports any exception it raises.</summary>
+    /// <param name="sender">The view model that raised the event.</param>
+    /// <param name="eventArgs">The event data.</param>
+    private async void OnAboutRequested(object? sender, EventArgs eventArgs)
+    {
+        try
+        {
+            await new AboutWindow().ShowDialog(this);
+        }
+        catch (Exception exception)
+        {
+            UnexpectedErrorHandler.ReportRecoverable(exception);
+        }
     }
 
     /// <summary>Asks the view model whether the window may close and, when it may, closes it.</summary>
@@ -70,6 +85,10 @@ public partial class MainWindow : ClassicWindow
 
                 Close();
             }
+        }
+        catch (Exception exception)
+        {
+            UnexpectedErrorHandler.ReportRecoverable(exception);
         }
         finally
         {

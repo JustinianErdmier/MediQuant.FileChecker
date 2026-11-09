@@ -873,10 +873,10 @@ XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj
   (connection strings, SQL identifiers, query builder, which also builds the path-only, prefix-filtered query, and the static `IndexTableReader`, which also reads the paths for the
   unindexed audit), `Checking/` (file checker, `SkipMarker`, which decides whether a path value is a skip marker, and the Win32 error mapper), `Scanning/` (the unindexed
   direction's `FileTypeList`, `FileTypePattern` and `FileTypeFilter`, the 128-bit-hash `IndexPathSet`, and the concurrent, static `FolderWalker`; `FileTypeList`, `FileTypePattern`
-  and `IndexPathSet` stay here, not in `Models/`, because they carry logic), `Auditing/` (audit runner and `UnindexedAuditRunner`, pre-flight checker, and the progress types
-  including `UnindexedProgress`, which also keeps the scan clock of §5.4a), `Reporting/` (the two report builders, `ReportFormat` with the formatting they share, writer and path
-  resolver) and `Dialogues/` (dialogue service, which also offers a three-button choice returning a `DialogueChoices`, the *Open Project* file picker and the File Types dialogue).
-  Stateless services are static classes (§12). Return `ErrorOr<T>` for expected failures.
+  and `IndexPathSet` stay here, not in `Models/`, because they carry logic), `Auditing/` (the static `AuditRunner` and `UnindexedAuditRunner`, pre-flight checker,
+  and the progress types including `UnindexedProgress`, which also keeps the scan clock of §5.4a), `Reporting/` (the two report builders, `ReportFormat` with the formatting
+  they share, writer and path resolver) and `Dialogues/` (dialogue service, which also offers a three-button choice returning a `DialogueChoices`, the *Open Project* file
+  picker and the File Types dialogue). Stateless services are static classes (§12). Return `ErrorOr<T>` for expected failures.
 - `Models/` — plain data, with no behaviour worth a service. `Settings/` (`AppSettings`, the settings record with no nullable members; `ProjectFile` and `ProjectFileFolder`, the
   nullable JSON shape of §8; `ScanFolder`; and `SavePointResult`), `Auditing/` (`AuditQuery`, `PathQuery`, `IndexRow`, `CheckResult`, `MappedOutcome`, `AuditRequest`, `ScannedFile`
   and `UnverifiedFolder`), `Dialogues/` (`ProjectFilePick`, the *Open Project* picker's result) and `Reporting/` (`AuditReport`, `UnindexedReport` and `ReportPath`).
@@ -918,10 +918,12 @@ plain `Microsoft.Data.SqlClient`, with no ORM.
   and the process then exits with code 1. The box is owned by the main window when that is safe to ask for, and otherwise it is topmost and in the foreground. A second fatal
   error on another thread waits until the first box has been read.
 - **One notice at a time.** While a recoverable notice is open, including the plain message box that takes over when there is no main window or the dialogue cannot be shown,
-  further recoverable errors are dropped, so an exception repeated on every refresh tick cannot stack up dialogues.
+  further recoverable errors are dropped, so an exception repeated on every refresh tick cannot stack up dialogues. A fault that repeats (on every 250 ms refresh, say) shows the
+  notice again after *OK*, never more than one at a time.
 - **No crash log.** Nothing is written to disk, by the storage rule below.
-- The three `async void` event handlers (the File Types dialogue's *OK*, the Report group's *Browse...* and the Unindexed tab's *Add...*) wrap their bodies in `try` / `catch`
-  and report through the handler (§12).
+- Every `async void` event handler (the File Types dialogue's *OK*, the Report group's *Browse...* and the Unindexed tab's *Add...*, and the main window's About handler) and
+  every fire-and-forget task (the close confirmation, the report probe and the untick confirmation) wraps its whole body in `try` / `catch` and reports through the handler
+  (§12), so no fault waits for finalisation to surface.
 
 **Storage.** The app writes only the project settings file (§8) and the report (§7), both in the report's folder — never anything beside its executable, which runs from a
 shared file server, and nothing under `%APPDATA%`.
@@ -1020,14 +1022,15 @@ Settled by the build (milestone 1), with no change in behaviour (milestone 4's a
 - **No pointers to design documents in code.** A comment or doc comment says what the code does and why, in its own words; it never cites the SDD, a milestone or a section number.
 - **Line length:** lines of code and of comments are at most 180 characters.
 - **Enum names:** an enum's type name is plural (`CheckOutcomes`, `DialogueChoices`) and its members are singular (`Found`, `Primary`); a variable, parameter or property that holds
-  one value is singular (`CheckOutcomes outcome`, `DialogueChoices choice`). Enums live in `Common/Constants/<Area>/` (§9).
+  one value is singular (`CheckOutcomes outcome`, `DialogueChoices choice`). The app's shared enums live in `Common/Constants/<Area>/` (§9); a private enum
+  used by one type only stays nested in it (`FolderWalker.LinkStates`).
 - **The switch convention.** A `switch` on an enum gives every member it handles its own arm, and its `default` arm throws `UnreachableException`; a `default` never stands in for a
   real member, so a new member fails loudly instead of falling into an old behaviour. An enum's `ToString()` is never user-facing text: a label comes from an explicit arm.
   The one exception is an on-disk path component: the `AuditDirections` member names in report file names and the stage names in the report's folder and file names.
-- **Static services.** A service with no state is a `static class`, not an instance created and passed around (`SettingsStore`, `IndexTableReader`, `FolderWalker`, the report
-  builders and the path resolver).
-- **`async void` event handlers** wrap their whole body in `try` / `catch` and report the exception through `UnexpectedErrorHandler.ReportRecoverable` (§9), because nothing can
-  catch an exception that escapes them.
+- **Static services.** A service with no state is a `static class`, not an instance created and passed around (`SettingsStore`, `IndexTableReader`, `FolderWalker`, `AuditRunner`,
+  `UnindexedAuditRunner`, the report builders and the path resolver).
+- **`async void` event handlers and fire-and-forget tasks** wrap their whole body in `try` / `catch` and report the exception through `UnexpectedErrorHandler.ReportRecoverable`
+  (§9), because nothing can catch an exception that escapes them and a discarded task's fault surfaces only at finalisation.
 - **ReSharper suppressions** take one of two forms: `// ReSharper disable once <Inspection>` on the line above the member, above its doc comment and never between the doc comment
   and the signature, or a `// ReSharper disable <Inspection>` / `// ReSharper restore <Inspection>` pair around a statement. Each carries a short reason when it is not obvious.
 - **Spaced attribute brackets:** `[ STAThread ]`, `[ ObservableProperty ]`, `[ RelayCommand ]`.
