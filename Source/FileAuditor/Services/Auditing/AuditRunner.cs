@@ -74,7 +74,10 @@ public sealed class AuditRunner
                                      try
                                      {
                                          // ReSharper disable AccessToDisposedClosure
-                                         readResult = await IndexTableReader.ReadAsync(connectionString, query, row => channel.Writer.WriteAsync(row, linkedSource.Token), linkedSource.Token);
+                                         readResult = await IndexTableReader.ReadAsync(connectionString,
+                                                                                       query,
+                                                                                       row => channel.Writer.WriteAsync(row, linkedSource.Token),
+                                                                                       linkedSource.Token);
                                          // ReSharper restore AccessToDisposedClosure
                                      }
                                      finally

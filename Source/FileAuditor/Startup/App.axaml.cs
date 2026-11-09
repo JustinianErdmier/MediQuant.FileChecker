@@ -13,12 +13,12 @@ public class App : Application
         {
             UnexpectedErrorHandler.Install(desktop);
 
-            DialogueService      dialogues = new(() => desktop.MainWindow);
-            ProjectSettingsService project   = new(dialogues);
+            DialogueService        dialogues              = new(() => desktop.MainWindow);
+            ProjectSettingsService projectSettingsService = new(dialogues);
 
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(dialogues, project)
+                DataContext = new MainWindowViewModel(dialogues, projectSettingsService)
             };
         }
 

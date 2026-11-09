@@ -126,7 +126,7 @@ public sealed class ProjectSettingsService
                                 || ReportPathResolver.IsSingleFolderName(current.ProjectFolder.Trim()));
 
         string target;
-        bool   isOpenedFile;
+        bool   isCurrentFile;
 
         if (FilePath is null)
         {
@@ -135,8 +135,8 @@ public sealed class ProjectSettingsService
                 return await CannotSaveAsync(report.DisplayDirectory, reason: "The report location is incomplete.", Done);
             }
 
-            target       = Path.Combine(report.Directory, SettingsStore.FileName);
-            isOpenedFile = false;
+            target        = Path.Combine(report.Directory, SettingsStore.FileName);
+            isCurrentFile = false;
         }
         else if (reportUsable
                  && !SameFolder(Path.GetDirectoryName(FilePath) ?? string.Empty, report.Directory))
@@ -152,14 +152,14 @@ public sealed class ProjectSettingsService
             switch (choice)
             {
                 case DialogueChoices.Primary:
-                    target       = Path.Combine(report.Directory, SettingsStore.FileName);
-                    isOpenedFile = false;
+                    target        = Path.Combine(report.Directory, SettingsStore.FileName);
+                    isCurrentFile = false;
 
                     break;
 
                 case DialogueChoices.Secondary:
-                    target       = FilePath;
-                    isOpenedFile = true;
+                    target        = FilePath;
+                    isCurrentFile = true;
 
                     break;
 
@@ -172,8 +172,8 @@ public sealed class ProjectSettingsService
         }
         else
         {
-            target       = FilePath;
-            isOpenedFile = true;
+            target        = FilePath;
+            isCurrentFile = true;
         }
 
         string folder = Path.GetDirectoryName(target) ?? string.Empty;
@@ -183,7 +183,7 @@ public sealed class ProjectSettingsService
             return await CannotSaveAsync(target, reason: "The folder does not exist.", Done);
         }
 
-        if (!isOpenedFile
+        if (!isCurrentFile
             && await Task.Run(() => File.Exists(target)))
         {
             DialogueChoices choice

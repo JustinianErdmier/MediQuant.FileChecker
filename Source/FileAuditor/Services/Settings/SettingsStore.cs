@@ -100,7 +100,7 @@ public static class SettingsStore
         }
 
         HashSet<string> knownPropertyNames = SettingsJsonContext.Default.ProjectFile.Properties.Select(property => property.Name)
-                                                   .ToHashSet(StringComparer.Ordinal);
+                                                                .ToHashSet(StringComparer.Ordinal);
 
         return document.RootElement.EnumerateObject()
                        .Any(property => knownPropertyNames.Contains(property.Name));

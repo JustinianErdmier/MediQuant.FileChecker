@@ -2,8 +2,8 @@ namespace FileAuditor.Services.Auditing;
 
 /// <summary>The checks that run when Start is pressed, before the database is touched (SDD §6.1). Each failure or declined confirmation is explained in a dialogue.</summary>
 /// <param name="dialogues">Shows the errors and confirmations.</param>
-/// <param name="project">Remembers which warnings were answered Continue this session.</param>
-public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsService project)
+/// <param name="projectSettingsService">Remembers which warnings were answered Continue this session.</param>
+public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsService projectSettingsService)
 {
     /// <summary>
     ///     Runs the checks in order: identifiers, the two reports' custom names, the Unindexed direction's folders and file types, custom file name, custom location form, report
@@ -187,7 +187,7 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
         if (matchAllEntry is not null
             && include.Length > 1
-            && !project.RedundantTypesConfirmed)
+            && !projectSettingsService.RedundantTypesConfirmed)
         {
             if (!await dialogues.ConfirmAsync($"File types contains {matchAllEntry}, which matches every file, so the other file types are redundant.\n\nDo you want to continue?",
                                               confirmText: "_Continue"))
@@ -195,27 +195,28 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
                 return false;
             }
 
-            project.RedundantTypesConfirmed = true;
+            projectSettingsService.RedundantTypesConfirmed = true;
         }
 
         if (matchAllEntry is not null
             && exclude.Length > 0
-            && !project.ExcludedTypesConfirmed)
+            && !projectSettingsService.ExcludedTypesConfirmed)
         {
             if (!await
-                     dialogues.ConfirmAsync($"File types contains {matchAllEntry}, which matches every file, so every file will be checked except the excluded types.\n\nDo you want to continue?",
+                     dialogues.ConfirmAsync($"File types contains {matchAllEntry}, which matches every file, so every file will be checked except the excluded types."
+                                           + "\n\nDo you want to continue?",
                                             confirmText: "_Continue"))
             {
                 return false;
             }
 
-            project.ExcludedTypesConfirmed = true;
+            projectSettingsService.ExcludedTypesConfirmed = true;
         }
 
         string[] inBothLists = [.. include.Intersect(exclude, StringComparer.Ordinal)];
 
         if (inBothLists.Length <= 0
-            || project.OverlapConfirmed)
+            || projectSettingsService.OverlapConfirmed)
         {
             return true;
         }
@@ -228,7 +229,7 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             return false;
         }
 
-        project.OverlapConfirmed = true;
+        projectSettingsService.OverlapConfirmed = true;
 
         return true;
     }

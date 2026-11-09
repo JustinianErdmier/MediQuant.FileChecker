@@ -172,9 +172,9 @@ public sealed class FileChecker(bool reportEmptyFiles)
     /// <summary>Walks from the root's child down to the file's parent to find the first directory that cannot be reached, and caches it.</summary>
     private CheckResult LocaliseFailure(IndexRow row, MappedOutcome fileOutcome, List<string> ancestorsDeepestFirst)
     {
-        for (int i = ancestorsDeepestFirst.Count - 1; i >= 0; i--)
+        for (int index = ancestorsDeepestFirst.Count - 1; index >= 0; index--)
         {
-            string directory = ancestorsDeepestFirst[i];
+            string directory = ancestorsDeepestFirst[index];
 
             try
             {

@@ -32,13 +32,13 @@ public static class FileTypeList
     {
         SortedSet<string> entries = new(StringComparer.Ordinal);
 
-        foreach (string rawEntry in Split(text))
+        foreach (string typedEntry in Split(text))
         {
-            string? normalised = Normalise(rawEntry);
+            string? normalised = Normalise(typedEntry);
 
             if (string.IsNullOrWhiteSpace(normalised))
             {
-                return InvalidEntry(rawEntry);
+                return InvalidEntry(typedEntry);
             }
 
             entries.Add(normalised);
@@ -49,18 +49,18 @@ public static class FileTypeList
     }
 
     /// <summary>Creates the validation error that names an entry that is not a valid file type.</summary>
-    /// <param name="rawEntry">The entry as typed.</param>
+    /// <param name="typedEntry">The entry as typed.</param>
     /// <returns>The error, whose description is the message to show.</returns>
-    public static Error InvalidEntry(string rawEntry) => Error.Validation(code: "FileTypes.Invalid", $"This file type is not valid:\n{rawEntry}");
+    public static Error InvalidEntry(string typedEntry) => Error.Validation(code: "FileTypes.Invalid", $"This file type is not valid:\n{typedEntry}");
 
     /// <summary>Formats entries for a file types box: sorted and space-separated.</summary>
     /// <param name="types">The normalised entries.</param>
     /// <returns>The text.</returns>
     public static string Format(IEnumerable<string> types) => string.Join(separator: ' ', types.OrderBy(type => type, StringComparer.Ordinal));
 
-    private static string? Normalise(string rawEntry)
+    private static string? Normalise(string typedEntry)
     {
-        string entry = rawEntry.ToLowerInvariant();
+        string entry = typedEntry.ToLowerInvariant();
 
         if (entry.StartsWith(value: "*.", StringComparison.Ordinal))
         {
