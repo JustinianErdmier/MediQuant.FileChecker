@@ -1,6 +1,7 @@
 <Solution>
     <Folder Name="/Docs/">
         <File Path="Docs/TeamsIntroMessage.md" />
+        <File Path="Docs/UserGuide.md" />
     </Folder>
     <Folder Name="/Docs/Ledgers/" />
     <Folder Name="/Docs/Ledgers/Epic-1-MVP/">

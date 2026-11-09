@@ -13,7 +13,7 @@ public static class FileTypeList
     /// <summary>Gets the built-in File types, sorted.</summary>
     public static IReadOnlyList<string> Defaults { get; } =
     [
-        ".bmp", ".doc", ".docx", ".eml", ".gif", ".jpeg", ".jpg", ".msg", ".odt", ".pdf", ".png", ".ppt", ".pptx", ".rtf", ".tif", ".tiff", ".xls", ".xlsx", ".xps"
+        ".bmp", ".doc", ".docm", ".docx", ".dotm", ".dotx", ".gif", ".html", ".rtf", ".txt", ".jpeg", ".tiff", ".pdf", ".png", ".jpg"
     ];
 
     /// <summary>Splits the text of a file types box into its entries: they are separated by white space (any kind) or commas.</summary>

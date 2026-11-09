@@ -266,9 +266,9 @@ The tab holds, top to bottom, the **Folders to Check** group, the **Report** gro
   16-pixel right margin (the bar's width) so the header and rows line up. The list is about as tall as the two buttons beside it.
 - **Add...** and **Remove**, stacked to the right of the list. *Add...* opens a folder picker (directories only) and appends the chosen folder, selecting it; a folder already
   listed (ignoring case and a trailing separator) is not added a second time. *Remove* removes the selected row and is disabled while no row is selected.
-- **File types:** a read-only, single-line summary of the extension whitelist (sorted, separated by spaces), with an **Edit...** button. A built-in list of 19 common document and
-  image formats is the default (`.bmp .doc .docx .eml .gif .jpeg .jpg .msg .odt .pdf .png .ppt .pptx .rtf .tif .tiff .xls .xlsx .xps`); `.txt`, `.json` and other text or
-  configuration formats are not on it, so the app's own reports and project files are never reported.
+- **File types:** a read-only, single-line summary of the extension whitelist (sorted, separated by spaces), with an **Edit...** button. A built-in list of 15 common document and
+  image formats is the default (`.bmp .doc .docm .docx .dotm .dotx .gif .html .jpeg .jpg .pdf .png .rtf .tiff .txt`, the user's list, `FileTypeList.Defaults`). It includes
+  `.txt`, so the app's own reports are checked like any other file when they sit in a scanned folder; `.json` is not on it, so project files are never reported.
 - **Exclude:** the extension blacklist, in the same form, empty by default, with its own **Edit...** button. A file that matches an Exclude entry is never checked, even when
   File types matches it: the blacklist wins.
 
@@ -773,7 +773,7 @@ The file holds every input of every direction: server, database, table, path col
 custom-location flag, custom location, and the custom file name of the missing-files report (`MissingCustomFileName`, default `FileAuditorMissingReport.txt`). The unindexed
 direction adds its folder list (`ScanFolders`: each folder's path and *Include subfolders* flag), the whitelist (`FileTypes`), the blacklist (`ExcludeTypes`), the grouping choice
 (`GroupByFoundExtension`) and its own custom file name (`UnindexedCustomFileName`, default `FileAuditorUnindexedReport.txt`). A file without them loads with an empty folder list,
-the 19 built-in file types, an empty blacklist, *Listed type* grouping and the default name; a folder entry without a path is dropped, and an invalid entry in either type list is
+the 15 built-in file types, an empty blacklist, *Listed type* grouping and the default name; a folder entry without a path is dropped, and an invalid entry in either type list is
 dropped on its own while the others are kept. Older files load, but their custom file names fall back to the defaults; no migration is attempted. The remembered answers to the
 three file-type warnings (§6.5.1) are not stored either. No credentials. The *Save project settings* checkbox is not stored in it. The file is written with a temp
 file + `File.Move(overwrite: true)`; a save never creates a folder. A `null` value of any kind (a string, a flag, a list, a list element or a folder's path) and an undefined enum
@@ -957,12 +957,12 @@ so ordinary builds and `dotnet run` are unchanged.
 - Unindexed audit (milestone 4): *Group file types by* is a pair of radio buttons in the Unindexed tab's Report group, owned by that tab's `ReportViewModel`; ties between
   equally specific file types go to the fewest wildcard characters, then the first alphabetically; an entry is invalid when it is empty after the leading dot, has an empty part,
   or contains a path separator or a character Windows forbids in file names other than `*` and `?`; `.txt` and `.json` are not default file types, so the app's own reports and
-  project files are never reported; hidden and system folders are skipped with their contents; a file under two input folders is reported once, under the deepest; the path column
-  is trimmed before hashing; the SQL prefix filter is an optimisation with a fallback to every row (§6.5.2); hashing is an in-box algorithm (MD5), so no package was added;
-  *Indexed* replaces *Checked* in the statistics (every file found is checked at once); links are never followed, only reported; Stop and the status bar follow the running audit
-  rather than the selected tab; Stop while the index loads writes no report; equal custom file names on the two tabs are refused; up to 16 folder listings run at once and the
-  statistics refresh four times a second; a duplicate folder is not added to the list and, when it reaches Start by a hand-edited file, is refused; what "matches every file" means
-  is defined in §6.5.1.
+  project files are never reported (later replaced by the user's 15-type list, which includes `.txt`, §5.2b); hidden and system folders are skipped with their contents; a
+  file under two input folders is reported once, under the deepest; the path column is trimmed before hashing; the SQL prefix filter is an optimisation with a fallback to
+  every row (§6.5.2); hashing is an in-box algorithm (MD5), so no package was added; *Indexed* replaces *Checked* in the statistics (every file found is checked at once);
+  links are never followed, only reported; Stop and the status bar follow the running audit rather than the selected tab; Stop while the index loads writes no report; equal
+  custom file names on the two tabs are refused; up to 16 folder listings run at once and the statistics refresh four times a second; a duplicate folder is not added to the list
+  and, when it reaches Start by a hand-edited file, is refused; what "matches every file" means is defined in §6.5.1.
 
 - Skipped rows and run statistics (milestone 5, from the user's five requests): the skip rule is exact and checked before every other check (§6.3); a skipped row is never listed,
   and the report's `Skipped:` line is always present on the missing-files report; on-screen *Total files* is `max(count, processed)` so the numbers agree with the report if the
