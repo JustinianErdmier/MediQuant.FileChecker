@@ -80,14 +80,14 @@ public sealed class AuditProgress
 
                 break;
 
-            case CheckOutcomes.UnverifiedDriveOrShareNotFound or
-                CheckOutcomes.UnverifiedPermissionDenied or
-                CheckOutcomes.UnverifiedNetworkUnreachable or
-                CheckOutcomes.UnverifiedPathTooLong or
-                CheckOutcomes.UnverifiedLinkNotFollowed or
-                CheckOutcomes.UnverifiedInvalidCharacters or
-                CheckOutcomes.UnverifiedPathEmpty or
-                CheckOutcomes.UnverifiedOther:
+            case CheckOutcomes.UnverifiedDriveOrShareNotFound
+                 or CheckOutcomes.UnverifiedPermissionDenied
+                 or CheckOutcomes.UnverifiedNetworkUnreachable
+                 or CheckOutcomes.UnverifiedPathTooLong
+                 or CheckOutcomes.UnverifiedLinkNotFollowed
+                 or CheckOutcomes.UnverifiedInvalidCharacters
+                 or CheckOutcomes.UnverifiedPathEmpty
+                 or CheckOutcomes.UnverifiedOther:
                 Interlocked.Increment(ref _unverified);
 
                 break;

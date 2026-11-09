@@ -10,8 +10,8 @@ namespace FileAuditor.Services.Scanning;
 ///         <b>Links.</b> Links are never followed or checked. An input folder that is a junction or symbolic link, a junction or symbolic link met whilst walking, and a matching
 ///         file that is a symbolic link are each reported once through the unverified callback as <see cref="CheckOutcomes.UnverifiedLinkNotFollowed" /> (a folder's path ends in
 ///         <c>\</c>); nothing beneath them is listed. Only an entry that has a link target (<see cref="FileSystemInfo.LinkTarget" />) is a link: any other reparse point (a DFS
-///         folder, a OneDrive placeholder, a deduplicated file) is an ordinary folder or file. With no link followed, every folder is reached by exactly one route, so no loop and
-///         no duplicate is possible.
+///         folder, a OneDrive placeholder, a deduplicated file) is an ordinary folder or file. With no link followed, every folder is reached by exactly one route, so no loop and no
+///         duplicate is possible.
 ///     </para>
 ///     <para>
 ///         <b>Attribution.</b> A file is reported once, under the deepest input folder whose scope covers the folder it sits in. The walk is a single traversal over the union of
@@ -143,6 +143,7 @@ public static class FolderWalker
                                                             TaskCreationOptions.LongRunning,
                                                             TaskScheduler.Default))
         ];
+
         // ReSharper restore AccessToDisposedClosure
 
         try
@@ -215,8 +216,8 @@ public static class FolderWalker
     }
 
     /// <summary>
-    ///     Tells whether an entry is a junction or symbolic link (it has a link target). Any other reparse point is an ordinary entry, but an entry whose link target cannot be
-    ///     read is <see cref="LinkStates.Unknown" />, never assumed ordinary: the caller reports it and does not walk or check it.
+    ///     Tells whether an entry is a junction or symbolic link (it has a link target). Any other reparse point is an ordinary entry, but an entry whose link target cannot be read
+    ///     is <see cref="LinkStates.Unknown" />, never assumed ordinary: the caller reports it and does not walk or check it.
     /// </summary>
     /// <param name="fileSystemInfo">The folder or file to classify.</param>
     /// <param name="failure">The system message when the link status could not be read; otherwise <see langword="null" />.</param>
@@ -241,8 +242,8 @@ public static class FolderWalker
     /// <param name="path">The file-system path whose attributes are inspected.</param>
     /// <returns><see langword="true" /> if the path is marked as a reparse point or its link status cannot be determined; otherwise, <see langword="false" />.</returns>
     /// <remarks>
-    ///     A folder whose attributes cannot be read is treated as ordinary here, so its listing reports the real reason (drive not found, unreachable, permission denied) rather
-    ///     than a link failure.
+    ///     A folder whose attributes cannot be read is treated as ordinary here, so its listing reports the real reason (drive not found, unreachable, permission denied) rather than
+    ///     a link failure.
     /// </remarks>
     private static bool HasReparsePointAttribute(string path)
     {
@@ -331,8 +332,8 @@ public static class FolderWalker
     /// <summary>Carries the mutable state for a single folder-walking operation.</summary>
     /// <remarks>
     ///     Maintains the pending folder queue, cancellation token, input-root metadata, file-type filter, and reporting callbacks used while traversing the resolved set of input
-    ///     folders. The walk enqueues folders that still need to be listed, reports matching files through the scanned-file callback, and reports folders or links that cannot be
-    ///     verified through the unverified-folder callback.
+    ///     folders. The walk enqueues folders that still need to be listed, reports matching files through the scanned-file callback, and reports folders or links that cannot be verified
+    ///     through the unverified-folder callback.
     /// </remarks>
     private sealed class Walk
     {

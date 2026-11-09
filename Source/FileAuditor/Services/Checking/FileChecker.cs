@@ -142,8 +142,8 @@ public sealed class FileChecker(bool reportEmptyFiles)
     }
 
     /// <summary>
-    ///     Re-probes a root that was cached as reachable after a not-found outcome, at most once per interval. When the root is gone the cached entry is flipped so later files
-    ///     under it are not probed again.
+    ///     Re-probes a root that was cached as reachable after a not-found outcome, at most once per interval. When the root is gone the cached entry is flipped so later files under
+    ///     it are not probed again.
     /// </summary>
     /// <param name="root">The root, with a trailing separator.</param>
     /// <returns><see langword="null" /> when the root is still reachable; otherwise the outcome shared by every file under it.</returns>
@@ -216,14 +216,14 @@ public sealed class FileChecker(bool reportEmptyFiles)
                         return ToResult(row, mapped);
 
                     // Any other outcome says nothing about this ancestor; the next one down is probed.
-                    case CheckOutcomes.Found or
-                        CheckOutcomes.Skipped or
-                        CheckOutcomes.MissingEmpty or
-                        CheckOutcomes.UnverifiedDriveOrShareNotFound or
-                        CheckOutcomes.UnverifiedPathTooLong or
-                        CheckOutcomes.UnverifiedLinkNotFollowed or
-                        CheckOutcomes.UnverifiedInvalidCharacters or
-                        CheckOutcomes.UnverifiedPathEmpty:
+                    case CheckOutcomes.Found
+                         or CheckOutcomes.Skipped
+                         or CheckOutcomes.MissingEmpty
+                         or CheckOutcomes.UnverifiedDriveOrShareNotFound
+                         or CheckOutcomes.UnverifiedPathTooLong
+                         or CheckOutcomes.UnverifiedLinkNotFollowed
+                         or CheckOutcomes.UnverifiedInvalidCharacters
+                         or CheckOutcomes.UnverifiedPathEmpty:
                         break;
 
                     default:

@@ -922,8 +922,8 @@ plain `Microsoft.Data.SqlClient`, with no ORM.
   notice again after *OK*, never more than one at a time.
 - **No crash log.** Nothing is written to disk, by the storage rule below.
 - Every `async void` event handler (the File Types dialogue's *OK*, the Report group's *Browse...* and the Unindexed tab's *Add...*, and the main window's About handler) and
-  every fire-and-forget task (the close confirmation, the report probe and the untick confirmation) wraps its whole body in `try` / `catch` and reports through the handler
-  (§12), so no fault waits for finalisation to surface.
+  every fire-and-forget task (the close confirmation, the report probe and the untick confirmation) wraps its whole body in `try` / `catch` and reports through the handler (§12),
+  so no fault waits for finalisation to surface.
 
 **Storage.** The app writes only the project settings file (§8) and the report (§7), both in the report's folder — never anything beside its executable, which runs from a
 shared file server, and nothing under `%APPDATA%`.

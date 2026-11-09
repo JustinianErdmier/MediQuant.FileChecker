@@ -1,8 +1,8 @@
 namespace FileAuditor.ViewModels.Groups;
 
 /// <summary>
-///     The Report group's values that every audit direction shares: the project folder, the two stage choices, the custom-location flag and text, and the save-settings tick.
-///     One instance is owned by the main window and every direction's <see cref="ReportViewModel" /> reads it, so the tabs cannot drift apart.
+///     The Report group's values that every audit direction shares: the project folder, the two stage choices, the custom-location flag and text, and the save-settings tick. One
+///     instance is owned by the main window and every direction's <see cref="ReportViewModel" /> reads it, so the tabs cannot drift apart.
 /// </summary>
 public sealed partial class ReportLocationState : ObservableObject
 {

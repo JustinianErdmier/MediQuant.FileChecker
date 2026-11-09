@@ -31,14 +31,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private Task _auditTask = Task.CompletedTask;
 
     /// <summary>
-    ///     Whether Start, Open project or Close project is executing, including while their prompts are open. Those commands and closing the window must not overlap, and the
-    ///     inputs must not be edited under them.
+    ///     Whether Start, Open project or Close project is executing, including while their prompts are open. Those commands and closing the window must not overlap, and the inputs
+    ///     must not be edited under them.
     /// </summary>
     private bool _isBusy;
 
     /// <summary>
-    ///     Whether the checkbox is being changed by the code rather than the user (reverting an untick, ticking after a Yes, resetting a project), so those changes do not raise
-    ///     the untick warning.
+    ///     Whether the checkbox is being changed by the code rather than the user (reverting an untick, ticking after a Yes, resetting a project), so those changes do not raise the
+    ///     untick warning.
     /// </summary>
     private bool _isRevertingTick;
 
@@ -150,9 +150,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public void RefreshReportState() => _ = ProbeReportAsync();
 
     /// <summary>
-    ///     Called whenever the window is asked to close. With an audit running the user is asked first, and on Yes the run is stopped and its report written. The project's
-    ///     settings are then saved or offered for saving under the same rule as Start. While Start, Open project or Close project is in progress (before any audit is running) the
-    ///     close is refused, so two save points never run at once; the user can close once that command's prompt has been answered.
+    ///     Called whenever the window is asked to close. With an audit running the user is asked first, and on Yes the run is stopped and its report written. The project's settings
+    ///     are then saved or offered for saving under the same rule as Start. While Start, Open project or Close project is in progress (before any audit is running) the close is
+    ///     refused, so two save points never run at once; the user can close once that command's prompt has been answered.
     /// </summary>
     /// <returns><see langword="true" /> when the window may close.</returns>
     public async Task<bool> ConfirmCloseAsync()
@@ -358,9 +358,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         UpdateIdleStatus();
     }
 
-    /// <summary>
-    ///     Sets each tab's status while no run is active: Ready only when its Start would be enabled. A run's own phases and final status are set by <see cref="RunAuditAsync" />.
-    /// </summary>
+    /// <summary>Sets each tab's status while no run is active: Ready only when its Start would be enabled. A run's own phases and final status are set by <see cref="RunAuditAsync" />.</summary>
     private void UpdateIdleStatus()
     {
         if (IsRunning
@@ -380,9 +378,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <param name="direction">The audit direction.</param>
     /// <returns>The direction's Report group.</returns>
     /// <remarks>
-    ///     Every direction has a tab. Checklist for adding another: the constructor's tab and Report PropertyChanged subscriptions (<c>OnInputChanged</c> and
-    ///     <c>OnReportChanged</c>); <see cref="Snapshot" />; <c>LoadAll</c>; <c>ReportFor</c>; <c>AuditFor</c>; <c>SelectedDirection</c>; <c>StartAsync</c> (the run and its
-    ///     pre-flight inputs); and the <c>TabItem</c> in <c>MainWindow.axaml</c>.
+    ///     Every direction has a tab. Checklist for adding another: the constructor's tab and Report PropertyChanged subscriptions (<c>OnInputChanged</c> and <c>OnReportChanged</c>
+    ///     ); <see cref="Snapshot" />; <c>LoadAll</c>; <c>ReportFor</c>; <c>AuditFor</c>; <c>SelectedDirection</c>; <c>StartAsync</c> (the run and its pre-flight inputs); and the
+    ///     <c>TabItem</c> in <c>MainWindow.axaml</c>.
     /// </remarks>
     private ReportViewModel ReportFor(AuditDirections direction)
         => direction switch
@@ -676,8 +674,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    ///     Shows the tick the save point asked for when opening a project is abandoned: the user may have unticked the box and then answered Yes to the save prompt, so the
-    ///     settings were saved; the project stays open, so that tick must be shown.
+    ///     Shows the tick the save point asked for when opening a project is abandoned: the user may have unticked the box and then answered Yes to the save prompt, so the settings
+    ///     were saved; the project stays open, so that tick must be shown.
     /// </summary>
     /// <param name="savePoint">The result of the save point.</param>
     private void AbandonOpen(SavePointResult savePoint)

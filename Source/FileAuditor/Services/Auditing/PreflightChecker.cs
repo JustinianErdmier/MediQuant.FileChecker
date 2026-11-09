@@ -183,9 +183,7 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         return false;
     }
 
-    /// <summary>
-    ///     Asks the user to confirm each type-list oddity that has not already been confirmed this session: a type that matches every file, and a type in both lists.
-    /// </summary>
+    /// <summary>Asks the user to confirm each type-list oddity that has not already been confirmed this session: a type that matches every file, and a type in both lists.</summary>
     /// <param name="include">The normalised File types entries.</param>
     /// <param name="exclude">The normalised Exclude entries.</param>
     /// <returns><see langword="true" /> when every needed confirmation was given; <see langword="false" /> when the user declined one.</returns>
@@ -212,7 +210,7 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         {
             if (!await
                      dialogues.ConfirmAsync($"File types contains {matchAllEntry}, which matches every file, so every file will be checked except the excluded types."
-                                           + "\n\nDo you want to continue?",
+                                            + "\n\nDo you want to continue?",
                                             confirmText: "_Continue"))
             {
                 return false;

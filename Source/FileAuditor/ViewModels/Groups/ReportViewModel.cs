@@ -3,9 +3,7 @@ namespace FileAuditor.ViewModels.Groups;
 /// <summary>One audit direction's Report group: the shared location values come from <see cref="ReportLocationState" />, and only the file name belongs to the direction.</summary>
 public sealed partial class ReportViewModel : ObservableObject
 {
-    /// <summary>
-    ///     The custom file name for this view model's own direction. Only <see cref="ApplyTo" /> and <see cref="Load" /> map it to the direction's settings property.
-    /// </summary>
+    /// <summary>The custom file name for this view model's own direction. Only <see cref="ApplyTo" /> and <see cref="Load" /> map it to the direction's settings property.</summary>
     private string _customFileName;
 
     /// <summary>Whether <see cref="Refresh" /> is rewriting the boxes, so their change handlers do not treat that as typing.</summary>

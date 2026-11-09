@@ -15,9 +15,8 @@ public sealed partial class AuditViewModel : AuditStatusBase
     public partial string Elapsed { get; set; } = string.Empty;
 
     /// <summary>
-    ///     Gets or sets the files checked per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up has
-    ///     passed by the recent figure in parentheses; blank until a full second has elapsed. The recent figure is the rate behind Remaining, which counts skipped rows as well as
-    ///     checked ones.
+    ///     Gets or sets the files checked per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up has passed
+    ///     by the recent figure in parentheses; blank until a full second has elapsed. The recent figure is the rate behind Remaining, which counts skipped rows as well as checked ones.
     /// </summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = string.Empty;

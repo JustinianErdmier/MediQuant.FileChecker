@@ -80,6 +80,7 @@ public static class AuditRunner
                                                                                        query,
                                                                                        row => channel.Writer.WriteAsync(row, linkedSource.Token),
                                                                                        linkedSource.Token);
+
                                          // ReSharper restore AccessToDisposedClosure
                                      }
                                      finally

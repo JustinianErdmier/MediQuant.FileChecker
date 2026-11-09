@@ -60,8 +60,8 @@ public static class QueryBuilder
     /// <param name="pathColumn">The name of the column holding file paths.</param>
     /// <param name="folders">
     ///     The folders to check. For 1 to <see cref="MaxFilterFolders" /> folders the statement filters on a case-insensitive <c>LIKE</c> prefix per folder; for none,
-    ///     for more, or when any folder is empty (which has no prefix to match), the filter is dropped and every row is selected. The filter also selects every row that starts
-    ///     with a whitespace character, so that <see cref="IndexPathSet" />, which ignores surrounding whitespace, can still match it.
+    ///     for more, or when any folder is empty (which has no prefix to match), the filter is dropped and every row is selected. The filter also selects every row that starts with a
+    ///     whitespace character, so that <see cref="IndexPathSet" />, which ignores surrounding whitespace, can still match it.
     /// </param>
     /// <returns>The query, or <c>Query.InvalidIdentifier</c> when a name is malformed.</returns>
     public static ErrorOr<PathQuery> BuildPaths(string table, string pathColumn, IReadOnlyList<string> folders)

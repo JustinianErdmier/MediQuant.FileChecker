@@ -63,8 +63,8 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
     /// <summary>Shows the Open Project file picker.</summary>
     /// <param name="startFolder">The folder to start in; ignored when it does not exist.</param>
     /// <returns>
-    ///     <see langword="null" /> when the picker was cancelled; otherwise the chosen file, whose <see cref="ProjectFilePick.LocalPath" /> is <see langword="null" /> when it is
-    ///     not a file on a local or network drive.
+    ///     <see langword="null" /> when the picker was cancelled; otherwise the chosen file, whose <see cref="ProjectFilePick.LocalPath" /> is <see langword="null" /> when it is not
+    ///     a file on a local or network drive.
     /// </returns>
     public async Task<ProjectFilePick?> PickProjectFileAsync(string startFolder)
     {

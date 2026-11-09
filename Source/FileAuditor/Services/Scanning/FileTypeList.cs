@@ -28,9 +28,7 @@ public static class FileTypeList
 
     /// <summary>Parses the text of a file types box: entries separated by white space or commas.</summary>
     /// <param name="text">The text typed.</param>
-    /// <returns>
-    ///     The normalised entries (lower case, one leading dot, no duplicates, sorted), or a validation error naming the first invalid entry as typed. Empty text is an empty list.
-    /// </returns>
+    /// <returns>The normalised entries (lower case, one leading dot, no duplicates, sorted), or a validation error naming the first invalid entry as typed. Empty text is an empty list.</returns>
     public static ErrorOr<string[]> Parse(string text)
     {
         SortedSet<string> entries = new(StringComparer.Ordinal);

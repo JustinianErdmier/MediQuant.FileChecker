@@ -6,10 +6,7 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     /// <summary>How far the moving block moves on each refresh, in units out of 100.</summary>
     private const double MarqueeStep = 5;
 
-    /// <summary>
-    ///     The width of the moving block, in units out of 100. It moves <see cref="MarqueeStep" /> units on each refresh, so with four refreshes a second it crosses in four
-    ///     seconds.
-    /// </summary>
+    /// <summary>The width of the moving block, in units out of 100. It moves <see cref="MarqueeStep" /> units on each refresh, so with four refreshes a second it crosses in four seconds.</summary>
     private const double MarqueeWidth = 20;
 
     /// <summary>Works out the recent rate of finding files.</summary>
@@ -23,8 +20,8 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     public partial string Elapsed { get; set; } = string.Empty;
 
     /// <summary>
-    ///     Gets or sets the files found per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up has passed
-    ///     by the recent figure in parentheses; blank until a full second has elapsed. The recent figure is timed from the start of the scan.
+    ///     Gets or sets the files found per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up has passed by
+    ///     the recent figure in parentheses; blank until a full second has elapsed. The recent figure is timed from the start of the scan.
     /// </summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = string.Empty;

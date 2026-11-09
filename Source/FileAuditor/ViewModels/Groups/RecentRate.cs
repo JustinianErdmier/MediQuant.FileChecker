@@ -7,14 +7,14 @@ namespace FileAuditor.ViewModels.Groups;
 public sealed class RecentRate
 {
     /// <summary>
-    ///     The averaging time constant in seconds. Thirty seconds is long enough to smooth the second-to-second noise of a network share and short enough to follow a real change
-    ///     in speed within a minute.
+    ///     The averaging time constant in seconds. Thirty seconds is long enough to smooth the second-to-second noise of a network share and short enough to follow a real change in
+    ///     speed within a minute.
     /// </summary>
     public const double TimeConstantSeconds = 30;
 
     /// <summary>
-    ///     The warm-up in seconds. A rate taken over the first few seconds is dominated by connection set-up and cache warming, so none is reported until this much time has
-    ///     passed; the average then starts from the warm-up's second half.
+    ///     The warm-up in seconds. A rate taken over the first few seconds is dominated by connection set-up and cache warming, so none is reported until this much time has passed;
+    ///     the average then starts from the warm-up's second half.
     /// </summary>
     public const double WarmUpSeconds = 5;
 

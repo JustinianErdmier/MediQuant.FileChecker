@@ -1,8 +1,6 @@
 namespace FileAuditor.Services.Reporting;
 
-/// <summary>
-///     Builds the plain-text unindexed-files report. The output is deterministic: invariant-culture numbers, ordinal case-insensitive ordering and CRLF line endings.
-/// </summary>
+/// <summary>Builds the plain-text unindexed-files report. The output is deterministic: invariant-culture numbers, ordinal case-insensitive ordering and CRLF line endings.</summary>
 public static class UnindexedReportBuilder
 {
     /// <summary>The order in which the Unverified groups are listed.</summary>
@@ -256,15 +254,13 @@ public static class UnindexedReportBuilder
     private static CheckOutcomes GroupOf(UnverifiedFolder folder)
         => folder.Reason switch
         {
-            CheckOutcomes.UnverifiedDriveOrShareNotFound or
-                CheckOutcomes.UnverifiedPermissionDenied or
-                CheckOutcomes.UnverifiedNetworkUnreachable or
-                CheckOutcomes.UnverifiedPathTooLong or
-                CheckOutcomes.UnverifiedLinkNotFollowed => folder.Reason,
-            CheckOutcomes.UnverifiedInvalidCharacters or
-                CheckOutcomes.UnverifiedPathEmpty or
-                CheckOutcomes.UnverifiedOther => CheckOutcomes.UnverifiedOther,
-            var _ => throw new UnreachableException()
+            CheckOutcomes.UnverifiedDriveOrShareNotFound
+                or CheckOutcomes.UnverifiedPermissionDenied
+                or CheckOutcomes.UnverifiedNetworkUnreachable
+                or CheckOutcomes.UnverifiedPathTooLong
+                or CheckOutcomes.UnverifiedLinkNotFollowed => folder.Reason,
+            CheckOutcomes.UnverifiedInvalidCharacters or CheckOutcomes.UnverifiedPathEmpty or CheckOutcomes.UnverifiedOther => CheckOutcomes.UnverifiedOther,
+            var _                                                                                                           => throw new UnreachableException()
         };
 
     /// <summary>Gets the reason shown on an Other errors line.</summary>
@@ -275,13 +271,13 @@ public static class UnindexedReportBuilder
            ?? folder.Reason switch
            {
                CheckOutcomes.UnverifiedInvalidCharacters => "Invalid characters in path",
-               CheckOutcomes.UnverifiedDriveOrShareNotFound or
-                   CheckOutcomes.UnverifiedPermissionDenied or
-                   CheckOutcomes.UnverifiedNetworkUnreachable or
-                   CheckOutcomes.UnverifiedPathTooLong or
-                   CheckOutcomes.UnverifiedLinkNotFollowed or
-                   CheckOutcomes.UnverifiedPathEmpty or
-                   CheckOutcomes.UnverifiedOther => "I/O error",
+               CheckOutcomes.UnverifiedDriveOrShareNotFound
+                   or CheckOutcomes.UnverifiedPermissionDenied
+                   or CheckOutcomes.UnverifiedNetworkUnreachable
+                   or CheckOutcomes.UnverifiedPathTooLong
+                   or CheckOutcomes.UnverifiedLinkNotFollowed
+                   or CheckOutcomes.UnverifiedPathEmpty
+                   or CheckOutcomes.UnverifiedOther => "I/O error",
                var _ => throw new UnreachableException()
            };
 

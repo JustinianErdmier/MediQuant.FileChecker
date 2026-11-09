@@ -1,14 +1,11 @@
 namespace FileAuditor.Startup;
 
 /// <summary>
-///     Catches exceptions nothing else handled. One the app can survive is shown in an error dialogue and the app carries on; one it cannot survive is explained in a message
-///     box before the process exits. Nothing is written to disk.
+///     Catches exceptions nothing else handled. One the app can survive is shown in an error dialogue and the app carries on; one it cannot survive is explained in a message box
+///     before the process exits. Nothing is written to disk.
 /// </summary>
 public static class UnexpectedErrorHandler
 {
-    /// <summary>The caption of the plain message box.</summary>
-    private const string Title = "File Auditor";
-
     /// <summary>The message box style that shows an OK button and the error icon (<c>MB_OK | MB_ICONERROR</c>).</summary>
     private const uint MessageBoxOkWithErrorIcon = 0x10;
 
@@ -18,17 +15,20 @@ public static class UnexpectedErrorHandler
     /// <summary>The message box style that keeps the box above other windows (<c>MB_TOPMOST</c>).</summary>
     private const uint MessageBoxTopmost = 0x40000;
 
+    /// <summary>The caption of the plain message box.</summary>
+    private const string Title = "File Auditor";
+
     /// <summary>The desktop lifetime whose main window owns the notices; <see langword="null" /> until <see cref="Install" /> runs.</summary>
     private static IClassicDesktopStyleApplicationLifetime? _desktop;
-
-    /// <summary>Whether a notice is already open, so a burst of errors does not stack up dialogues. Touched only on the UI thread, so it needs no lock.</summary>
-    private static bool _noticeIsOpen;
 
     /// <summary>Set to 1 by the first fatal report, so a second fatal error on another thread waits instead of showing a second message.</summary>
     private static int _fatalReportStarted;
 
     /// <summary>Whether <see cref="Install" /> has already hooked the exception events.</summary>
     private static bool _isInstalled;
+
+    /// <summary>Whether a notice is already open, so a burst of errors does not stack up dialogues. Touched only on the UI thread, so it needs no lock.</summary>
+    private static bool _noticeIsOpen;
 
     /// <summary>Starts watching for unexpected exceptions on the UI thread, in unobserved tasks and anywhere else in the process.</summary>
     /// <param name="desktop">The desktop lifetime, whose main window owns the notices.</param>
@@ -43,8 +43,8 @@ public static class UnexpectedErrorHandler
 
         _desktop = desktop;
 
-        Dispatcher.UIThread.UnhandledException += OnDispatcherUnhandledException;
-        TaskScheduler.UnobservedTaskException  += OnUnobservedTaskException;
+        Dispatcher.UIThread.UnhandledException     += OnDispatcherUnhandledException;
+        TaskScheduler.UnobservedTaskException      += OnUnobservedTaskException;
         AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
     }
 
@@ -81,7 +81,7 @@ public static class UnexpectedErrorHandler
 
             try
             {
-                ShowMessageBox(message, ownerHandle: IntPtr.Zero);
+                ShowMessageBox(message, IntPtr.Zero);
             }
             finally
             {
@@ -146,9 +146,7 @@ public static class UnexpectedErrorHandler
         ReportFatalAndExit(eventArgs.ExceptionObject as Exception ?? new InvalidOperationException(eventArgs.ExceptionObject.ToString()));
     }
 
-    /// <summary>
-    ///     Shows the error dialogue over the main window and clears the open-notice flag when it closes. Falls back to the plain message box if the dialogue cannot be shown.
-    /// </summary>
+    /// <summary>Shows the error dialogue over the main window and clears the open-notice flag when it closes. Falls back to the plain message box if the dialogue cannot be shown.</summary>
     /// <param name="owner">The window that owns the dialogue.</param>
     /// <param name="message">The text to show.</param>
     /// <returns>A task that completes when the notice has been closed.</returns>
@@ -165,7 +163,7 @@ public static class UnexpectedErrorHandler
             // The dialogue could not be shown, so the plain message box takes over.
             try
             {
-                ShowMessageBox(message, ownerHandle: IntPtr.Zero);
+                ShowMessageBox(message, IntPtr.Zero);
             }
             catch (Exception)
             {
@@ -179,8 +177,8 @@ public static class UnexpectedErrorHandler
     }
 
     /// <summary>
-    ///     Gets the message to show for an exception. A task wraps its failure in an <see cref="AggregateException" />, whose own message is boilerplate, so the first inner
-    ///     message is used.
+    ///     Gets the message to show for an exception. A task wraps its failure in an <see cref="AggregateException" />, whose own message is boilerplate, so the first inner message
+    ///     is used.
     /// </summary>
     /// <param name="exception">The exception to describe.</param>
     /// <returns>The message the user needs to read.</returns>
@@ -194,7 +192,7 @@ public static class UnexpectedErrorHandler
     /// <returns><see langword="true" /> when the app cannot survive it.</returns>
     private static bool IsOutOfMemory(Exception exception)
         => exception is OutOfMemoryException
-           || exception is AggregateException aggregate && aggregate.Flatten().InnerExceptions.Any(inner => inner is OutOfMemoryException);
+           || (exception is AggregateException aggregate && aggregate.Flatten().InnerExceptions.Any(inner => inner is OutOfMemoryException));
 
     /// <summary>Finds the native handle of the main window, to own the fatal message box.</summary>
     /// <returns>The handle, or <see cref="IntPtr.Zero" /> when it cannot be had safely from the calling thread.</returns>
@@ -234,6 +232,6 @@ public static class UnexpectedErrorHandler
     /// <param name="caption">The caption of the box.</param>
     /// <param name="type">The style flags: buttons, icon and behaviour.</param>
     /// <returns>The identifier of the button the user pressed.</returns>
-    [ DllImport("user32.dll", CharSet = CharSet.Unicode) ]
+    [ DllImport(dllName: "user32.dll", CharSet = CharSet.Unicode) ]
     private static extern int MessageBoxW(IntPtr windowHandle, string text, string caption, uint type);
 }

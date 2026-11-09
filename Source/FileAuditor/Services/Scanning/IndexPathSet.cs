@@ -3,9 +3,9 @@ namespace FileAuditor.Services.Scanning;
 /// <summary>The paths of the index table, kept as 128-bit hashes so that millions of rows cost about 48 bytes each (measured, with the set) instead of about 200.</summary>
 /// <remarks>
 ///     A path's key is the MD5 hash of the UTF-16 bytes of <c>path.Trim().ToUpperInvariant()</c>. MD5 is used for its speed and even spread, not for security. At 128 bits the
-///     chance of two different paths sharing a key is negligible (about 10^-25 for ten million paths), so a file is never reported as unindexed because of a collision.
-///     A collision could only ever hide an unindexed file, and not in any realistic table. <see cref="Add" /> must be called from one thread; once loading has finished,
-///     <see cref="Contains" /> is safe from any number of threads at once.
+///     chance of two different paths sharing a key is negligible (about 10^-25 for ten million paths), so a file is never reported as unindexed because of a collision. A collision
+///     could only ever hide an unindexed file, and not in any realistic table. <see cref="Add" /> must be called from one thread; once loading has finished, <see cref="Contains" />
+///     is safe from any number of threads at once.
 /// </remarks>
 public sealed class IndexPathSet
 {

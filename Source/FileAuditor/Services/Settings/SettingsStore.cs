@@ -89,8 +89,8 @@ public static class SettingsStore
     public static string Serialise(AppSettings settings) => JsonSerializer.Serialize(ToFile(settings), SettingsJsonContext.Default.ProjectFile);
 
     /// <summary>
-    ///     Determines whether JSON text is a project file: a JSON object holding at least one of <see cref="ProjectFile" />'s keys. Anything else, such as another application's
-    ///     JSON or <c>{}</c>, is refused rather than opened as a project of defaults.
+    ///     Determines whether JSON text is a project file: a JSON object holding at least one of <see cref="ProjectFile" />'s keys. Anything else, such as another application's JSON
+    ///     or <c>{}</c>, is refused rather than opened as a project of defaults.
     /// </summary>
     /// <param name="json">The JSON text.</param>
     /// <returns><see langword="true" /> when the text is a project file.</returns>
@@ -117,22 +117,22 @@ public static class SettingsStore
     private static ProjectFile ToFile(AppSettings settings)
         => new()
         {
-            Server = settings.Server,
-            Database = settings.Database,
-            Table = settings.Table,
-            PathColumn = settings.PathColumn,
-            IdColumn = settings.IdColumn,
-            ReportEmptyFiles = settings.ReportEmptyFiles,
-            ProjectFolder = settings.ProjectFolder,
-            ProjectStage = settings.ProjectStage,
-            AuditStage = settings.AuditStage,
+            Server                  = settings.Server,
+            Database                = settings.Database,
+            Table                   = settings.Table,
+            PathColumn              = settings.PathColumn,
+            IdColumn                = settings.IdColumn,
+            ReportEmptyFiles        = settings.ReportEmptyFiles,
+            ProjectFolder           = settings.ProjectFolder,
+            ProjectStage            = settings.ProjectStage,
+            AuditStage              = settings.AuditStage,
             UseCustomReportLocation = settings.UseCustomReportLocation,
-            CustomLocation = settings.CustomLocation,
-            MissingCustomFileName = settings.MissingCustomFileName,
-            ScanFolders = [.. settings.ScanFolders.Select(folder => new ProjectFileFolder(folder.Path, folder.IncludeSubfolders))],
-            FileTypes = [.. settings.FileTypes],
-            ExcludeTypes = [.. settings.ExcludeTypes],
-            GroupByFoundExtension = settings.GroupByFoundExtension,
+            CustomLocation          = settings.CustomLocation,
+            MissingCustomFileName   = settings.MissingCustomFileName,
+            ScanFolders             = [.. settings.ScanFolders.Select(folder => new ProjectFileFolder(folder.Path, folder.IncludeSubfolders))],
+            FileTypes               = [.. settings.FileTypes],
+            ExcludeTypes            = [.. settings.ExcludeTypes],
+            GroupByFoundExtension   = settings.GroupByFoundExtension,
             UnindexedCustomFileName = settings.UnindexedCustomFileName
         };
 
@@ -148,29 +148,29 @@ public static class SettingsStore
 
         return new AppSettings
         {
-            Server = file.Server ?? defaults.Server,
-            Database = file.Database ?? defaults.Database,
-            Table = file.Table ?? defaults.Table,
-            PathColumn = file.PathColumn ?? defaults.PathColumn,
-            IdColumn = file.IdColumn ?? defaults.IdColumn,
-            ReportEmptyFiles = file.ReportEmptyFiles ?? defaults.ReportEmptyFiles,
-            ProjectFolder = file.ProjectFolder ?? defaults.ProjectFolder,
-            ProjectStage = file.ProjectStage is { } projectStage && Enum.IsDefined(projectStage) ? projectStage : defaults.ProjectStage,
-            AuditStage = file.AuditStage is { } auditStage && Enum.IsDefined(auditStage) ? auditStage : defaults.AuditStage,
+            Server                  = file.Server           ?? defaults.Server,
+            Database                = file.Database         ?? defaults.Database,
+            Table                   = file.Table            ?? defaults.Table,
+            PathColumn              = file.PathColumn       ?? defaults.PathColumn,
+            IdColumn                = file.IdColumn         ?? defaults.IdColumn,
+            ReportEmptyFiles        = file.ReportEmptyFiles ?? defaults.ReportEmptyFiles,
+            ProjectFolder           = file.ProjectFolder    ?? defaults.ProjectFolder,
+            ProjectStage            = file.ProjectStage is { } projectStage && Enum.IsDefined(projectStage) ? projectStage : defaults.ProjectStage,
+            AuditStage              = file.AuditStage is { } auditStage     && Enum.IsDefined(auditStage) ? auditStage : defaults.AuditStage,
             UseCustomReportLocation = file.UseCustomReportLocation ?? defaults.UseCustomReportLocation,
-            CustomLocation = file.CustomLocation ?? defaults.CustomLocation,
-            MissingCustomFileName = file.MissingCustomFileName ?? defaults.MissingCustomFileName,
-            ScanFolders = NormaliseFolders(file.ScanFolders),
-            FileTypes = NormaliseTypes(file.FileTypes, defaults.FileTypes),
-            ExcludeTypes = NormaliseTypes(file.ExcludeTypes, []),
-            GroupByFoundExtension = file.GroupByFoundExtension ?? defaults.GroupByFoundExtension,
+            CustomLocation          = file.CustomLocation          ?? defaults.CustomLocation,
+            MissingCustomFileName   = file.MissingCustomFileName   ?? defaults.MissingCustomFileName,
+            ScanFolders             = NormaliseFolders(file.ScanFolders),
+            FileTypes               = NormaliseTypes(file.FileTypes, defaults.FileTypes),
+            ExcludeTypes            = NormaliseTypes(file.ExcludeTypes, []),
+            GroupByFoundExtension   = file.GroupByFoundExtension   ?? defaults.GroupByFoundExtension,
             UnindexedCustomFileName = file.UnindexedCustomFileName ?? defaults.UnindexedCustomFileName
         };
     }
 
     /// <summary>
-    ///     Maps the scan folders of a project file. A null list is empty; a null element or one without a path is dropped; a null <c>IncludeSubfolders</c> is
-    ///     <see langword="true" />.
+    ///     Maps the scan folders of a project file. A null list is empty; a null element or one without a path is dropped; a null <c>IncludeSubfolders</c> is <see langword="true" />
+    ///     .
     /// </summary>
     /// <param name="folders">The folders as read from the file.</param>
     /// <returns>The folders that are kept.</returns>
@@ -196,8 +196,7 @@ public static class SettingsStore
 
     /// <summary>
     ///     Maps a file type list of a project file. A null list takes the fallback (a copy, never the shared default array). A null element is dropped. Each valid entry is
-    ///     normalised; an invalid one is kept as written (trimmed), so that the tab shows it, and the pre-flight names it when Start is pressed, instead of the file silently
-    ///     losing it.
+    ///     normalised; an invalid one is kept as written (trimmed), so that the tab shows it, and the pre-flight names it when Start is pressed, instead of the file silently losing it.
     /// </summary>
     /// <param name="types">The entries as read from the file.</param>
     /// <param name="fallback">The entries to use when the list is null.</param>

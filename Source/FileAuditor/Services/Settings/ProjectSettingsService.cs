@@ -14,10 +14,7 @@ public sealed class ProjectSettingsService
 
     /// <summary>Initialises a new instance.</summary>
     /// <param name="dialogues">Shows the prompts.</param>
-    public ProjectSettingsService(DialogueService dialogues)
-    {
-        _dialogues = dialogues;
-    }
+    public ProjectSettingsService(DialogueService dialogues) => _dialogues = dialogues;
 
     /// <summary>Gets or sets a value indicating whether the "every file except the excluded types" warning was answered Continue this session.</summary>
     public bool ExcludedTypesConfirmed { get; set; }
@@ -83,11 +80,8 @@ public sealed class ProjectSettingsService
 
     /// <summary>Determines whether the current settings differ from the baseline.</summary>
     /// <param name="current">The current settings.</param>
-    /// <returns>
-    ///     <see langword="true" /> when they differ. They are compared by value through their serialised form, because record equality would compare the list arrays by reference.
-    /// </returns>
-    public bool IsChanged(AppSettings current)
-        => SettingsStore.Serialise(current) != SettingsStore.Serialise(_baseline);
+    /// <returns><see langword="true" /> when they differ. They are compared by value through their serialised form, because record equality would compare the list arrays by reference.</returns>
+    public bool IsChanged(AppSettings current) => SettingsStore.Serialise(current) != SettingsStore.Serialise(_baseline);
 
     /// <summary>Runs the save rule: saves the settings when they have changed and the rules allow it, asking whether and where to as needed.</summary>
     /// <param name="current">The current settings.</param>

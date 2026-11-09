@@ -78,9 +78,7 @@ public partial class FileTypesDialogueWindow : ClassicWindow
                                  DispatcherPriority.Loaded);
     }
 
-    /// <summary>
-    ///     Validates the entries when OK is clicked. A valid list becomes <see cref="Result" /> and closes the dialogue; an invalid entry is explained and the dialogue stays open.
-    /// </summary>
+    /// <summary>Validates the entries when OK is clicked. A valid list becomes <see cref="Result" /> and closes the dialogue; an invalid entry is explained and the dialogue stays open.</summary>
     /// <param name="sender">The OK button.</param>
     /// <param name="eventArgs">The event data.</param>
     private async void OnOkClick(object? sender, RoutedEventArgs eventArgs)
