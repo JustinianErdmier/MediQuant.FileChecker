@@ -17,7 +17,7 @@ A few things to know before you start:
 - **It runs from the shared file server.** File Auditor is a single program file. There is nothing to install, and your computer does not need .NET. For its exact location, see the
   table on the right side of this wiki.
 - **It never changes your data.** It only reads the index table and lists folders. The only files it ever writes are the audit reports and the project settings file, both in
-  the report's folder.
+  the report's folder. The only folder it ever creates is a custom report folder, and only when you choose **Create Folder**.
 - **It is honest about what it could not check.** A file it could not reach (a drive that is not mapped, a permission problem, a network error) is listed as *Unverified*,
   with the reason, and never silently marked as missing.
 - **It looks like Windows 95.** That is deliberate: a plain, familiar layout with a menu, group boxes, keyboard shortcuts, and access keys on every control.
@@ -63,7 +63,7 @@ trustworthy, for readers who want to know what happens under the hood.
 1. Start **File Auditor**.
 2. In **Database**, type the **Server** and **Database**.
 3. In **File Index Table**, type the **Table** (for example `_DMS_FileIndex`, or `dbo._DMS_FileIndex` with its schema) and the **Path column**. Type an **ID column**
-   too if the table has one; the report then shows each row's ID beside its path. Names can be either quoted or unquoted.
+   too if the table has one; the report then shows each row's ID beside its path. Names can be typed as they are or in square brackets, such as `[dbo].[My Table]`.
 4. Stay on the **Missing Files** tab.
 5. In **Report**, type the **Project folder** (for example `D12345`) and choose the **Project stage** and **Audit stage**. Check that the **Location** shown is the project's
    folder. If you want the report somewhere else, tick **Use a custom report location and file name** and fill in the location and name instead.
@@ -99,16 +99,16 @@ because every letter was already taken.
 
 **Menus and shortcuts**
 
-| Menu item              | Shortcut | What it does                                                                          |
-|------------------------|----------|---------------------------------------------------------------------------------------|
-| File > Open project... |          | Loads a project's settings file (section 6).                                          |
-| File > Close project   |          | Puts every input back to its default, as if you had just started the app (section 6). |
-| File > Start           | F5       | Starts the audit on the selected tab.                                                 |
-| File > Stop            | Esc      | Stops the running audit, whichever tab is showing.                                    |
-| File > View Report     | Ctrl+R   | Opens the selected tab's report in your default program for `.txt` files.             |
-| File > Exit            | Alt+F4   | Closes the app.                                                                       |
-| Help > Help Topics     | F1       | Opens this guide in your web browser.                                                 |
-| Help > About           |          | Shows the app's version.                                                              |
+| Menu item                 | Shortcut | What it does                                                                          |
+|---------------------------|----------|---------------------------------------------------------------------------------------|
+| File > Open project...    |          | Loads a project's settings file (section 6).                                          |
+| File > Close project      |          | Puts every input back to its default, as if you had just started the app (section 6). |
+| File > Start              | F5       | Starts the audit on the selected tab.                                                 |
+| File > Stop               | Esc      | Stops the running audit, whichever tab is showing.                                    |
+| File > View Report        | Ctrl+R   | Opens the selected tab's report in your default program for `.txt` files.             |
+| File > Exit               | Alt+F4   | Closes the app.                                                                       |
+| Help > Help Topics        | F1       | Opens this guide in your web browser.                                                 |
+| Help > About File Auditor |          | Shows the app's version.                                                              |
 
 **The status bar** reads `Ready` when the selected tab can start, `Enter the required details` when something it needs is still empty, and, whilst an audit runs, its phase:
 `Counting files...`, `Loading the index...`, `Checking files...` or `Writing report...`. When a run ends it reads `Completed`, `Stopped`, or `Failed`, and that result stays on
@@ -153,7 +153,7 @@ Each tab keeps the statistics of its own last run.
 tab whose audit is running, whilst *File > Stop* and Esc stop it from either tab.
 
 **Only one audit runs at a time.** Whilst either audit runs, both Start buttons are disabled and every input is locked, so nothing can change during a running audit. You can still
-switch tabs, stop the audit, open the report for either tab, open the About window, and open this guide.
+switch tabs, stop the audit, open the About window, and open this guide. *View Report* is disabled until the audit ends.
 
 ## 3.4 Audit Report Configuration
 
@@ -183,7 +183,7 @@ keeps its own custom file name, and the two names must differ, because both repo
 **When you press Start**, before anything touches the database, the app checks the report location:
 
 - A built location whose folder does not exist is an error: the folder has to be created first (the app does not create project folders for you). This is because the intention is
-  to conform to the established SVn conventions for the team, which requires an empty project folder to be manually created by the engineer first when they do their first checkout.
+  to conform to the established SVN conventions for the team, which requires an empty project folder to be manually created by the engineer first when they do their first checkout.
   In other words, if following that convention, the folder should always be created first by virtue of the process, and treating it as an error helps protect you from accidentally
   saving the report and settings to the wrong project.
 - A custom location whose folder does not exist offers **Create Folder** or **Cancel**.
@@ -237,16 +237,16 @@ Press **Start**. The app runs its pre-flight checks (section 3.4), saves the pro
 
 **The statistics**
 
-| Statistic    | Meaning                                                                                                            |
-|--------------|--------------------------------------------------------------------------------------------------------------------|
-| Total files  | The number of rows in the index table.                                                                             |
-| Checked      | Rows checked so far: Found + Missing + Unverified. Skipped rows are not included.                                  |
-| Missing      | Missing files found so far.                                                                                        |
-| Unverified   | Files that could not be checked so far.                                                                            |
-| Skipped      | Rows passed over because they hold a skip marker.                                                                  |
-| Elapsed      | Time since you pressed Start, as `hh:mm:ss`.                                                                       |
-| Remaining    | Estimated time left. It reads `Calculating...` while the rows are counted and for the first 5 seconds of checking. |
-| Files/second | The run's average speed, then, whilst the run is going, the recent speed in brackets, such as `54,112 (60,001)`.   |
+| Statistic    | Meaning                                                                                                             |
+|--------------|---------------------------------------------------------------------------------------------------------------------|
+| Total files  | The number of rows in the index table.                                                                              |
+| Checked      | Rows checked so far: Found + Missing + Unverified. Skipped rows are not included.                                   |
+| Missing      | Missing files found so far.                                                                                         |
+| Unverified   | Files that could not be checked so far.                                                                             |
+| Skipped      | Rows passed over because they hold a skip marker.                                                                   |
+| Elapsed      | Time since you pressed Start, as `hh:mm:ss`.                                                                        |
+| Remaining    | Estimated time left. It reads `Calculating...` whilst the rows are counted and for the first 5 seconds of checking. |
+| Files/second | The run's average speed, then, whilst the run is going, the recent speed in brackets, such as `54,112 (60,001)`.    |
 
 The progress bar shows the share of rows done (checked **and** skipped).
 
@@ -391,9 +391,10 @@ A file is checked only when it matches an entry in *File types* and no entry in 
 | OK     | Checks every entry and saves the list; an invalid entry is named and the editor stays open. |
 | Cancel | Throws away every change, including a Reset.                                                |
 
-**Note:** Deleting, clearing, and reset do **not** ask for confirmation and are not undoable once you press OK with one exception. If you have your settings saved, you can untick
-the option, close the project, and reopen it. You have to untick the option to save the settings first because settings are saved when a project or the app is closed. Just ensure
-that you retick the option when you load it next.
+**Note:** Deleting, clearing, and reset do **not** ask for confirmation, and once you press OK they cannot be undone, with one exception: if the project's settings were saved
+before the change, and nothing has been saved since, you can go back to the saved settings. Untick *Save project settings* and confirm the warning, choose *File > Close project*
+and answer **No** when asked whether to save, then open the project again with *File > Open project...*. Settings are saved when you press Start, open or close a project, or close
+the app, so this works only if none of those has saved the change already. The checkbox is ticked again automatically when the project opens.
 
 **Writing an entry.** An entry is a file extension, with or without its leading dot: `pdf` and `.pdf` are the same, and so is `*.pdf`. Entries ignore letter case. An entry can
 have several parts, such as `.tar.gz` or `.zip.001`, and can use the wildcards `*` (any run of characters) and `?` (exactly one character), such as `.tif*` or `.zip.*`.
@@ -430,8 +431,8 @@ Press **Start**. After the pre-flight checks and the save rule, the app:
 | Elapsed      | Time since you pressed Start.                                                                                                   |
 | Files/second | The run's average, then, once the walk has run for 5 seconds, the recent speed in brackets.                                     |
 
-There is **no Remaining** and **no percentage**: the app cannot know how many files there are until it has walked every folder. Instead, the progress bar shows marquee from left to
-right whilst the audit runs, and fills up when it ends.
+There is **no Remaining** and **no percentage**: the app cannot know how many files there are until it has walked every folder. Instead, the progress bar shows a marquee from left
+to right whilst the audit runs, and fills up when it ends.
 
 **Stopping.** Press **Stop** (or Esc). If the index is still loading, no report is written. Otherwise, the app stops listing folders and writes the report with
 `Result: Stopped by user`, listing what it found and checked so far.
@@ -451,7 +452,7 @@ Database:        Interim_AdventHealth_DocStorage_12345
 Table:           _DMS_FileIndex
 Path column:     MQ_FullPath
 Folders:         \\kdcdms2\crm12345\Images (with subfolders)
-                 \\kdcdsm1\crm12345\Scans
+                 \\kdcdms1\crm12345\Scans
 File types:      .doc .docx .jpg .pdf .png .tif .tiff
 Exclude:         .zip .zip.*
 Grouped by:      Listed type
@@ -483,10 +484,10 @@ Unindexed Files (20)
   \\kdcdms2\crm12345\Images\2019\04\10443.tif
   ...
 
-[\\kdcdsm1\crm12345\Scans (3)]
+[\\kdcdms1\crm12345\Scans (3)]
 
   [.jpg (3)]
-  \\kdcdsm1\crm12345\Scans\IMG_0041.jpg
+  \\kdcdms1\crm12345\Scans\IMG_0041.jpg
   ...
 
 Unverified (3)
@@ -601,7 +602,7 @@ The file is ordinary JSON, written with indentation so it reads well in a reposi
 
 Things the file does **not** hold:
 
-- **Not the *Save project settings* checkbox.** It is ticked every time you start the app or open a project.
+- **Not the *Save project settings* checkbox.** It is ticked every time you start the app, open a project, or close one.
 - **Not your answers to the app's questions** (the *Continue* answers, or a *No* to saving). They last only for the session and are forgotten when you close the project or restart
   the app.
 - **Not the selected tab, or the window's position.**
@@ -718,7 +719,8 @@ section 12.
 # 10. Frequently Asked Questions
 
 **Does File Auditor change or delete anything?**
-No. It only reads the index table and lists folders. The only files it writes are the reports and the project settings file, all in the report's folder.
+No. It only reads the index table and lists folders. The only files it writes are the reports and the project settings file, all in the report's folder, and the only
+folder it creates is a custom report folder, when you choose **Create Folder**.
 
 **What is the difference between Missing and Unverified?**
 *Missing* means the app is sure the file is not there (or is empty, if you asked). *Unverified* means it could not check, and the report says why. Treat Unverified files as
@@ -738,7 +740,7 @@ The report adds a *Not checked* line for the rows it did not reach, so Found + M
 The app cannot know how many files the folders hold until it has walked them all, so it cannot estimate the time left.
 
 **Can I run both audits at once?**
-No, one at a time. You can still switch tabs while an audit runs.
+No, one at a time. You can still switch tabs whilst an audit runs.
 
 **Where are my settings saved?**
 In `FileAuditorSettings.json`, in the report's folder. The Project Settings group says which file is in use.
