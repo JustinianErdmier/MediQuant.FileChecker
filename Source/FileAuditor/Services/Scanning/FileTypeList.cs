@@ -10,10 +10,14 @@ public static class FileTypeList
                .Where(c => c is not ('*' or '?'))
     ];
 
-    /// <summary>Gets the built-in File types, sorted.</summary>
+    /// <summary>
+    ///     Gets the built-in File types, sorted ordinally. The sort is applied here, not left to the literal's order, because an untouched project is recognised by comparing
+    ///     its settings with the defaults, and the File types box always holds its entries sorted: an unsorted default would make every fresh window look changed.
+    /// </summary>
     public static IReadOnlyList<string> Defaults { get; } =
     [
-        ".bmp", ".doc", ".docm", ".docx", ".dotm", ".dotx", ".gif", ".html", ".rtf", ".txt", ".jpeg", ".tiff", ".pdf", ".png", ".jpg"
+        .. new[] { ".bmp", ".doc", ".docm", ".docx", ".dotm", ".dotx", ".gif", ".html", ".rtf", ".txt", ".jpeg", ".tiff", ".pdf", ".png", ".jpg" }
+            .Order(StringComparer.Ordinal)
     ];
 
     /// <summary>Splits the text of a file types box into its entries: they are separated by white space (any kind) or commas.</summary>
