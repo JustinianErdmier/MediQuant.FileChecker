@@ -321,14 +321,14 @@ names are the report file names, as its remarks document.
 
 **Files:** `Docs/Specs/1-file-auditor-master-design.md`, `Docs/Ledgers/Epic-1-MVP/milestone-6-ledger.md` and `MediQuant.FileAuditor.slnx`.
 
-- [ ] **Step 1: Bring §9 up to date.**
+- [x] **Step 1: Bring §9 up to date.**
   - The enums now live in `Common/Constants/<Area>/` with plural names, and the folder list must say so; today it still places them in `Models/` and `ViewModels/Dialogues/`.
   - Record the moved records, `ProjectFile`/`ProjectFileFolder` and the static services.
   - Rename the singular type names it quotes: `AuditDirection` → `AuditDirections`, `DialogueChoice` → `DialogueChoices`, and so on.
-- [ ] **Step 2: Update §8 and §9.**
+- [x] **Step 2: Update §8 and §9.**
   - In §8, a `null` value of any kind falls back to its default, field by field.
   - In §9 *Errors*, describe the global exception handler: which exceptions are recoverable and which are fatal, both message texts, one notice at a time, and no crash log.
-- [ ] **Step 3: Update §12.** Record the conventions:
+- [x] **Step 3: Update §12.** Record the conventions:
   - doc comments on **every** type and member;
   - no pointers to design documents in code;
   - the switch convention;
@@ -336,5 +336,5 @@ names are the report file names, as its remarks document.
   - stateless services as static classes;
   - `async void` handlers wrapped in `try`/`catch`;
   - the ReSharper suppression form.
-- [ ] **Step 4: Write the ledger and register it.** Write the ledger with the rulings above and add it to the `.slnx`.
-- [ ] **Step 5: Commit.** Use `docs(📝): sync the SDD with the code review clean-up and close the milestone 6 ledger`.
+- [x] **Step 4: Write the ledger and register it.** Write the ledger with the rulings above and add it to the `.slnx`.
+- [x] **Step 5: Commit.** Use `docs(📝): sync the SDD with the code review clean-up and close the milestone 6 ledger`.
