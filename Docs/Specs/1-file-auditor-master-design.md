@@ -776,9 +776,11 @@ direction adds its folder list (`ScanFolders`: each folder's path and *Include s
 the 19 built-in file types, an empty blacklist, *Listed type* grouping and the default name; a folder entry without a path is dropped, and an invalid entry in either type list is
 dropped on its own while the others are kept. Older files load, but their custom file names fall back to the defaults; no migration is attempted. The remembered answers to the
 three file-type warnings (§6.5.1) are not stored either. No credentials. The *Save project settings* checkbox is not stored in it. The file is written with a temp
-file + `File.Move(overwrite: true)`; a save never creates a folder. A null string value or an undefined enum value in the file falls back, field by field, to its default; other
-values are kept. Window size and position are not saved — the window is fixed-size. The milestone 2 spec (`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`) has the
-full prompt texts.
+file + `File.Move(overwrite: true)`; a save never creates a folder. A `null` value of any kind (a string, a flag, a list, a list element or a folder's path) and an undefined enum
+value fall back, field by field, to that field's default; every other value is kept. The file is read into a `ProjectFile`, a model with nullable members that mirrors the
+JSON (and a `ProjectFileFolder` for each scan folder), and `SettingsStore` maps it to an `AppSettings` that has no nullable members, so nothing else in the app ever sees a
+missing value. The keys keep their names (`ProjectStage` and `AuditStage` among them), enums are written as strings and no `null` is written. Window size and position are not
+saved — the window is fixed-size. The milestone 2 spec (`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`) has the full prompt texts.
 
 ### 8.1 Start-up, opening and closing a project
 
@@ -849,44 +851,79 @@ One project, `Source/FileAuditor/`, organised by folder (namespaces mirror folde
 app icon, and `Assets/Win95Icons/` the Windows 95 icon set. Dialogue icons are taken from that set (`error32.gif`, `warning32.png`, `question32.png`), never drawn in
 XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj`. The code folders are:
 
-- `Startup/` — `App` and `Program`.
+- `Startup/` — `App`, `Program` and `UnexpectedErrorHandler`, the global exception handler (see *Errors* below).
 - `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`, `FileTypesDialogueWindow`), `Groups/` (a `UserControl` per group box:
   Database, File Index Table, Project Settings, Report, Audit, Unindexed Audit) and `Tabs/` (a `UserControl` per audit direction, the content of a tab: `MissingFilesTabView`,
   `UnindexedFilesTabView`).
-- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (including `DialogueIcon`, `DialogueChoice`,
-  `FileTypesDialogueViewModel` and its row item `FileTypeEntryItem`), `Groups/` (including `ProjectSettingsViewModel`, which owns the Project Settings group's status message) and
-  `Tabs/` (`MissingFilesTabViewModel`, which owns the direction's *Report empty files* option, its `ReportViewModel` and its `AuditViewModel`; `UnindexedFilesTabViewModel`, which
-  owns the folder list, the two file-type summaries, its `ReportViewModel` and its `UnindexedAuditViewModel`). `Groups/` also holds three types that are deliberately not a
-  `*ViewModel` (they have no view of their own): `ReportLocationState`, the Report group's shared values, owned by the main window (each direction's `ReportViewModel` reads it and
-  adds the direction's file name and, for the Unindexed direction, the grouping choice, so the tabs' Report groups cannot drift apart); `AuditStatusBase`, the base of both audit
-  view models and what the status bar binds to (`StatusMessage`, `StatusPercent`, and `IsStopEnabled`, which enables that tab's Stop button); and `ScanFolderItem`, a row of the
-  folder list. `Groups/` also holds the Audit group's statistics helpers, each deliberately not a view model: `RecentRate`, the 30-second exponentially weighted rate with its
-  5-second warm-up and the formatter of the *Files/second* text; `RemainingEstimator`, which owns a `RecentRate` and turns progress samples into the Remaining text (§5.4); and
-  `TimeText`, the one overflow-safe `hh:mm:ss` formatter that Elapsed and Remaining share. `Main/` also holds `AuditRun` and its two subclasses `MissingAuditRun` and
-  `UnindexedAuditRun`, which carry one direction's run (progress object, phase text, refresh, result text) for `MainWindowViewModel`. `MainWindowViewModel` routes Start and View
-  Report to the selected tab's direction and Stop and the status bar to the running one.
-- `Services/` — `Settings/` (`SettingsStore`, which loads and saves one settings file at a path it is given and never creates a folder; `ProjectSettingsService`, which holds the
-  open project's file path and baseline settings and runs the save rule of §8.2 with its prompts, returning a `SavePointResult` that says whether the triggering operation may
-  proceed and whether the checkbox is to be ticked; it also remembers the three file-type warning answers of §6.5.1), `Sql/` (connection strings, SQL identifiers, query builder,
-  which also builds the path-only, prefix-filtered query, and index table reader, which also reads the paths for the unindexed audit), `Checking/` (file checker, `SkipMarker`,
-  which decides whether a path value is a skip marker, and the Win32 error mapper), `Scanning/` (the unindexed direction's `FileTypeList`, `FileTypePattern` and `FileTypeFilter`,
-  the 128-bit-hash `IndexPathSet` and the concurrent `FolderWalker`), `Auditing/` (audit runner and `UnindexedAuditRunner`, pre-flight checker, request and progress types including
-  `UnindexedProgress`, which also keeps the scan clock of §5.4a), `Reporting/` (the two report builders, `ReportFormat` with the formatting they share, writer and path resolver)
-  and `Dialogues/` (dialogue service, which also offers a three-button choice returning a `DialogueChoice`, the *Open Project* file picker and the File Types dialogue). Return
-  `ErrorOr<T>` for expected failures.
-- `Models/` — `Settings/` (settings record, `ScanFolder` and the project and audit stage enums), `Auditing/` (audit query, `PathQuery`, index row, check outcome and result,
-  `ScannedFile`, `UnverifiedFolder`, and `AuditDirection`, the enum of directions, `Missing` and `Unindexed`, whose member names the report file names are tied to) and
-  `Reporting/` (audit report, `UnindexedReport` and result kind).
-- `Common/` — `GlobalUsings.cs`; `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/` (`ClassicWindow` helpers); `Links/`
-  (`HelpLinks`, the user-guide address); `Serialisation/` (the source-generated settings JSON context).
+- `ViewModels/` — one view model per view (CommunityToolkit.Mvvm), in the parallel folders `Main/`, `About/`, `Dialogues/` (`MessageDialogueViewModel`, `FileTypesDialogueViewModel`
+  and its row item `FileTypeEntryItem`, which has no view of its own and so stays here), `Groups/` (including `ProjectSettingsViewModel`, which owns the Project Settings group's
+  status message) and `Tabs/` (`MissingFilesTabViewModel`, which owns the direction's *Report empty files* option, its `ReportViewModel` and its `AuditViewModel`;
+  `UnindexedFilesTabViewModel`, which owns the folder list, the two file-type summaries, its `ReportViewModel` and its `UnindexedAuditViewModel`). `Groups/` also holds three types
+  that are deliberately not a `*ViewModel` (they have no view of their own): `ReportLocationState`, the Report group's shared values, owned by the main window (each direction's
+  `ReportViewModel` reads it and adds the direction's file name and, for the Unindexed direction, the grouping choice, so the tabs' Report groups cannot drift apart);
+  `AuditStatusBase`, the base of both audit view models and what the status bar binds to (`StatusMessage`, `StatusPercent`, and `IsStopEnabled`, which enables that tab's Stop
+  button); and `ScanFolderItem`, a row of the folder list. `Groups/` also holds the Audit group's statistics helpers, each deliberately not a view model: `RecentRate`, the
+  30-second exponentially weighted rate with its 5-second warm-up and the formatter of the *Files/second* text; `RemainingEstimator`, which owns a `RecentRate` and turns progress
+  samples into the Remaining text (§5.4); and `TimeText`, the one overflow-safe `hh:mm:ss` formatter that Elapsed and Remaining share. `Main/` also holds `AuditRun` and its two
+  subclasses `MissingAuditRun` and `UnindexedAuditRun`, which carry one direction's run (progress object, phase text, refresh, result text) for `MainWindowViewModel`.
+  `MainWindowViewModel` routes Start and View Report to the selected tab's direction and Stop and the status bar to the running one.
+- `Services/` — `Settings/` (`SettingsStore`, a static class that maps a settings file to and from `AppSettings` through `ProjectFile`, at a path it is given, and never creates a
+  folder; `ProjectSettingsService`, which holds the open project's file path and baseline settings and runs the save rule of §8.2 with its prompts, returning a `SavePointResult`
+  that says whether the triggering operation may proceed and whether the checkbox is to be ticked; it also remembers the three file-type warning answers of §6.5.1), `Sql/`
+  (connection strings, SQL identifiers, query builder, which also builds the path-only, prefix-filtered query, and the static `IndexTableReader`, which also reads the paths for the
+  unindexed audit), `Checking/` (file checker, `SkipMarker`, which decides whether a path value is a skip marker, and the Win32 error mapper), `Scanning/` (the unindexed
+  direction's `FileTypeList`, `FileTypePattern` and `FileTypeFilter`, the 128-bit-hash `IndexPathSet`, and the concurrent, static `FolderWalker`; `FileTypeList`, `FileTypePattern`
+  and `IndexPathSet` stay here, not in `Models/`, because they carry logic), `Auditing/` (the static `AuditRunner` and `UnindexedAuditRunner`, pre-flight checker,
+  and the progress types including `UnindexedProgress`, which also keeps the scan clock of §5.4a), `Reporting/` (the two report builders, `ReportFormat` with the formatting
+  they share, writer and path resolver) and `Dialogues/` (dialogue service, which also offers a three-button choice returning a `DialogueChoices`, the *Open Project* file
+  picker and the File Types dialogue). Stateless services are static classes (§12). Return `ErrorOr<T>` for expected failures.
+- `Models/` — plain data, with no behaviour worth a service. `Settings/` (`AppSettings`, the settings record with no nullable members; `ProjectFile` and `ProjectFileFolder`, the
+  nullable JSON shape of §8; `ScanFolder`; and `SavePointResult`), `Auditing/` (`AuditQuery`, `PathQuery`, `IndexRow`, `CheckResult`, `MappedOutcome`, `AuditRequest`, `ScannedFile`
+  and `UnverifiedFolder`), `Dialogues/` (`ProjectFilePick`, the *Open Project* picker's result) and `Reporting/` (`AuditReport`, `UnindexedReport` and `ReportPath`).
+- `Common/` — `GlobalUsings.cs`; `Constants/` (every enum, one file each, in a folder named for the area it serves and with a plural type name: `Auditing/` `AuditDirections`, the
+  directions `Missing` and `Unindexed`, whose member names the report file names are tied to, and `CheckOutcomes`; `Dialogues/` `DialogueChoices` and `DialogueIcons`; `Reporting/`
+  `AuditResultKinds`; `Settings/` `ProjectStages` and `AuditStages`); `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/`
+  (`ClassicWindow` helpers); `Links/` (`HelpLinks`, the user-guide address); `Serialisation/` (the source-generated settings JSON context, `SettingsJsonContext`, which serialises
+  `ProjectFile`).
 
 Services are wired by hand in `App`; there is no dependency-injection container. `MainWindow.axaml` composes the shared group-box views (the Database and File Index Table groups
 in a two-column grid) and the tab control (each tab's content is a `Tabs/` view) and holds the menu bar and status bar; it stays at 100 lines or fewer by pushing content into the
-group-box and tab `UserControl`s. `ReportPathResolver.Resolve` takes the settings and an `AuditDirection`, so a direction's report name comes from one place.
+group-box and tab `UserControl`s. `ReportPathResolver.Resolve` takes the settings and an `AuditDirections`, so a direction's report name comes from one place.
 
 **Errors.** Services return `ErrorOr<T>`: expected failures (bad input, SQL errors, an unwritable report, unreadable settings) are values with custom errors from
 `Common/Errors/`, not exceptions. Exceptions are caught at the boundary where they occur (SQL, file system) and translated into errors or check outcomes. SQL access is
 plain `Microsoft.Data.SqlClient`, with no ORM.
+
+**Unexpected exceptions.** `UnexpectedErrorHandler` (`Startup/`) catches what nothing else handled. `App` installs it at start-up and `Program.Main` wraps the lifetime in it.
+
+- **Recoverable** — an exception unhandled on the UI thread (marked handled) or in a task nobody awaited (marked observed, then posted to the UI thread; for the task's
+  wrapper the first inner exception's message is shown). The app carries on, and the user sees the main window's error dialogue (error icon, *OK*):
+
+  ```
+  Something unexpected went wrong:
+  <the exception's message>
+
+  File Auditor will carry on.
+  ```
+
+- **Fatal** — an exception that reaches the top of any thread (`AppDomain` unhandled), one that escapes the lifetime in `Program.Main`, and an `OutOfMemoryException` anywhere,
+  including inside an `AggregateException`. A plain Windows message box (`MessageBoxW`, caption *File Auditor*, error icon) says:
+
+  ```
+  File Auditor ran into a problem it cannot recover from and has to close.
+
+  <the exception's message>
+  ```
+
+  and the process then exits with code 1. The box is owned by the main window when that is safe to ask for; otherwise it asks to be topmost and in the foreground, which
+  Windows may refuse to a process in the background. A second fatal error on another thread waits until the first box has been read.
+- **One notice at a time.** While a recoverable notice is open, including the plain message box that takes over when there is no main window or the dialogue cannot be shown,
+  further recoverable errors are dropped, so an exception repeated on every refresh tick cannot stack up dialogues. A fault that repeats (on every 250 ms refresh, say) shows the
+  notice again after *OK*, never more than one at a time.
+- **No crash log.** Nothing is written to disk, by the storage rule below.
+- Every `async void` event handler (the File Types dialogue's *OK*, the Report group's *Browse...* and the Unindexed tab's *Add...*, and the main window's About handler) and
+  every fire-and-forget task (the close confirmation, the report probe and the untick confirmation) wraps its whole body in `try` / `catch` and reports through the handler (§12),
+  so no fault waits for finalisation to surface.
 
 **Storage.** The app writes only the project settings file (§8) and the report (§7), both in the report's folder — never anything beside its executable, which runs from a
 shared file server, and nothing under `%APPDATA%`.
@@ -979,8 +1016,23 @@ Settled by the build (milestone 1), with no change in behaviour (milestone 4's a
 - **Usings** are consolidated in `Common/GlobalUsings.cs`; a local `using` only for a namespace conflict or an alias. **File-scoped namespaces** everywhere.
 - **British English** in comments, XML doc text, UI copy, commit messages, Markdown, and identifier wording where there is a choice (`Initialise`, `Behaviour`,
   `Colour`, `Dialogue`). A US spelling fixed by an external API (`System.IO`, `Color`, `Dialog`) stays.
-- **XML doc comments on every public type and member** (`<summary>`, `<param>`, `<returns>`, `<remarks>`, `<exception>` as appropriate); `//` comments only for inline
-  implementation notes. `<c>…</c>` and `<code>…</code>` carry no inside whitespace.
+- **XML doc comments on every type and member, at every access level** — private fields, constants, methods, nested types, enum members, record parameters and event handlers
+  included (`<summary>`, `<param>`, `<returns>`, `<remarks>`, `<exception>` as appropriate); `//` comments only for inline implementation notes. `<c>…</c>` and `<code>…</code>`
+  carry no inside whitespace.
+- **No pointers to design documents in code.** A comment or doc comment says what the code does and why, in its own words; it never cites the SDD, a milestone or a section number.
+- **Line length:** lines of code and of comments are at most 180 characters.
+- **Enum names:** an enum's type name is plural (`CheckOutcomes`, `DialogueChoices`) and its members are singular (`Found`, `Primary`); a variable, parameter or property that holds
+  one value is singular (`CheckOutcomes outcome`, `DialogueChoices choice`). The app's shared enums live in `Common/Constants/<Area>/` (§9); a private enum
+  used by one type only stays nested in it (`FolderWalker.LinkStates`).
+- **The switch convention.** A `switch` on an enum gives every member it handles its own arm, and its `default` arm throws `UnreachableException`; a `default` never stands in for a
+  real member, so a new member fails loudly instead of falling into an old behaviour. An enum's `ToString()` is never user-facing text: a label comes from an explicit arm.
+  The one exception is an on-disk path component: the `AuditDirections` member names in report file names and the stage names in the report's folder and file names.
+- **Static services.** A service with no state is a `static class`, not an instance created and passed around (`SettingsStore`, `IndexTableReader`, `FolderWalker`, `AuditRunner`,
+  `UnindexedAuditRunner`, the report builders and the path resolver).
+- **`async void` event handlers and fire-and-forget tasks** wrap their whole body in `try` / `catch` and report the exception through `UnexpectedErrorHandler.ReportRecoverable`
+  (§9), because nothing can catch an exception that escapes them and a discarded task's fault surfaces only at finalisation.
+- **ReSharper suppressions** take one of two forms: `// ReSharper disable once <Inspection>` on the line above the member, above its doc comment and never between the doc comment
+  and the signature, or a `// ReSharper disable <Inspection>` / `// ReSharper restore <Inspection>` pair around a statement. Each carries a short reason when it is not obvious.
 - **Spaced attribute brackets:** `[ STAThread ]`, `[ ObservableProperty ]`, `[ RelayCommand ]`.
 - **Vertical spacing:** consecutive statements of different kinds (e.g. a declaration followed by an invocation) are separated by a blank line; like statements are
   grouped. Every `if` has braces.
@@ -988,8 +1040,8 @@ Settled by the build (milestone 1), with no change in behaviour (milestone 4's a
   report.
 - **Source-generated MVVM:** `[ ObservableProperty ]` on `partial` properties, `[ RelayCommand ]` on private methods; no hand-rolled INPC. **Compiled bindings:** every
   XAML file declares `x:DataType`.
-- **Designer constructors:** view models expose a parameterless constructor for the XAML designer only, built from `AppSettings.Default` and parameterless concrete
-  services. No interfaces are introduced just for the designer.
+- **Designer constructors:** view models expose a parameterless constructor for the XAML designer only, built from `AppSettings.Default` and concrete services created in
+  place (a `DialogueService` with no owner window). No interfaces are introduced just for the designer.
 - **View composition pair rule:** every public `*ViewModel` has a sibling `*View.axaml` under the parallel `Views/…` folder, and vice versa. Windows are the exception to the
   `*View` suffix: `MainWindow`, `AboutWindow`, `MessageDialogueWindow` and `FileTypesDialogueWindow` pair with `MainWindowViewModel`, `AboutWindowViewModel`,
   `MessageDialogueViewModel` and `FileTypesDialogueViewModel`. State a view model needs but that has no view of its own is not named `*ViewModel` (`ReportLocationState`,

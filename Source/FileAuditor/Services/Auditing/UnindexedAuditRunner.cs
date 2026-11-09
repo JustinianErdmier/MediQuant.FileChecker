@@ -1,12 +1,8 @@
 namespace FileAuditor.Services.Auditing;
 
-/// <summary>Runs one unindexed-files audit: loads the index paths as hashes, walks the folders checking each file as it is found, then writes the report (milestone 4 spec §3.5).</summary>
-public sealed class UnindexedAuditRunner
+/// <summary>Runs one unindexed-files audit: loads the index paths as hashes, walks the folders checking each file as it is found, then writes the report.</summary>
+public static class UnindexedAuditRunner
 {
-    private readonly IndexTableReader _reader = new();
-
-    private readonly FolderWalker _walker = new();
-
     /// <summary>Runs the audit.</summary>
     /// <param name="request">The settings and report path.</param>
     /// <param name="progress">Receives the live statistics.</param>
@@ -15,7 +11,7 @@ public sealed class UnindexedAuditRunner
     ///     The report that was written for a completed or stopped audit; a SQL error when loading the index failed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped
     ///     while the index was loading; or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
-    public async Task<ErrorOr<UnindexedReport>> RunAsync(AuditRequest request, UnindexedProgress progress, CancellationToken cancellationToken)
+    public static async Task<ErrorOr<UnindexedReport>> RunAsync(AuditRequest request, UnindexedProgress progress, CancellationToken cancellationToken)
     {
         AppSettings settings   = request.Settings;
         DateTime    startedUtc = DateTime.UtcNow;
@@ -24,7 +20,7 @@ public sealed class UnindexedAuditRunner
         // (`U:/A/./B`, a trailing separator, other letter case). The report still names each folder as it was entered.
         ScanFolder[] folders =
         [
-            .. (settings.ScanFolders ?? []).Select(folder => folder with
+            .. settings.ScanFolders.Select(folder => folder with
             {
                 Path = FolderWalker.NormaliseFolder(folder.Path)
             })
@@ -32,7 +28,7 @@ public sealed class UnindexedAuditRunner
 
         Dictionary<string, string> entered = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (ScanFolder folder in settings.ScanFolders ?? [])
+        foreach (ScanFolder folder in settings.ScanFolders)
         {
             entered.TryAdd(FolderWalker.NormaliseFolder(folder.Path), folder.Path);
         }
@@ -53,7 +49,7 @@ public sealed class UnindexedAuditRunner
 
         try
         {
-            loaded = await _reader.ReadPathsAsync(ConnectionStrings.Build(settings.Server, settings.Database), built.Value, paths.Add, cancellationToken);
+            loaded = await IndexTableReader.ReadPathsAsync(ConnectionStrings.Build(settings.Server, settings.Database), built.Value, paths.Add, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -74,51 +70,51 @@ public sealed class UnindexedAuditRunner
 
         progress.StartScan();
 
-        FileTypeFilter filter = new(settings.FileTypes ?? FileTypeList.Defaults, settings.ExcludeTypes ?? []);
+        FileTypeFilter filter = new(settings.FileTypes, settings.ExcludeTypes);
 
         ConcurrentBag<ScannedFile> unindexed = [];
 
         ConcurrentBag<UnverifiedFolder> unverified = [];
 
         // The walker returns normally when stopped, so a stop is told apart by the token afterwards. An exception from a callback is a bug and surfaces as one.
-        await _walker.WalkAsync(folders,
-                                filter,
-                                walked =>
-                                {
-                                    ScannedFile file = walked with
-                                    {
-                                        InputFolder = entered.GetValueOrDefault(walked.InputFolder, walked.InputFolder)
-                                    };
+        await FolderWalker.WalkAsync(folders,
+                                     filter,
+                                     walked =>
+                                     {
+                                         ScannedFile file = walked with
+                                         {
+                                             InputFolder = entered.GetValueOrDefault(walked.InputFolder, walked.InputFolder)
+                                         };
 
-                                    if (paths.Contains(file.Path))
-                                    {
-                                        progress.Record(indexed: true);
-                                    }
-                                    else
-                                    {
-                                        unindexed.Add(file);
-                                        progress.Record(indexed: false);
-                                    }
-                                },
-                                folder =>
-                                {
-                                    unverified.Add(folder);
-                                    progress.RecordUnverified();
-                                },
-                                cancellationToken);
+                                         if (paths.Contains(file.Path))
+                                         {
+                                             progress.Record(indexed: true);
+                                         }
+                                         else
+                                         {
+                                             unindexed.Add(file);
+                                             progress.Record(indexed: false);
+                                         }
+                                     },
+                                     folder =>
+                                     {
+                                         unverified.Add(folder);
+                                         progress.RecordUnverified();
+                                     },
+                                     cancellationToken);
 
         progress.StopScan();
 
-        AuditResultKinds kinds = cancellationToken.IsCancellationRequested
-                                     ? AuditResultKinds.StoppedByUser
-                                     : AuditResultKinds.Completed;
+        AuditResultKinds result = cancellationToken.IsCancellationRequested
+                                      ? AuditResultKinds.StoppedByUser
+                                      : AuditResultKinds.Completed;
 
         progress.Phase = "Writing report...";
 
         UnindexedReport report = new(settings,
                                      startedUtc,
                                      DateTime.UtcNow,
-                                     kinds,
+                                     result,
                                      [.. unindexed],
                                      [.. unverified],
                                      progress.TotalFiles,

@@ -28,19 +28,22 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
 
     /// <summary>Shows a dialogue with two or three buttons.</summary>
     /// <param name="message">The message.</param>
-    /// <param name="icons">The icon to show.</param>
+    /// <param name="icon">The icon to show.</param>
     /// <param name="primaryText">The action button's text; an underscore marks its access key.</param>
     /// <param name="secondaryText">The second button's text.</param>
     /// <param name="tertiaryText">The third button's text, or <see langword="null" /> for a two-button dialogue.</param>
     /// <returns>The button chosen; the last visible button when the dialogue is closed with the title-bar close box.</returns>
-    public Task<DialogueChoices> ChooseAsync(string message, DialogueIcons icons, string primaryText, string secondaryText, string? tertiaryText = null)
-        => ShowAsync(new MessageDialogueViewModel(message, icons, primaryText, secondaryText, tertiaryText));
+    public Task<DialogueChoices> ChooseAsync(string message, DialogueIcons icon, string primaryText, string secondaryText, string? tertiaryText = null)
+        => ShowAsync(new MessageDialogueViewModel(message, icon, primaryText, secondaryText, tertiaryText));
 
     /// <summary>Shows the file types editor.</summary>
     /// <param name="title">The window title.</param>
     /// <param name="entries">The entries to start with.</param>
     /// <param name="canReset">Whether the editor offers Reset, which restores the built-in file types.</param>
-    /// <returns>The accepted entries in normal form, or <see langword="null" /> when the editor was cancelled.</returns>
+    /// <returns>
+    ///     The accepted entries in normal form, or <see langword="null" /> when the editor was cancelled; an empty array means it was accepted with every entry removed, which the
+    ///     Exclude list allows.
+    /// </returns>
     public async Task<string[]?> EditFileTypesAsync(string title, IReadOnlyList<string> entries, bool canReset)
     {
         Window? owner = ownerProvider();
@@ -97,6 +100,9 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
                                              .TryGetLocalPath());
     }
 
+    /// <summary>Shows a message dialogue over the owner window and waits for it to close.</summary>
+    /// <param name="viewModel">What the dialogue shows.</param>
+    /// <returns>The button the user chose; <see cref="DialogueChoices.Secondary" /> when there is no window to show it over.</returns>
     private async Task<DialogueChoices> ShowAsync(MessageDialogueViewModel viewModel)
     {
         Window? owner = ownerProvider();
@@ -110,6 +116,6 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
 
         await window.ShowDialog(owner);
 
-        return window.Choices;
+        return window.Choice;
     }
 }

@@ -3,6 +3,7 @@ namespace FileAuditor.ViewModels.Groups;
 /// <summary>The Audit group and status bar: read-only run statistics as display strings, blank before the first run.</summary>
 public sealed partial class AuditViewModel : AuditStatusBase
 {
+    /// <summary>Works out the Remaining time and the recent rate behind it.</summary>
     private readonly RemainingEstimator _remainingEstimator = new();
 
     /// <summary>Gets or sets the number of files checked so far, formatted with thousands separators.</summary>

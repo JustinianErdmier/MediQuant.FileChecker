@@ -20,12 +20,13 @@
         <StackPanel Spacing="2">
             <ct:GroupBox Header="Folders to Check"
                          Margin="4,2"
-                         IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable}">
+                         IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable, FallbackValue=True}">
                 <Grid ColumnDefinitions="72,*,Auto,Auto"
                       RowDefinitions="Auto,Auto,Auto"
                       RowSpacing="4"
                       Margin="4">
-                    <StackPanel Grid.ColumnSpan="3">
+                    <StackPanel Grid.Row="0"
+                                Grid.ColumnSpan="3">
                         <!--The 16 px right margin is the vertical scroll bar's width: the bar is pinned Visible so the header and the rows share one right edge.-->
                         <Grid ColumnDefinitions="*,110"
                               Margin="4,0,16,0">
@@ -62,7 +63,8 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
                     </StackPanel>
-                    <StackPanel Grid.Column="3"
+                    <StackPanel Grid.Row="0"
+                                Grid.Column="3"
                                 Margin="6,17,0,0"
                                 Spacing="6">
                         <Button x:Name="AddButton"
@@ -79,6 +81,7 @@
                                 Command="{Binding RemoveCommand}" />
                     </StackPanel>
                     <Label Grid.Row="1"
+                           Grid.Column="0"
                            Content="File t_ypes:"
                            Target="{Binding #EditFileTypesButton}"
                            VerticalAlignment="Center" />
@@ -98,6 +101,7 @@
                             HorizontalContentAlignment="Center"
                             Command="{Binding EditFileTypesCommand}" />
                     <Label Grid.Row="2"
+                           Grid.Column="0"
                            Content="E_xclude:"
                            Target="{Binding #EditExcludeButton}"
                            VerticalAlignment="Center" />
@@ -119,7 +123,7 @@
                 </Grid>
             </ct:GroupBox>
             <groups:ReportView DataContext="{Binding Report}"
-                               IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable}" />
+                               IsEnabled="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).IsEditable, FallbackValue=True}" />
             <groups:UnindexedAuditView DataContext="{Binding Audit}" />
         </StackPanel>
     </ScrollViewer>

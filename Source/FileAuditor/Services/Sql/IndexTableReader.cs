@@ -1,14 +1,14 @@
 namespace FileAuditor.Services.Sql;
 
 /// <summary>Counts and streams the rows of the file index table.</summary>
-public sealed class IndexTableReader
+public static class IndexTableReader
 {
     /// <summary>Counts the rows in the index table.</summary>
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The audit query.</param>
     /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
     /// <returns>The row count, or <c>Sql.QueryFailed</c> when SQL Server reports an error.</returns>
-    public async Task<ErrorOr<long>> CountAsync(string connectionString, AuditQuery query, CancellationToken cancellationToken)
+    public static async Task<ErrorOr<long>> CountAsync(string connectionString, AuditQuery query, CancellationToken cancellationToken)
     {
         try
         {
@@ -43,7 +43,7 @@ public sealed class IndexTableReader
     /// <param name="onRow">Called once per row, in order.</param>
     /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
     /// <returns>Success, or <c>Sql.QueryFailed</c> when SQL Server reports an error.</returns>
-    public async Task<ErrorOr<Success>> ReadAsync(string connectionString, AuditQuery query, Func<IndexRow, ValueTask> onRow, CancellationToken cancellationToken)
+    public static async Task<ErrorOr<Success>> ReadAsync(string connectionString, AuditQuery query, Func<IndexRow, ValueTask> onRow, CancellationToken cancellationToken)
     {
         try
         {
@@ -96,7 +96,7 @@ public sealed class IndexTableReader
     /// <param name="onPath">Called once per non-null path, one call at a time.</param>
     /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
     /// <returns>Success, or <c>Sql.QueryFailed</c> when SQL Server reports an error.</returns>
-    public async Task<ErrorOr<Success>> ReadPathsAsync(string connectionString, PathQuery query, Action<string> onPath, CancellationToken cancellationToken)
+    public static async Task<ErrorOr<Success>> ReadPathsAsync(string connectionString, PathQuery query, Action<string> onPath, CancellationToken cancellationToken)
     {
         try
         {
@@ -155,6 +155,11 @@ public sealed class IndexTableReader
         }
     }
 
+    /// <summary>Reads one column of the current row as text, whatever its SQL type.</summary>
+    /// <param name="reader">The reader, positioned on a row.</param>
+    /// <param name="ordinal">The column's position; with sequential access the columns must be read in order.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The value as text, or <see langword="null" /> when the database value is <c>NULL</c>.</returns>
     private static async Task<string?> ReadStringAsync(SqlDataReader reader, int ordinal, CancellationToken cancellationToken)
     {
         if (await reader.IsDBNullAsync(ordinal, cancellationToken))

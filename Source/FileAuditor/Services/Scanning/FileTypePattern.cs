@@ -1,6 +1,6 @@
 namespace FileAuditor.Services.Scanning;
 
-/// <summary>One normalised file type entry, such as <c>.pdf</c>, <c>.tar.gz</c> or <c>.zip.0??</c>, compiled for matching file names (milestone 4 spec §3.3).</summary>
+/// <summary>One normalised file type entry, such as <c>.pdf</c>, <c>.tar.gz</c> or <c>.zip.0??</c>, compiled for matching file names.</summary>
 public sealed class FileTypePattern
 {
     /// <summary>Stores the normalised file type pattern as dot-separated extension parts, excluding the leading dot.</summary>
@@ -98,32 +98,38 @@ public sealed class FileTypePattern
             .ToLowerInvariant();
     }
 
-    // Glob match of one part: '*' is any run (including none), '?' exactly one character; case-insensitive. The pattern is already lower case.
+    /// <summary>
+    ///     Matches one part of a file name against one part of the entry: <c>*</c> is any run of characters (including none) and <c>?</c> exactly one. Case is ignored; the pattern
+    ///     is already lower case.
+    /// </summary>
+    /// <param name="pattern">The part of the entry.</param>
+    /// <param name="text">The part of the file name.</param>
+    /// <returns><see langword="true" /> when the whole text matches the pattern.</returns>
     private static bool GlobMatches(string pattern, ReadOnlySpan<char> text)
     {
-        int p        = 0;
-        int t        = 0;
-        int star     = -1;
-        int starText = 0;
+        int patternIndex     = 0;
+        int textIndex        = 0;
+        int starPatternIndex = -1;
+        int starTextIndex    = 0;
 
-        while (t < text.Length)
+        while (textIndex < text.Length)
         {
-            if (p < pattern.Length
-                && pattern[p] is '*')
+            if (patternIndex < pattern.Length
+                && pattern[patternIndex] is '*')
             {
-                star     = p++;
-                starText = t;
+                starPatternIndex = patternIndex++;
+                starTextIndex    = textIndex;
             }
-            else if (p < pattern.Length
-                     && (pattern[p] is '?' || pattern[p] == char.ToLowerInvariant(text[t])))
+            else if (patternIndex < pattern.Length
+                     && (pattern[patternIndex] is '?' || pattern[patternIndex] == char.ToLowerInvariant(text[textIndex])))
             {
-                p++;
-                t++;
+                patternIndex++;
+                textIndex++;
             }
-            else if (star >= 0)
+            else if (starPatternIndex >= 0)
             {
-                p = star + 1;
-                t = ++starText;
+                patternIndex = starPatternIndex + 1;
+                textIndex    = ++starTextIndex;
             }
             else
             {
@@ -131,12 +137,12 @@ public sealed class FileTypePattern
             }
         }
 
-        while (p < pattern.Length
-               && pattern[p] is '*')
+        while (patternIndex < pattern.Length
+               && pattern[patternIndex] is '*')
         {
-            p++;
+            patternIndex++;
         }
 
-        return p == pattern.Length;
+        return patternIndex == pattern.Length;
     }
 }

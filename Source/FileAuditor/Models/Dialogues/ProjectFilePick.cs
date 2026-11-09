@@ -1,4 +1,4 @@
-namespace FileAuditor.Services.Dialogues;
+namespace FileAuditor.Models.Dialogues;
 
 /// <summary>A file the user chose in the Open Project picker.</summary>
 /// <param name="Name">The file's name, for messages.</param>

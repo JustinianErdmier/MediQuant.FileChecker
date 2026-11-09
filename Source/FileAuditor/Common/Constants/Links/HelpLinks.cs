@@ -1,4 +1,4 @@
-namespace FileAuditor.Common.Links;
+namespace FileAuditor.Common.Constants.Links;
 
 /// <summary>Addresses of the web pages the application links to.</summary>
 public static class HelpLinks

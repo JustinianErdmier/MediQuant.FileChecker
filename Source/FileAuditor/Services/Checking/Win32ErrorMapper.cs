@@ -3,6 +3,7 @@ namespace FileAuditor.Services.Checking;
 /// <summary>Maps file-system exceptions, by Win32 error code and by type, to check outcomes.</summary>
 internal static class Win32ErrorMapper
 {
+    /// <summary>The facility code of an HRESULT that wraps a Win32 error (<c>FACILITY_WIN32</c>).</summary>
     private const int Win32Facility = 0x8007;
 
     /// <summary>Maps an exception thrown while probing a path to an outcome.</summary>

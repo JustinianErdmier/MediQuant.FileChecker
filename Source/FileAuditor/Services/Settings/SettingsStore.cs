@@ -1,7 +1,7 @@
 namespace FileAuditor.Services.Settings;
 
 /// <summary>Loads and saves <see cref="AppSettings" /> as a project settings JSON file at a path the caller chooses.</summary>
-public sealed class SettingsStore
+public static class SettingsStore
 {
     /// <summary>The name of a project settings file.</summary>
     public const string FileName = "FileAuditorSettings.json";
@@ -9,7 +9,7 @@ public sealed class SettingsStore
     /// <summary>Loads the settings from a file. Properties absent from the file take their defaults.</summary>
     /// <param name="filePath">The full path of the settings file.</param>
     /// <returns>The settings, or <see cref="SettingsErrors.Unreadable" /> when the file is missing, cannot be read or is not valid JSON.</returns>
-    public ErrorOr<AppSettings> Load(string filePath)
+    public static ErrorOr<AppSettings> Load(string filePath)
     {
         string json;
 
@@ -32,14 +32,14 @@ public sealed class SettingsStore
                 return SettingsErrors.Unreadable(detail: "the file is not a File Auditor project.");
             }
 
-            AppSettings? settings = JsonSerializer.Deserialize(json, SettingsJsonContext.Default.AppSettings);
+            ProjectFile? file = JsonSerializer.Deserialize(json, SettingsJsonContext.Default.ProjectFile);
 
-            if (settings is null)
+            if (file is null)
             {
                 return SettingsErrors.Unreadable(detail: "the file is empty or contains null.");
             }
 
-            return Normalise(settings);
+            return ToSettings(file);
         }
         catch (JsonException exception)
         {
@@ -51,13 +51,13 @@ public sealed class SettingsStore
     /// <param name="settings">The settings to save.</param>
     /// <param name="filePath">The full path of the settings file.</param>
     /// <returns><see cref="Result.Success" />, or <see cref="SettingsErrors.Unwritable" /> when the write fails, including when the folder does not exist.</returns>
-    public ErrorOr<Success> Save(AppSettings settings, string filePath)
+    public static ErrorOr<Success> Save(AppSettings settings, string filePath)
     {
         string tempPath = $"{filePath}.tmp";
 
         try
         {
-            File.WriteAllText(tempPath, JsonSerializer.Serialize(settings, SettingsJsonContext.Default.AppSettings));
+            File.WriteAllText(tempPath, Serialise(settings));
             File.Move(tempPath, filePath, overwrite: true);
 
             return Result.Success;
@@ -83,8 +83,18 @@ public sealed class SettingsStore
         }
     }
 
-    // A project file is a JSON object holding at least one of AppSettings' properties. Anything else, such as another application's JSON or "{}", is refused rather than
-    // opened as a project of defaults. Throws JsonException for invalid JSON.
+    /// <summary>Serialises the settings as the text of a project settings file, which is also the form in which two sets of settings are compared by value.</summary>
+    /// <param name="settings">The settings to serialise.</param>
+    /// <returns>The indented JSON text.</returns>
+    public static string Serialise(AppSettings settings) => JsonSerializer.Serialize(ToFile(settings), SettingsJsonContext.Default.ProjectFile);
+
+    /// <summary>
+    ///     Determines whether JSON text is a project file: a JSON object holding at least one of <see cref="ProjectFile" />'s keys. Anything else, such as another application's JSON
+    ///     or <c>{}</c>, is refused rather than opened as a project of defaults.
+    /// </summary>
+    /// <param name="json">The JSON text.</param>
+    /// <returns><see langword="true" /> when the text is a project file.</returns>
+    /// <exception cref="JsonException">The text is not valid JSON.</exception>
     private static bool LooksLikeProject(string json)
     {
         using JsonDocument document = JsonDocument.Parse(json);
@@ -94,54 +104,111 @@ public sealed class SettingsStore
             return false;
         }
 
-        HashSet<string> known = SettingsJsonContext.Default.AppSettings.Properties.Select(property => property.Name)
-                                                   .ToHashSet(StringComparer.Ordinal);
+        HashSet<string> knownPropertyNames = SettingsJsonContext.Default.ProjectFile.Properties.Select(property => property.Name)
+                                                                .ToHashSet(StringComparer.Ordinal);
 
         return document.RootElement.EnumerateObject()
-                       .Any(property => known.Contains(property.Name));
+                       .Any(property => knownPropertyNames.Contains(property.Name));
     }
 
-    // A hand-edited or damaged file can hold null strings or numeric enum values that name nothing; each such value falls back to its default so one bad property
-    // never takes down the others.
-    private static AppSettings Normalise(AppSettings settings)
+    /// <summary>Maps the settings to the file shape. Every member is set, so no <see langword="null" /> is written.</summary>
+    /// <param name="settings">The settings to map.</param>
+    /// <returns>The file shape of the settings.</returns>
+    private static ProjectFile ToFile(AppSettings settings)
+        => new()
+        {
+            Server                  = settings.Server,
+            Database                = settings.Database,
+            Table                   = settings.Table,
+            PathColumn              = settings.PathColumn,
+            IdColumn                = settings.IdColumn,
+            ReportEmptyFiles        = settings.ReportEmptyFiles,
+            ProjectFolder           = settings.ProjectFolder,
+            ProjectStage            = settings.ProjectStage,
+            AuditStage              = settings.AuditStage,
+            UseCustomReportLocation = settings.UseCustomReportLocation,
+            CustomLocation          = settings.CustomLocation,
+            MissingCustomFileName   = settings.MissingCustomFileName,
+            ScanFolders             = [.. settings.ScanFolders.Select(folder => new ProjectFileFolder(folder.Path, folder.IncludeSubfolders))],
+            FileTypes               = [.. settings.FileTypes],
+            ExcludeTypes            = [.. settings.ExcludeTypes],
+            GroupByFoundExtension   = settings.GroupByFoundExtension,
+            UnindexedCustomFileName = settings.UnindexedCustomFileName
+        };
+
+    /// <summary>
+    ///     Maps a project file to settings. A hand-edited or damaged file can hold nulls or numeric enum values that name nothing; each such value falls back to its default so one
+    ///     bad property never takes down the others.
+    /// </summary>
+    /// <param name="file">The file shape read from disk.</param>
+    /// <returns>The settings, with no nullable member.</returns>
+    private static AppSettings ToSettings(ProjectFile file)
     {
         AppSettings defaults = AppSettings.Default;
 
-        return settings with
+        return new AppSettings
         {
-            Server = settings.Server               ?? defaults.Server,
-            Database = settings.Database           ?? defaults.Database,
-            Table = settings.Table                 ?? defaults.Table,
-            PathColumn = settings.PathColumn       ?? defaults.PathColumn,
-            IdColumn = settings.IdColumn           ?? defaults.IdColumn,
-            ProjectFolder = settings.ProjectFolder ?? defaults.ProjectFolder,
-            ProjectStages = Enum.IsDefined(settings.ProjectStages) ? settings.ProjectStages : defaults.ProjectStages,
-            AuditStages = Enum.IsDefined(settings.AuditStages) ? settings.AuditStages : defaults.AuditStages,
-            CustomLocation = settings.CustomLocation               ?? defaults.CustomLocation,
-            MissingCustomFileName = settings.MissingCustomFileName ?? defaults.MissingCustomFileName,
-            ScanFolders = NormaliseFolders(settings.ScanFolders),
-            FileTypes = NormaliseTypes(settings.FileTypes, defaults.FileTypes!),
-            ExcludeTypes = NormaliseTypes(settings.ExcludeTypes, []),
-            UnindexedCustomFileName = settings.UnindexedCustomFileName ?? defaults.UnindexedCustomFileName
+            Server                  = file.Server           ?? defaults.Server,
+            Database                = file.Database         ?? defaults.Database,
+            Table                   = file.Table            ?? defaults.Table,
+            PathColumn              = file.PathColumn       ?? defaults.PathColumn,
+            IdColumn                = file.IdColumn         ?? defaults.IdColumn,
+            ReportEmptyFiles        = file.ReportEmptyFiles ?? defaults.ReportEmptyFiles,
+            ProjectFolder           = file.ProjectFolder    ?? defaults.ProjectFolder,
+            ProjectStage            = file.ProjectStage is { } projectStage && Enum.IsDefined(projectStage) ? projectStage : defaults.ProjectStage,
+            AuditStage              = file.AuditStage is { } auditStage     && Enum.IsDefined(auditStage) ? auditStage : defaults.AuditStage,
+            UseCustomReportLocation = file.UseCustomReportLocation ?? defaults.UseCustomReportLocation,
+            CustomLocation          = file.CustomLocation          ?? defaults.CustomLocation,
+            MissingCustomFileName   = file.MissingCustomFileName   ?? defaults.MissingCustomFileName,
+            ScanFolders             = NormaliseFolders(file.ScanFolders),
+            FileTypes               = NormaliseTypes(file.FileTypes, defaults.FileTypes),
+            ExcludeTypes            = NormaliseTypes(file.ExcludeTypes, []),
+            GroupByFoundExtension   = file.GroupByFoundExtension   ?? defaults.GroupByFoundExtension,
+            UnindexedCustomFileName = file.UnindexedCustomFileName ?? defaults.UnindexedCustomFileName
         };
     }
 
-    // A null list is empty; a null element or one without a path is dropped.
-    private static ScanFolder[] NormaliseFolders(ScanFolder[]? folders)
-        => folders?.Where(folder => folder?.Path is not null)
-                  .ToArray()
-           ?? [];
+    /// <summary>
+    ///     Maps the scan folders of a project file. A null list is empty; a null element or one without a path is dropped; a null <c>IncludeSubfolders</c> is <see langword="true" />
+    ///     .
+    /// </summary>
+    /// <param name="folders">The folders as read from the file.</param>
+    /// <returns>The folders that are kept.</returns>
+    private static ScanFolder[] NormaliseFolders(ProjectFileFolder?[]? folders)
+    {
+        if (folders is null)
+        {
+            return [];
+        }
 
-    // A null list takes the fallback (a copy, never the shared default array). A null element is dropped. Each valid entry is normalised; an invalid one is kept as
-    // written (trimmed), so that the tab shows it, and the pre-flight names it when Start is pressed (spec §4), instead of the file silently losing it.
-    private static string[] NormaliseTypes(string[]? types, string[] fallback)
+        List<ScanFolder> keptFolders = [];
+
+        foreach (ProjectFileFolder? folder in folders)
+        {
+            if (folder?.Path is not null)
+            {
+                keptFolders.Add(new ScanFolder(folder.Path, folder.IncludeSubfolders ?? true));
+            }
+        }
+
+        return [.. keptFolders];
+    }
+
+    /// <summary>
+    ///     Maps a file type list of a project file. A null list takes the fallback (a copy, never the shared default array). A null element is dropped. Each valid entry is
+    ///     normalised; an invalid one is kept as written (trimmed), so that the tab shows it, and the pre-flight names it when Start is pressed, instead of the file silently losing it.
+    /// </summary>
+    /// <param name="types">The entries as read from the file.</param>
+    /// <param name="fallback">The entries to use when the list is null.</param>
+    /// <returns>The entries that are kept, sorted.</returns>
+    private static string[] NormaliseTypes(string?[]? types, string[] fallback)
     {
         if (types is null)
         {
             return [.. fallback];
         }
 
-        SortedSet<string> kept = new(StringComparer.Ordinal);
+        SortedSet<string> keptTypes = new(StringComparer.Ordinal);
 
         foreach (string? type in types)
         {
@@ -154,14 +221,14 @@ public sealed class SettingsStore
 
             if (!parsed.IsError)
             {
-                kept.UnionWith(parsed.Value);
+                keptTypes.UnionWith(parsed.Value);
             }
             else
             {
-                kept.Add(type.Trim());
+                keptTypes.Add(type.Trim());
             }
         }
 
-        return [.. kept];
+        return [.. keptTypes];
     }
 }

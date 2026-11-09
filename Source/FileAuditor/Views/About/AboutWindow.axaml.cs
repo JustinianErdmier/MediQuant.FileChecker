@@ -13,5 +13,8 @@ public partial class AboutWindow : ClassicWindow
         DataContext = new AboutWindowViewModel();
     }
 
-    private void OnOkClick(object? sender, RoutedEventArgs e) => Close();
+    /// <summary>Closes the box when OK is clicked.</summary>
+    /// <param name="sender">The OK button.</param>
+    /// <param name="eventArgs">The event data.</param>
+    private void OnOkClick(object? sender, RoutedEventArgs eventArgs) => Close();
 }

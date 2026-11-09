@@ -6,14 +6,19 @@ namespace FileAuditor.Services.Auditing;
 /// </summary>
 public sealed class UnindexedProgress
 {
+    /// <summary>The number of files found that are in the index. Read and written with <see cref="Interlocked" />.</summary>
     private long _indexed;
 
+    /// <summary>The status-bar text for the current phase.</summary>
     private volatile string _phase = string.Empty;
 
+    /// <summary>Times the folder scan; <see langword="null" /> until the scan begins.</summary>
     private volatile Stopwatch? _scanClock;
 
+    /// <summary>The number of files found that are not in the index. Read and written with <see cref="Interlocked" />.</summary>
     private long _unindexed;
 
+    /// <summary>The number of folders that could not be listed plus links not followed and entries whose link status could not be read. Read and written with <see cref="Interlocked" />.</summary>
     private long _unverified;
 
     /// <summary>Gets the number of files found that are in the index.</summary>

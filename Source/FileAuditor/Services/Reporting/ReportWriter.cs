@@ -3,6 +3,7 @@ namespace FileAuditor.Services.Reporting;
 /// <summary>Writes the finished report to disk.</summary>
 public static class ReportWriter
 {
+    /// <summary>UTF-8 without a byte order mark, the encoding of every report.</summary>
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
     /// <summary>Writes the report as UTF-8 without a byte order mark, to a temporary file beside the target and then moved over it, so a failure never leaves a half-written report.</summary>
@@ -31,6 +32,8 @@ public static class ReportWriter
         }
     }
 
+    /// <summary>Deletes a temporary file, ignoring any failure: the original failure is the one worth reporting.</summary>
+    /// <param name="path">The file to delete.</param>
     private static void TryDelete(string path)
     {
         try

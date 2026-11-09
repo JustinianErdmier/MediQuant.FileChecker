@@ -1,4 +1,4 @@
-namespace FileAuditor.Services.Settings;
+namespace FileAuditor.Models.Settings;
 
 /// <summary>The outcome of a save point: whether the operation that triggered it may proceed, and whether the save checkbox should now be ticked.</summary>
 /// <param name="Proceed"><see langword="true" /> when the triggering operation may go ahead; <see langword="false" /> when the user cancelled.</param>

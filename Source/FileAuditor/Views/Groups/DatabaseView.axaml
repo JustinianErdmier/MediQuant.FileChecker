@@ -18,13 +18,16 @@
               RowDefinitions="Auto,Auto"
               RowSpacing="6"
               Margin="4">
-            <Label Content="_Server:"
+            <Label Grid.Row="0"
+                   Content="_Server:"
                    Target="{Binding #ServerBox}"
                    VerticalAlignment="Center" />
             <TextBox x:Name="ServerBox"
+                     Grid.Row="0"
                      Grid.Column="1"
                      Text="{Binding Server}" />
             <Label Grid.Row="1"
+                   Grid.Column="0"
                    Content="_Database:"
                    Target="{Binding #DatabaseBox}"
                    VerticalAlignment="Center" />

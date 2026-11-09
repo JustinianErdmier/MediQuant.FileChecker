@@ -18,16 +18,22 @@ public sealed class RecentRate
     /// </summary>
     public const double WarmUpSeconds = 5;
 
+    /// <summary>The count at the anchor sample, which the first rate is measured from.</summary>
     private long _anchorCount;
 
+    /// <summary>The time of the anchor sample, in seconds.</summary>
     private double _anchorSeconds;
 
+    /// <summary>Whether the anchor sample has been taken.</summary>
     private bool _hasAnchor;
 
+    /// <summary>The count at the previous sample.</summary>
     private long _previousCount;
 
+    /// <summary>The time of the previous sample, in seconds.</summary>
     private double _previousSeconds;
 
+    /// <summary>Whether the average has been seeded, which ends the warm-up.</summary>
     private bool _seeded;
 
     /// <summary>Gets the rate from the latest <see cref="Next" /> call, or <see langword="null" /> during the warm-up.</summary>
@@ -99,8 +105,8 @@ public sealed class RecentRate
     /// <returns>The text, such as <c>54,112 (60,001)</c> or <c>54,112</c>.</returns>
     public static string Format(double wholeRun, double? recent)
     {
-        string whole = wholeRun.ToString(format: "N0", CultureInfo.CurrentCulture);
+        string wholeRunText = wholeRun.ToString(format: "N0", CultureInfo.CurrentCulture);
 
-        return recent is null ? whole : $"{whole} ({recent.Value.ToString(format: "N0", CultureInfo.CurrentCulture)})";
+        return recent is null ? wholeRunText : $"{wholeRunText} ({recent.Value.ToString(format: "N0", CultureInfo.CurrentCulture)})";
     }
 }

@@ -18,14 +18,17 @@
               RowDefinitions="Auto,Auto,Auto"
               RowSpacing="6"
               Margin="4">
-            <Label Content="_Table:"
+            <Label Grid.Row="0"
+                   Content="_Table:"
                    Target="{Binding #TableBox}"
                    VerticalAlignment="Center" />
             <TextBox x:Name="TableBox"
+                     Grid.Row="0"
                      Grid.Column="1"
                      Grid.ColumnSpan="2"
                      Text="{Binding Table}" />
             <Label Grid.Row="1"
+                   Grid.Column="0"
                    Content="_Path column:"
                    Target="{Binding #PathColumnBox}"
                    VerticalAlignment="Center" />
@@ -35,6 +38,7 @@
                      Grid.ColumnSpan="2"
                      Text="{Binding PathColumn}" />
             <Label Grid.Row="2"
+                   Grid.Column="0"
                    Content="_ID column:"
                    Target="{Binding #IdColumnBox}"
                    VerticalAlignment="Center" />

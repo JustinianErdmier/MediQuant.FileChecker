@@ -1,10 +1,12 @@
 namespace FileAuditor.Services.Reporting;
 
-/// <summary>Works out where the report goes from the user's settings (SDD §5.3).</summary>
+/// <summary>Works out where the report goes from the user's settings.</summary>
 public static class ReportPathResolver
 {
+    /// <summary>The folder that built report paths start from.</summary>
     private const string BuiltRoot = @"U:\Projects";
 
+    /// <summary>Stands in for the project folder in a built path until the project folder is filled in.</summary>
     private const string ProjectFolderPlaceholder = "<Project Folder>";
 
     /// <summary>
@@ -13,15 +15,15 @@ public static class ReportPathResolver
     ///     filled in. Custom: the typed location and file name, complete once both are filled in.
     /// </summary>
     /// <param name="settings">The current settings.</param>
-    /// <param name="directions">The audit direction the report belongs to.</param>
+    /// <param name="direction">The audit direction the report belongs to.</param>
     /// <returns>The resolved report path.</returns>
-    public static ReportPath Resolve(AppSettings settings, AuditDirections directions)
+    public static ReportPath Resolve(AppSettings settings, AuditDirections direction)
     {
         if (settings.UseCustomReportLocation)
         {
             string location = settings.CustomLocation.Trim();
 
-            string fileName = directions is AuditDirections.Missing
+            string fileName = direction is AuditDirections.Missing
                                   ? settings.MissingCustomFileName.Trim()
                                   : settings.UnindexedCustomFileName.Trim();
 
@@ -30,23 +32,23 @@ public static class ReportPathResolver
 
         string projectFolder = settings.ProjectFolder.Trim();
 
-        AuditStages auditStages = settings.ProjectStages is ProjectStages.Sample
-                                      ? AuditStages.Interim
-                                      : settings.AuditStages;
+        AuditStages auditStage = settings.ProjectStage is ProjectStages.Sample
+                                     ? AuditStages.Interim
+                                     : settings.AuditStage;
 
         string directory = Path.Combine(BuiltRoot,
                                         projectFolder.Length > 0
                                             ? projectFolder
                                             : ProjectFolderPlaceholder,
                                         path3: "DE",
-                                        settings.ProjectStages.ToString());
+                                        settings.ProjectStage.ToString());
 
-        return new ReportPath(directory, $"FileAuditor{directions}Report_{auditStages}.txt", projectFolder.Length > 0, IsCustom: false);
+        return new ReportPath(directory, $"FileAuditor{direction}Report_{auditStage}.txt", projectFolder.Length > 0, IsCustom: false);
     }
 
     /// <summary>
-    ///     Resolves the report folder alone, without a direction: the project file's folder follows the shared location, never a tab's file name (SDD §8.3). Built: the built folder,
-    ///     complete once the project folder is filled in. Custom: the typed location, complete once it is not empty.
+    ///     Resolves the report folder alone, without a direction: the project file's folder follows the shared location, never a tab's file name. Built: the built folder, complete
+    ///     once the project folder is filled in. Custom: the typed location, complete once it is not empty.
     /// </summary>
     /// <param name="settings">The current settings.</param>
     /// <returns>A path whose <see cref="ReportPath.FileName" /> is empty; only its folder, completeness and custom flag mean anything.</returns>

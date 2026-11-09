@@ -21,18 +21,25 @@
             <Grid ColumnDefinitions="80,84,70,84,82,*"
                   RowDefinitions="Auto,Auto"
                   RowSpacing="3">
-                <TextBlock Text="Total files:" />
-                <TextBlock Grid.Column="1"
+                <TextBlock Grid.Row="0"
+                           Text="Total files:" />
+                <TextBlock Grid.Row="0"
+                           Grid.Column="1"
                            Text="{Binding TotalFiles}" />
-                <TextBlock Grid.Column="2"
+                <TextBlock Grid.Row="0"
+                           Grid.Column="2"
                            Text="Unindexed:" />
-                <TextBlock Grid.Column="3"
+                <TextBlock Grid.Row="0"
+                           Grid.Column="3"
                            Text="{Binding Unindexed}" />
-                <TextBlock Grid.Column="4"
+                <TextBlock Grid.Row="0"
+                           Grid.Column="4"
                            Text="Elapsed:" />
-                <TextBlock Grid.Column="5"
+                <TextBlock Grid.Row="0"
+                           Grid.Column="5"
                            Text="{Binding Elapsed}" />
                 <TextBlock Grid.Row="1"
+                           Grid.Column="0"
                            Text="Indexed:" />
                 <TextBlock Grid.Row="1"
                            Grid.Column="1"
@@ -80,14 +87,14 @@
                         MinWidth="75"
                         MinHeight="23"
                         HorizontalContentAlignment="Center"
-                        Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).ViewReportCommand}" />
+                        Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).ViewReportCommand, FallbackValue={x:Null}}" />
                 <Button Grid.Column="2"
                         Content="St_art"
                         MinWidth="75"
                         MinHeight="23"
                         HorizontalContentAlignment="Center"
                         IsDefault="True"
-                        Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).StartCommand}" />
+                        Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).StartCommand, FallbackValue={x:Null}}" />
                 <Button Grid.Column="3"
                         Content="St_op"
                         MinWidth="75"
@@ -95,7 +102,7 @@
                         HorizontalContentAlignment="Center"
                         Margin="6,0,0,0"
                         IsEnabled="{Binding IsStopEnabled}"
-                        Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).StopCommand}" />
+                        Command="{Binding $parent[Window].((mainVm:MainWindowViewModel)DataContext).StopCommand, FallbackValue={x:Null}}" />
             </Grid>
         </StackPanel>
     </ct:GroupBox>

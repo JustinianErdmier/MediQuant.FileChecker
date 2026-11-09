@@ -3,8 +3,10 @@ namespace FileAuditor.Views.Main;
 /// <summary>The File Auditor main window.</summary>
 public partial class MainWindow : ClassicWindow
 {
+    /// <summary>Whether the user has confirmed the close, so the next closing request goes through.</summary>
     private bool _closeApproved;
 
+    /// <summary>Whether the close question is open, so a second closing request does not ask again.</summary>
     private bool _isAsking;
 
     /// <summary>Initialises a new instance of the <see cref="MainWindow" /> class.</summary>
@@ -49,10 +51,28 @@ public partial class MainWindow : ClassicWindow
             return;
         }
 
-        viewModel.AboutRequested += async (_, _) => await new AboutWindow().ShowDialog(this);
-        viewModel.ExitRequested  += (_,       _) => Close();
+        viewModel.AboutRequested += OnAboutRequested;
+        viewModel.ExitRequested  += (_, _) => Close();
     }
 
+    /// <summary>Shows the About window as a dialogue over this window, and reports any exception it raises.</summary>
+    /// <param name="sender">The view model that raised the event.</param>
+    /// <param name="eventArgs">The event data.</param>
+    private async void OnAboutRequested(object? sender, EventArgs eventArgs)
+    {
+        try
+        {
+            await new AboutWindow().ShowDialog(this);
+        }
+        catch (Exception exception)
+        {
+            UnexpectedErrorHandler.ReportRecoverable(exception);
+        }
+    }
+
+    /// <summary>Asks the view model whether the window may close and, when it may, closes it.</summary>
+    /// <param name="viewModel">The view model of the window.</param>
+    /// <returns>A task that completes when the question has been answered.</returns>
     private async Task CloseWhenConfirmedAsync(MainWindowViewModel viewModel)
     {
         _isAsking = true;
@@ -65,6 +85,10 @@ public partial class MainWindow : ClassicWindow
 
                 Close();
             }
+        }
+        catch (Exception exception)
+        {
+            UnexpectedErrorHandler.ReportRecoverable(exception);
         }
         finally
         {

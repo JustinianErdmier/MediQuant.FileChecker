@@ -1,7 +1,7 @@
 namespace FileAuditor.Services.Scanning;
 
 /// <summary>
-///     Walks the input folders of the unindexed-files audit and reports every file whose name belongs to a chosen file type (milestone 4 spec §3.2).
+///     Walks the input folders of the unindexed-files audit and reports every file whose name belongs to a chosen file type.
 ///     <para>
 ///         <b>Scope.</b> An input folder covers its own files and, when <see cref="ScanFolder.IncludeSubfolders" /> is set, every folder beneath it. Hidden and system files and
 ///         folders are never listed (a skipped folder's contents go with it).
@@ -28,12 +28,13 @@ namespace FileAuditor.Services.Scanning;
 ///         reported) and returns once every worker has noticed. The caller must check the token afterwards to tell a stopped walk from a finished one.
 ///     </para>
 /// </summary>
-public sealed class FolderWalker
+public static class FolderWalker
 {
     // ReSharper disable once MemberCanBePrivate.Global
     /// <summary>The most folder listings that run at once; each listing over a network share is a round trip, so the parallelism is in listing.</summary>
     public const int MaxConcurrentListings = 16;
 
+    /// <summary>The options for listing one folder: no recursion, hidden and system entries skipped, and every failure thrown rather than ignored.</summary>
     private static readonly EnumerationOptions ListingOptions = new()
     {
         RecurseSubdirectories    = false,
@@ -52,11 +53,11 @@ public sealed class FolderWalker
     /// </param>
     /// <param name="cancellationToken">Stops the walk promptly; see the cancellation note on the type.</param>
     /// <returns>A task that completes when no folder is queued or being listed, or the walk was stopped.</returns>
-    public Task WalkAsync(IReadOnlyList<ScanFolder> folders,
-                          FileTypeFilter            filter,
-                          Action<ScannedFile>       onFile,
-                          Action<UnverifiedFolder>  onUnverified,
-                          CancellationToken         cancellationToken)
+    public static Task WalkAsync(IReadOnlyList<ScanFolder> folders,
+                                 FileTypeFilter            filter,
+                                 Action<ScannedFile>       onFile,
+                                 Action<UnverifiedFolder>  onUnverified,
+                                 CancellationToken         cancellationToken)
         => Task.Run(() => WalkAsyncCore(folders, filter, onFile, onUnverified, cancellationToken), CancellationToken.None);
 
     /// <summary>Makes an input folder's path canonical: a full path with exactly one trailing separator, as the walk and the index query both use it.</summary>
@@ -69,6 +70,13 @@ public sealed class FolderWalker
         return Path.EndsInDirectorySeparator(full) ? full : $"{full}{Path.DirectorySeparatorChar}";
     }
 
+    /// <summary>Runs the walk on worker threads, after dropping the input folders that are links or whose link status cannot be read.</summary>
+    /// <param name="folders">The input folders.</param>
+    /// <param name="filter">Decides which files are reported, and under which file type.</param>
+    /// <param name="onFile">Called for each file found.</param>
+    /// <param name="onUnverified">Called for each folder or link that could not be checked.</param>
+    /// <param name="cancellationToken">Stops the walk.</param>
+    /// <returns>A task that completes when every worker has finished.</returns>
     private static async Task WalkAsyncCore(IReadOnlyList<ScanFolder> folders,
                                             FileTypeFilter            filter,
                                             Action<ScannedFile>       onFile,
@@ -90,29 +98,18 @@ public sealed class FolderWalker
         {
             // Only a reparse point can be a link, so an ordinary input costs no extra probe, and a missing or unreachable one is left for its listing to classify. An input whose
             // link status cannot be read is not walked either: it is reported as unverified.
-            if (!IsReparsePoint(inputRoot.Path))
+            if (!HasReparsePointAttribute(inputRoot.Path))
             {
                 pathRoots.Add(inputRoot);
 
                 continue;
             }
 
-            switch (Classify(new DirectoryInfo(inputRoot.Path), out string? failure))
+            LinkStates state = Classify(new DirectoryInfo(inputRoot.Path), out string? failure);
+
+            if (IsOrdinary(state, inputRoot.Path, failure, onUnverified))
             {
-                case LinkStates.Link:
-                    onUnverified(LinkNotFollowed(inputRoot.Path));
-
-                    break;
-
-                case LinkStates.Unknown:
-                    onUnverified(Unclassifiable(inputRoot.Path, failure));
-
-                    break;
-
-                default:
-                    pathRoots.Add(inputRoot);
-
-                    break;
+                pathRoots.Add(inputRoot);
             }
         }
 
@@ -121,7 +118,7 @@ public sealed class FolderWalker
             return;
         }
 
-        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using CancellationTokenSource linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         Walk walk = new([.. pathRoots],
                         allPathRoots.Select(root => root.Path)
@@ -129,7 +126,7 @@ public sealed class FolderWalker
                         filter,
                         onFile,
                         onUnverified,
-                        linked.Token);
+                        linkedSource.Token);
 
         foreach (InputRoot root in pathRoots)
         {
@@ -137,14 +134,17 @@ public sealed class FolderWalker
         }
 
         // Dedicated threads: the listings block, and the thread pool would ramp up to 16 blocked threads slowly.
+        // ReSharper disable AccessToDisposedClosure
         Task[] workers =
         [
             .. Enumerable.Range(start: 0, MaxConcurrentListings)
-                         .Select(_ => Task.Factory.StartNew(() => RunWorker(walk, linked),
+                         .Select(_ => Task.Factory.StartNew(() => RunWorker(walk, linkedSource),
                                                             CancellationToken.None,
                                                             TaskCreationOptions.LongRunning,
                                                             TaskScheduler.Default))
         ];
+
+        // ReSharper restore AccessToDisposedClosure
 
         try
         {
@@ -158,7 +158,10 @@ public sealed class FolderWalker
         }
     }
 
-    private static void RunWorker(Walk walk, CancellationTokenSource linked)
+    /// <summary>The loop of one worker: lists folders from the queue until the walk is over, stopped or failed.</summary>
+    /// <param name="walk">The walk the worker takes its folders from.</param>
+    /// <param name="linkedSource">Cancelled when a callback throws, so the other workers stop too.</param>
+    private static void RunWorker(Walk walk, CancellationTokenSource linkedSource)
     {
         try
         {
@@ -182,7 +185,7 @@ public sealed class FolderWalker
         catch
         {
             // A callback threw: stop the others, then let the exception surface from WalkAsync.
-            linked.Cancel();
+            linkedSource.Cancel();
 
             throw;
         }
@@ -212,15 +215,20 @@ public sealed class FolderWalker
         return [.. byPath.Values.OrderByDescending(root => root.Path.Length)];
     }
 
-    // Whether the entry is a junction or symbolic link (it has a link target). Any other reparse point is an ordinary entry, but an entry whose link target cannot
-    // be read is Unknown, never assumed ordinary: the caller reports it and does not walk or check it.
-    private static LinkStates Classify(FileSystemInfo info, out string? failure)
+    /// <summary>
+    ///     Tells whether an entry is a junction or symbolic link (it has a link target). Any other reparse point is an ordinary entry, but an entry whose link target cannot be read
+    ///     is <see cref="LinkStates.Unknown" />, never assumed ordinary: the caller reports it and does not walk or check it.
+    /// </summary>
+    /// <param name="fileSystemInfo">The folder or file to classify.</param>
+    /// <param name="failure">The system message when the link status could not be read; otherwise <see langword="null" />.</param>
+    /// <returns>The entry's link status.</returns>
+    private static LinkStates Classify(FileSystemInfo fileSystemInfo, out string? failure)
     {
         failure = null;
 
         try
         {
-            return info.LinkTarget is not null ? LinkStates.Link : LinkStates.Ordinary;
+            return fileSystemInfo.LinkTarget is not null ? LinkStates.Link : LinkStates.Ordinary;
         }
         catch (Exception exception)
         {
@@ -237,7 +245,7 @@ public sealed class FolderWalker
     ///     A folder whose attributes cannot be read is treated as ordinary here, so its listing reports the real reason (drive not found, unreachable, permission denied) rather than
     ///     a link failure.
     /// </remarks>
-    private static bool IsReparsePoint(string path)
+    private static bool HasReparsePointAttribute(string path)
     {
         try
         {
@@ -265,13 +273,54 @@ public sealed class FolderWalker
     /// <returns>An <see cref="UnverifiedFolder" /> record with the <see cref="CheckOutcomes.UnverifiedLinkNotFollowed" /> reason.</returns>
     private static UnverifiedFolder LinkNotFollowed(string path) => new(path, CheckOutcomes.UnverifiedLinkNotFollowed, ReasonText: null, SystemMessage: null);
 
+    /// <summary>Reports a link, or an entry whose link status could not be read, as unverified; an ordinary entry is left for the caller to walk or report.</summary>
+    /// <param name="state">The entry's link status.</param>
+    /// <param name="path">The entry's path.</param>
+    /// <param name="failure">The system message when the link status could not be read.</param>
+    /// <param name="onUnverified">The callback that receives the unverified entry.</param>
+    /// <returns><see langword="true" /> only for an ordinary entry, which the caller then walks or reports.</returns>
+    private static bool IsOrdinary(LinkStates state, string path, string? failure, Action<UnverifiedFolder> onUnverified)
+    {
+        switch (state)
+        {
+            case LinkStates.Ordinary:
+                return true;
+
+            case LinkStates.Link:
+                onUnverified(LinkNotFollowed(path));
+
+                return false;
+
+            case LinkStates.Unknown:
+                onUnverified(Unclassifiable(path, failure));
+
+                return false;
+
+            default:
+                throw new UnreachableException();
+        }
+    }
+
     /// <summary>
     ///     Describes the outcome of classifying a file-system entry before traversal, distinguishing entries that can be processed normally, entries that are links and must not be
     ///     followed, and entries whose link status could not be determined.
     /// </summary>
-    private enum LinkStates { Ordinary, Link, Unknown }
+    private enum LinkStates
+    {
+        /// <summary>The entry is an ordinary file or folder, including any reparse point that is not a link.</summary>
+        Ordinary,
+
+        /// <summary>The entry is a junction or symbolic link, which is reported and not followed.</summary>
+        Link,
+
+        /// <summary>The entry's link status could not be read, so it is reported and neither walked nor checked.</summary>
+        Unknown
+    }
 
     /// <summary>An input folder: its normalised path, the path as entered, and its scope.</summary>
+    /// <param name="Path">The folder's normalised path: a full path with one trailing separator.</param>
+    /// <param name="Entered">The folder's path as the user entered it, which is how the report names it.</param>
+    /// <param name="IncludeSubfolders">Whether the folders beneath it are covered too.</param>
     private sealed record InputRoot(string Path, string Entered, bool IncludeSubfolders);
 
     /// <summary>Represents one file-system entry discovered while listing a folder during a scan.</summary>
@@ -288,18 +337,31 @@ public sealed class FolderWalker
     /// </remarks>
     private sealed class Walk
     {
+        /// <summary>Decides which files are reported, and under which file type.</summary>
         private readonly FileTypeFilter _filter;
 
+        /// <summary>The normalised paths of every input folder, so a subfolder that is itself an input is not queued a second time.</summary>
         private readonly HashSet<string> _inputPaths;
 
+        /// <summary>Called for each file found.</summary>
         private readonly Action<ScannedFile> _onFile;
 
+        /// <summary>Called for each folder that could not be listed and each link that was not followed.</summary>
         private readonly Action<UnverifiedFolder> _onUnverified;
 
+        /// <summary>The input folders that are walked, deepest first.</summary>
         private readonly InputRoot[] _roots;
 
+        /// <summary>The number of folders queued or being listed; the walk is over when it reaches zero.</summary>
         private int _pending;
 
+        /// <summary>Initialises a new walk.</summary>
+        /// <param name="roots">The input folders that are walked, deepest first.</param>
+        /// <param name="inputPaths">The normalised paths of every input folder, including those that are links and so not walked.</param>
+        /// <param name="filter">Decides which files are reported, and under which file type.</param>
+        /// <param name="onFile">Called for each file found.</param>
+        /// <param name="onUnverified">Called for each folder that could not be listed and each link that was not followed.</param>
+        /// <param name="cancellationToken">Stops the walk.</param>
         public Walk(InputRoot[]              roots,
                     HashSet<string>          inputPaths,
                     FileTypeFilter           filter,
@@ -315,15 +377,20 @@ public sealed class FolderWalker
             CancellationToken = cancellationToken;
         }
 
+        /// <summary>Gets the token that stops the walk.</summary>
         public CancellationToken CancellationToken { get; }
 
+        /// <summary>Gets the folders waiting to be listed.</summary>
         public BlockingCollection<string> Queue { get; } = new();
 
         /// <summary>Queues a folder; the walk is over when every queued folder has finished.</summary>
+        /// <param name="folder">The normalised path of the folder, with a trailing separator.</param>
         public void Enqueue(string folder)
         {
             Interlocked.Increment(ref _pending);
 
+            // The queue is unbounded, so Add never blocks; a token could throw before the workers start and leave _pending counted for an unqueued folder.
+            // ReSharper disable once MethodSupportsCancellation
             Queue.Add(folder);
         }
 
@@ -336,6 +403,8 @@ public sealed class FolderWalker
             }
         }
 
+        /// <summary>Lists one folder: reports its matching files, and queues its subfolders when any input that covers it includes subfolders.</summary>
+        /// <param name="folder">The normalised path of the folder, with a trailing separator.</param>
         public void List(string folder)
         {
             if (CancellationToken.IsCancellationRequested)
@@ -389,9 +458,9 @@ public sealed class FolderWalker
                 MappedOutcome mapped = Win32ErrorMapper.Map(exception);
 
                 // A folder that vanished mid-run is not a "file missing" outcome; it is a folder that could not be checked.
-                _onUnverified(mapped.Outcomes is CheckOutcomes.MissingDoesNotExist
+                _onUnverified(mapped.Outcome is CheckOutcomes.MissingDoesNotExist
                                   ? new UnverifiedFolder(folder, CheckOutcomes.UnverifiedOther, ReasonText: "Folder not found", exception.Message)
-                                  : new UnverifiedFolder(folder, mapped.Outcomes, mapped.Reason, mapped.SystemMessage));
+                                  : new UnverifiedFolder(folder, mapped.Outcome, mapped.Reason, mapped.SystemMessage));
 
                 return;
             }
@@ -420,29 +489,21 @@ public sealed class FolderWalker
 
                 string? failure = null;
 
-                switch (entry.IsReparsePoint ? Classify(new FileInfo(file), out failure) : LinkStates.Ordinary)
+                LinkStates state = entry.IsReparsePoint ? Classify(new FileInfo(file), out failure) : LinkStates.Ordinary;
+
+                if (IsOrdinary(state, file, failure, _onUnverified))
                 {
-                    case LinkStates.Link:
-                        _onUnverified(LinkNotFollowed(file));
-
-                        break;
-
-                    case LinkStates.Unknown:
-                        _onUnverified(Unclassifiable(file, failure));
-
-                        break;
-
-                    default:
-                        _onFile(new ScannedFile(file, owner.Entered, type));
-
-                        break;
+                    _onFile(new ScannedFile(file, owner.Entered, type));
                 }
             }
         }
 
-        private void Descend(string folder, Entry sub)
+        /// <summary>Queues a subfolder, unless it is itself an input or is a link, which is reported instead.</summary>
+        /// <param name="folder">The normalised path of the folder being listed.</param>
+        /// <param name="subfolder">The subfolder's entry.</param>
+        private void Descend(string folder, Entry subfolder)
         {
-            string path = $"{folder}{sub.Name}{Path.DirectorySeparatorChar}";
+            string path = $"{folder}{subfolder.Name}{Path.DirectorySeparatorChar}";
 
             // An input is queued, or reported if it is a link, on its own: here it would be a second visit.
             if (_inputPaths.Contains(path))
@@ -453,30 +514,26 @@ public sealed class FolderWalker
             // A folder's status is probed only for a reparse point, and before the folder is queued; one that cannot be classified is not walked.
             string? failure = null;
 
-            switch (sub.IsReparsePoint ? Classify(new DirectoryInfo(path), out failure) : LinkStates.Ordinary)
+            LinkStates state = subfolder.IsReparsePoint ? Classify(new DirectoryInfo(path), out failure) : LinkStates.Ordinary;
+
+            if (IsOrdinary(state, path, failure, _onUnverified))
             {
-                case LinkStates.Link:
-                    _onUnverified(LinkNotFollowed(path));
-
-                    break;
-
-                case LinkStates.Unknown:
-                    _onUnverified(Unclassifiable(path, failure));
-
-                    break;
-
-                default:
-                    Enqueue(path);
-
-                    break;
+                Enqueue(path);
             }
         }
 
+        /// <summary>Converts a raw file-system entry into an <see cref="Entry" />.</summary>
+        /// <param name="entry">The entry the enumeration is positioned on.</param>
+        /// <returns>The entry's name, whether it is a directory and whether it is a reparse point.</returns>
         private static Entry ToEntry(ref FileSystemEntry entry)
             => new(entry.FileName.ToString(),
                    entry.IsDirectory,
                    (entry.Attributes & FileAttributes.ReparsePoint) is not 0);
 
+        /// <summary>Determines whether an input folder covers a folder: the folder is the input itself, or is beneath it and the input includes subfolders.</summary>
+        /// <param name="inputRoot">The input folder.</param>
+        /// <param name="folder">The normalised path of the folder, with a trailing separator.</param>
+        /// <returns><see langword="true" /> when the input covers the folder.</returns>
         private static bool Covers(InputRoot inputRoot, string folder)
             => inputRoot.Path.Equals(folder, StringComparison.OrdinalIgnoreCase)
                || (inputRoot.IncludeSubfolders

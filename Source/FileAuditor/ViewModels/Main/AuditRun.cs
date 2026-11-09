@@ -2,7 +2,7 @@ namespace FileAuditor.ViewModels.Main;
 
 /// <summary>
 ///     One run of an audit in one direction, as the main window drives it: the window times the run and refreshes the Audit group on a timer, and the run supplies the
-///     direction's progress, its runner and how its outcome reads. It keeps the per-direction code out of <see cref="MainWindowViewModel" />.
+///     direction's progress, how it runs and how its outcome reads. It keeps the per-direction code out of <see cref="MainWindowViewModel" />.
 /// </summary>
 /// <param name="audit">The Audit group that shows this run.</param>
 public abstract class AuditRun(AuditStatusBase audit)
@@ -66,6 +66,7 @@ public abstract class AuditRun(AuditStatusBase audit)
         {
             AuditResultKinds.Completed     => ("Completed", null),
             AuditResultKinds.StoppedByUser => ("Stopped", null),
-            var _                          => ("Failed", $"The audit failed part-way through:\n\n{failureMessage}\n\nThe report so far has been written.")
+            AuditResultKinds.Failed        => ("Failed", $"The audit failed part-way through:\n\n{failureMessage}\n\nThe report so far has been written."),
+            var _                          => throw new UnreachableException()
         };
 }
