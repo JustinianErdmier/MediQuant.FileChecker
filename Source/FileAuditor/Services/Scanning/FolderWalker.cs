@@ -70,7 +70,7 @@ public static class FolderWalker
         return Path.EndsInDirectorySeparator(full) ? full : $"{full}{Path.DirectorySeparatorChar}";
     }
 
-    /// <summary>Runs the walk on worker threads, after dropping the input folders that are links.</summary>
+    /// <summary>Runs the walk on worker threads, after dropping the input folders that are links or whose link status cannot be read.</summary>
     /// <param name="folders">The input folders.</param>
     /// <param name="filter">Decides which files are reported, and under which file type.</param>
     /// <param name="onFile">Called for each file found.</param>

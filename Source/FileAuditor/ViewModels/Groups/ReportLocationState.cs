@@ -64,8 +64,8 @@ public sealed partial class ReportLocationState : ObservableObject
         };
 
     /// <summary>
-    ///     Resolves the report folder from the shared values alone, which is what decides where the project's settings file goes. The result has no file name, so it is
-    ///     the same whichever tab is selected.
+    ///     Resolves the report folder from the shared values alone, which is what decides where the project's settings file goes. The result has no file name, so it is the same
+    ///     whichever tab is selected.
     /// </summary>
     /// <returns>The report folder: complete once the project folder is filled in (built) or the custom location is (custom).</returns>
     public ReportPath ResolveFolder() => ReportPathResolver.ResolveFolder(ApplyTo(AppSettings.Default));

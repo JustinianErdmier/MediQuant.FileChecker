@@ -1,8 +1,7 @@
 namespace FileAuditor.Services.Reporting;
 
 /// <summary>
-///     Builds the plain-text unindexed-files report. The output is deterministic: invariant-culture numbers, ordinal case-insensitive ordering and CRLF
-///     line endings.
+///     Builds the plain-text unindexed-files report. The output is deterministic: invariant-culture numbers, ordinal case-insensitive ordering and CRLF line endings.
 /// </summary>
 public static class UnindexedReportBuilder
 {

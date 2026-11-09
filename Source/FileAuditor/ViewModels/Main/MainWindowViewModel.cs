@@ -62,7 +62,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         : this(new DialogueService(() => null))
     { }
 
-    /// <summary>Initialises a new instance populated with the default settings.</summary>
+    /// <summary>Initialises a new instance with the given dialogue service and a new project settings service that uses it.</summary>
     /// <param name="dialogues">Shows the errors, confirmations and questions.</param>
     private MainWindowViewModel(DialogueService dialogues)
         : this(dialogues, new ProjectSettingsService(dialogues))
@@ -417,7 +417,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool CanStop() => IsRunning;
 
     /// <summary>Determines whether View Report is available. It reads the cached probe result; the file system is never touched from here.</summary>
-    /// <returns><see langword="true" /> when no audit is running and the selected tab's report exists.</returns>
+    /// <returns><see langword="true" /> when no audit is running and the selected tab's report path is complete and the file exists.</returns>
     private bool CanViewReport() => !IsRunning && SelectedReport.Current.IsComplete && _reportExists;
 
     /// <summary>
@@ -542,7 +542,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    /// <summary>Stops the running audit; whatever was checked is reported.</summary>
+    /// <summary>Stops the running audit; whatever was checked is reported, unless the run was stopped before checking began.</summary>
     [ RelayCommand(CanExecute = nameof(CanStop)) ]
     private void Stop() => _auditCancellationSource?.Cancel();
 
@@ -668,8 +668,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    ///     Undoes what the save point did when opening a project is abandoned. The save point may have saved and ticked the checkbox after a Yes; the project stays open, so that
-    ///     tick must be shown.
+    ///     Shows the tick the save point asked for when opening a project is abandoned: the user may have unticked the box and then answered Yes to the save prompt, so the
+    ///     settings were saved; the project stays open, so that tick must be shown.
     /// </summary>
     /// <param name="savePoint">The result of the save point.</param>
     private void AbandonOpen(SavePointResult savePoint)

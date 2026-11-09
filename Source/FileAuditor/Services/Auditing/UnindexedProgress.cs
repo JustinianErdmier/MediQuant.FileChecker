@@ -18,7 +18,7 @@ public sealed class UnindexedProgress
     /// <summary>The number of files found that are not in the index. Read and written with <see cref="Interlocked" />.</summary>
     private long _unindexed;
 
-    /// <summary>The number of folders that could not be listed plus links not followed. Read and written with <see cref="Interlocked" />.</summary>
+    /// <summary>The number of folders that could not be listed plus links not followed and entries whose link status could not be read. Read and written with <see cref="Interlocked" />.</summary>
     private long _unverified;
 
     /// <summary>Gets the number of files found that are in the index.</summary>

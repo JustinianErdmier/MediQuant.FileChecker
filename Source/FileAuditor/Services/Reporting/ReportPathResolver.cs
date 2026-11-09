@@ -47,8 +47,8 @@ public static class ReportPathResolver
     }
 
     /// <summary>
-    ///     Resolves the report folder alone, without a direction: the project file's folder follows the shared location, never a tab's file name. Built: the built folder,
-    ///     complete once the project folder is filled in. Custom: the typed location, complete once it is not empty.
+    ///     Resolves the report folder alone, without a direction: the project file's folder follows the shared location, never a tab's file name. Built: the built folder, complete
+    ///     once the project folder is filled in. Custom: the typed location, complete once it is not empty.
     /// </summary>
     /// <param name="settings">The current settings.</param>
     /// <returns>A path whose <see cref="ReportPath.FileName" /> is empty; only its folder, completeness and custom flag mean anything.</returns>
