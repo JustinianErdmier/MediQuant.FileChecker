@@ -263,7 +263,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         RefreshReportState();
     }
 
-    /// <summary>Asks whether the save checkbox may be unticked, and ticks it again when the user declines.</summary>
+    /// <summary>Asks whether the save checkbox may be unticked, and ticks it again when the user declines or the question cannot be asked.</summary>
     /// <returns>A task that completes when the question has been answered.</returns>
     private async Task ConfirmUntickAsync()
     {
@@ -283,6 +283,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception exception)
         {
+            // An untick that was never confirmed falls back to the safe, ticked state.
+            SetSaveProjectSettings(value: true);
+
             UnexpectedErrorHandler.ReportRecoverable(exception);
         }
     }

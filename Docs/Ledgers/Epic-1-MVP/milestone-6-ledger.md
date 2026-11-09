@@ -35,6 +35,9 @@ in a project file now falls back to its default instead of making the file unrea
 `git log --oneline c5a05cf..HEAD`, newest first (`c5a05cf` and `c76b4ea` are the plan):
 
 ```
+(this commit) fix(🐛): tidy the milestone 6 re-review follow-ups
+945aa09 docs(📝): record the milestone 6 final review and fix wave 1 in the ledger
+ef106eb fix(🐛): close the milestone 6 final review follow-ups
 0e50f54 docs(📝): sync the SDD with the code review clean-up and close the milestone 6 ledger
 55adafa docs(📝): correct the AbandonOpen doc and tidy the task 7 wording
 c7e6fdd docs(📝): document every type and member and drop the pointers to the design documents
@@ -98,8 +101,8 @@ Decisions taken without the user, each with what it costs if wrong.
 
 For the user, before the pull request:
 
-- **A manual look at the fatal-box flags (done in fix wave 1, see below).** The ownerless box's topmost and foreground flags, and the owner-only-on-the-UI-thread rule, were
-  added in `eff6f62` and checked from the code only; the box itself was seen at runtime before that round.
+- **The fatal-box flags are requested, not proven (looked at in fix wave 1, see below).** The ownerless box asks for topmost and foreground (`eff6f62`); at runtime it sat in
+  front of every window, but Windows did not make it the foreground window and `WS_EX_TOPMOST` did not read back as set. Worth one look on a target machine.
 - **A Stop-button check per tab (done in fix wave 1, see below).** Task 6 believed Stop was one shared button; each tab has its own. The per-tab enabling from milestone 5 was
   not re-checked after the XAML and naming passes (Task 5's screenshots were pixel-identical idle, and the Missing tab's Stop was enabled while running).
 - **The `Project stage:` and `Audit stage:` report lines were checked by reading the code only** (see the plan defects). The stage loading was checked (a `Sample` file shows
@@ -146,8 +149,8 @@ Runtime checks (LocalDB scratch database of 2.5 million rows, dropped afterwards
 - **Smoke:** a project opened, a changed table name was saved to the project file in the same keys with no `null`, the project closed, tabs switched, and *View Report* enabled
   after a completed Unindexed run.
 
-Incidents: two screenshots taken with `CopyFromScreen` captured parts of the user's screen (the Open dialogue's folder listing, and an unrelated window); both were deleted after a
-glance, and every later capture used `PrintWindow` on the app's own window. The fix wave was committed in `ef106eb`; this ledger update follows it.
+The fix wave was committed in `ef106eb`; its incident is under *Incidents*. The scoped re-review (Opus) approved the wave with minors only, tidied in the last commit: the SDD's
+fatal-box wording softened to what was observed, this ledger's commit list and incident placement, and a fault while asking about the untick now re-ticks the box (the safe state).
 
 ## Incidents
 
@@ -158,8 +161,10 @@ glance, and every later capture used `PrintWindow` on the app's own window. The 
 - **Task 2: a stray Enter.** A `{ENTER}` sent while the app was foreground and focused on *Add...* opened the folder picker once. The implementer pressed its `Cancel` at once
   through its own button, and no folder view was read. The rules were tightened again: no `SendKeys` at all, and never open a folder picker (only check that it opens and cancels).
 - **Task 4: a browser window behind the fatal box.** Two early screenshots of the fatal message box also captured an unrelated browser window on the user's screen, because the box
-  sat behind it. They were deleted after a glance and later captures used `PrintWindow` on the box. This is the defect the fix round addressed (an ownerless box is now topmost and
-  foreground).
+  sat behind it. They were deleted after a glance and later captures used `PrintWindow` on the box. This is the defect the fix round addressed (an ownerless box now asks to be
+  topmost and in the foreground).
+- **Fix wave 1: two full-screen captures.** Two screenshots taken with `CopyFromScreen` captured parts of the user's screen (the Open dialogue's folder listing, and an
+  unrelated window); both were deleted after a glance, and every later capture used `PrintWindow` on the app's own window. The rules now forbid `CopyFromScreen`.
 - **Task 4: the GPG timeout.** Committing the staged Task 4 diff timed out on signing, for the implementer and then the controller. The run stopped and the user unlocked GPG; the
   controller then committed (`37d07c1`) and the review ran on the identical diff. Signing was never bypassed.
 - **Smaller:** a Task 1 foreground-steal attempt left another application in front; the check failed before any key was sent. A regex edit in Task 6 left lone LF line endings in

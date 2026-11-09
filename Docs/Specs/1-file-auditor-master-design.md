@@ -915,8 +915,8 @@ plain `Microsoft.Data.SqlClient`, with no ORM.
   <the exception's message>
   ```
 
-  and the process then exits with code 1. The box is owned by the main window when that is safe to ask for, and otherwise it is topmost and in the foreground. A second fatal
-  error on another thread waits until the first box has been read.
+  and the process then exits with code 1. The box is owned by the main window when that is safe to ask for; otherwise it asks to be topmost and in the foreground, which
+  Windows may refuse to a process in the background. A second fatal error on another thread waits until the first box has been read.
 - **One notice at a time.** While a recoverable notice is open, including the plain message box that takes over when there is no main window or the dialogue cannot be shown,
   further recoverable errors are dropped, so an exception repeated on every refresh tick cannot stack up dialogues. A fault that repeats (on every 250 ms refresh, say) shows the
   notice again after *OK*, never more than one at a time.
