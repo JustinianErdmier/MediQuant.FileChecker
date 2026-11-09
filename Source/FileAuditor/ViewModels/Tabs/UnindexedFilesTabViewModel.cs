@@ -3,6 +3,7 @@ namespace FileAuditor.ViewModels.Tabs;
 /// <summary>The Unindexed Files tab: its Folders to Check group, its direction's Report group and its Audit group.</summary>
 public sealed partial class UnindexedFilesTabViewModel : ObservableObject
 {
+    /// <summary>Shows the file types editor; <see langword="null" /> in the XAML designer.</summary>
     private readonly DialogueService? _dialogues;
 
     /// <summary>Initialises a new instance with its own default shared state, for the XAML designer.</summary>
@@ -95,6 +96,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         Report.Load(settings);
     }
 
+    /// <summary>Opens the File types editor and, when it is accepted, replaces the File types summary with the result.</summary>
     [ RelayCommand ]
     private async Task EditFileTypesAsync()
     {
@@ -106,6 +108,7 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         }
     }
 
+    /// <summary>Opens the Exclude list editor and, when it is accepted, replaces the Exclude summary with the result.</summary>
     [ RelayCommand ]
     private async Task EditExcludeAsync()
     {
@@ -117,8 +120,11 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         }
     }
 
+    /// <summary>Determines whether a folder is selected, so Remove can run.</summary>
+    /// <returns><see langword="true" /> when a row is selected.</returns>
     private bool CanRemove() => SelectedFolder is not null;
 
+    /// <summary>Removes the selected folder from the list.</summary>
     [ RelayCommand(CanExecute = nameof(CanRemove)) ]
     private void Remove()
     {
@@ -128,7 +134,9 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         }
     }
 
-    // A change to the list or to a row's checkbox is an input change, like a change to either box.
+    /// <summary>Treats a change to the list as an input change, and starts or stops watching each row's checkbox for the same.</summary>
+    /// <param name="sender">The folder list.</param>
+    /// <param name="eventArgs">The rows added and removed.</param>
     private void OnFoldersChanged(object? sender, NotifyCollectionChangedEventArgs eventArgs)
     {
         foreach (ScanFolderItem item in eventArgs.OldItems?.OfType<ScanFolderItem>() ?? [])
@@ -144,7 +152,13 @@ public sealed partial class UnindexedFilesTabViewModel : ObservableObject
         OnPropertyChanged(nameof(Folders));
     }
 
+    /// <summary>Treats a change to a row's checkbox as an input change, like a change to the list.</summary>
+    /// <param name="sender">The row that changed.</param>
+    /// <param name="eventArgs">The name of the property that changed.</param>
     private void OnFolderChanged(object? sender, PropertyChangedEventArgs eventArgs) => OnPropertyChanged(nameof(Folders));
 
+    /// <summary>Splits the text of a file types summary into its entries.</summary>
+    /// <param name="text">The summary text.</param>
+    /// <returns>The entries, without empty ones.</returns>
     private static string[] Entries(string text) => FileTypeList.Split(text);
 }

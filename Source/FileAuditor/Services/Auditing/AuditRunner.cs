@@ -1,10 +1,12 @@
 namespace FileAuditor.Services.Auditing;
 
-/// <summary>Runs one audit: counts the rows, streams them through a bounded channel to parallel file checks, then builds and writes the report (SDD §6.4).</summary>
+/// <summary>Runs one audit: counts the rows, streams them through a bounded channel to parallel file checks, then builds and writes the report.</summary>
 public sealed class AuditRunner
 {
+    /// <summary>How many index rows can wait between the reader and the file checks before the reader pauses.</summary>
     private const int ChannelCapacity = 10_000;
 
+    /// <summary>The most file checks that run at the same time.</summary>
     private const int MaxParallelism = 32;
 
     /// <summary>Runs the audit.</summary>

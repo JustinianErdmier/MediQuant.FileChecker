@@ -1,6 +1,6 @@
 namespace FileAuditor.Models.Reporting;
 
-/// <summary>Everything the report builder needs to write the plain-text unindexed-files report (milestone 4 spec §3.7).</summary>
+/// <summary>Everything the report builder needs to write the plain-text unindexed-files report.</summary>
 /// <param name="Settings">The settings the run used.</param>
 /// <param name="StartedUtc">When the run started, in UTC.</param>
 /// <param name="FinishedUtc">When the run finished, in UTC.</param>

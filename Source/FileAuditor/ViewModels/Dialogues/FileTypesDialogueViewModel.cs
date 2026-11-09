@@ -78,8 +78,11 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
         return FileTypeList.Parse(string.Join(separator: ' ', entries));
     }
 
+    /// <summary>Determines whether a line is selected, so Delete can run.</summary>
+    /// <returns><see langword="true" /> when there is a selected line.</returns>
     private bool CanDelete() => SelectedEntry is not null;
 
+    /// <summary>Removes the selected line and selects the one that takes its place.</summary>
     [ RelayCommand(CanExecute = nameof(CanDelete)) ]
     private void Delete()
     {
@@ -95,8 +98,11 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
         SelectedEntry = Entries is [] ? null : Entries[Math.Min(index, Entries.Count - 1)];
     }
 
+    /// <summary>Determines whether there are any lines, so Clear can run.</summary>
+    /// <returns><see langword="true" /> when the list is not empty.</returns>
     private bool CanClear() => Entries.Count > 0;
 
+    /// <summary>Removes every line.</summary>
     [ RelayCommand(CanExecute = nameof(CanClear)) ]
     private void Clear()
     {
@@ -105,6 +111,7 @@ public sealed partial class FileTypesDialogueViewModel : ObservableObject
         SelectedEntry = null;
     }
 
+    /// <summary>Replaces every line with the built-in file types.</summary>
     [ RelayCommand ]
     private void Reset()
     {

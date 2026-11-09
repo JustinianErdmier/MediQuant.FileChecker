@@ -3,14 +3,16 @@ namespace FileAuditor.Services.Scanning;
 /// <summary>The paths of the index table, kept as 128-bit hashes so that millions of rows cost about 48 bytes each (measured, with the set) instead of about 200.</summary>
 /// <remarks>
 ///     A path's key is the MD5 hash of the UTF-16 bytes of <c>path.Trim().ToUpperInvariant()</c>. MD5 is used for its speed and even spread, not for security. At 128 bits the
-///     chance of two different paths sharing a key is negligible (about 10^-25 for ten million paths), so a file is never reported as unindexed because of a collision (spec anti-goal
-///     1). A collision could only ever hide an unindexed file, and not in any realistic table. <see cref="Add" /> must be called from one thread; once loading has finished,
+///     chance of two different paths sharing a key is negligible (about 10^-25 for ten million paths), so a file is never reported as unindexed because of a collision.
+///     A collision could only ever hide an unindexed file, and not in any realistic table. <see cref="Add" /> must be called from one thread; once loading has finished,
 ///     <see cref="Contains" /> is safe from any number of threads at once.
 /// </remarks>
 public sealed class IndexPathSet
 {
+    /// <summary>The longest trimmed path, in characters, whose upper-case copy is made on the stack rather than in a rented array.</summary>
     private const int StackLimit = 1024;
 
+    /// <summary>The 128-bit keys of the paths added.</summary>
     private readonly HashSet<UInt128> _keys;
 
     /// <summary>Creates an empty set.</summary>
@@ -26,6 +28,9 @@ public sealed class IndexPathSet
     /// <returns><see langword="true" /> when the path was added.</returns>
     public bool Contains(string path) => _keys.Contains(Hash(path));
 
+    /// <summary>Computes the key of a path: the MD5 hash of its trimmed, upper-cased UTF-16 bytes.</summary>
+    /// <param name="path">The path to hash.</param>
+    /// <returns>The 128-bit key.</returns>
     private static UInt128 Hash(string path)
     {
         ReadOnlySpan<char> trimmed = path.AsSpan()

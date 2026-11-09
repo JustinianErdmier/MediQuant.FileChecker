@@ -1,6 +1,6 @@
 namespace FileAuditor.Common.Constants.Auditing;
 
-/// <summary>The single outcome every audited path lands in (SDD §6.3). Each report sets the order in which it lists the Unverified members.</summary>
+/// <summary>The single outcome every audited path lands in. Each report sets the order in which it lists the Unverified members.</summary>
 public enum CheckOutcomes
 {
     /// <summary>The file exists (and, when empty files are reported, has a length greater than zero).</summary>

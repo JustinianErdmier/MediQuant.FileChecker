@@ -6,6 +6,9 @@ public partial class UnindexedFilesTabView : UserControl
     /// <summary>Initialises a new instance of the <see cref="UnindexedFilesTabView" /> class.</summary>
     public UnindexedFilesTabView() => InitializeComponent();
 
+    /// <summary>Opens the folder picker when Add is clicked and adds the chosen folder to the list.</summary>
+    /// <param name="sender">The Add button.</param>
+    /// <param name="eventArgs">The event data.</param>
     private async void OnAddClick(object? sender, RoutedEventArgs eventArgs)
     {
         try

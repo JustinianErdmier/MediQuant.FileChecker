@@ -3,18 +3,25 @@ namespace FileAuditor.Services.Auditing;
 /// <summary>The live statistics of a running audit. The runner updates the counters from many threads with <see cref="Interlocked" />; the UI polls them.</summary>
 public sealed class AuditProgress
 {
+    /// <summary>The number of rows checked so far, not counting skipped rows. Read and written with <see cref="Interlocked" />.</summary>
     private long _checked;
 
+    /// <summary>Times the checking phase; <see langword="null" /> until the row count is known.</summary>
     private volatile Stopwatch? _checkingClock;
 
+    /// <summary>The number of missing files found so far. Read and written with <see cref="Interlocked" />.</summary>
     private long _missing;
 
+    /// <summary>The status-bar text for the current phase.</summary>
     private volatile string _phase = "";
 
+    /// <summary>The number of rows skipped so far. Read and written with <see cref="Interlocked" />.</summary>
     private long _skipped;
 
+    /// <summary>The table's row count. Read and written with <see cref="Interlocked" />.</summary>
     private long _total;
 
+    /// <summary>The number of unverified files found so far. Read and written with <see cref="Interlocked" />.</summary>
     private long _unverified;
 
     /// <summary>Gets the number of rows checked so far.</summary>

@@ -1,6 +1,6 @@
 namespace FileAuditor.Services.Auditing;
 
-/// <summary>Runs one unindexed-files audit: loads the index paths as hashes, walks the folders checking each file as it is found, then writes the report (milestone 4 spec §3.5).</summary>
+/// <summary>Runs one unindexed-files audit: loads the index paths as hashes, walks the folders checking each file as it is found, then writes the report.</summary>
 public sealed class UnindexedAuditRunner
 {
     /// <summary>Runs the audit.</summary>

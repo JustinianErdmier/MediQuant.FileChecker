@@ -6,7 +6,9 @@ namespace FileAuditor.ViewModels.Main;
 /// <param name="request">The settings and report path.</param>
 public sealed class UnindexedAuditRun(UnindexedAuditViewModel audit, UnindexedAuditRunner runner, AuditRequest request) : AuditRun(audit)
 {
-    // Fresh for every run: the report's Summary reads the counters, so a reused one would carry the last run's totals into this one.
+    /// <summary>
+    ///     The live counters of this run. They are fresh for every run: the report's Summary reads them, so a reused one would carry the last run's totals into this one.
+    /// </summary>
     private readonly UnindexedProgress _progress = new()
     {
         Phase = "Loading the index..."

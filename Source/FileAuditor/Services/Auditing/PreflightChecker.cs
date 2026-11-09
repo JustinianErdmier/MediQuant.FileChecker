@@ -1,6 +1,6 @@
 namespace FileAuditor.Services.Auditing;
 
-/// <summary>The checks that run when Start is pressed, before the database is touched (SDD §6.1). Each failure or declined confirmation is explained in a dialogue.</summary>
+/// <summary>The checks that run when Start is pressed, before the database is touched. Each failure or declined confirmation is explained in a dialogue.</summary>
 /// <param name="dialogues">Shows the errors and confirmations.</param>
 /// <param name="projectSettingsService">Remembers which warnings were answered Continue this session.</param>
 public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsService projectSettingsService)
@@ -62,8 +62,8 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
             if (!Path.IsPathFullyQualified(report.Directory))
             {
-                await
-                    dialogues.ShowErrorAsync($"The report location must be a full path, such as C:\\Reports or \\\\server\\share\\Reports:\n{PathText.Breakable(report.Directory)}");
+                await dialogues.ShowErrorAsync("The report location must be a full path, such as C:\\Reports or \\\\server\\share\\Reports:\n"
+                                               + PathText.Breakable(report.Directory));
 
                 return null;
             }
@@ -127,7 +127,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         return report;
     }
 
-    // The Unindexed direction's own inputs: folders first, then the two type lists, then the three warnings in the order of milestone 4 spec §3.3.
+    /// <summary>Checks the unindexed-files inputs: the folders first, then the two file type lists, then the three type warnings.</summary>
+    /// <param name="settings">The settings to audit with.</param>
+    /// <returns><see langword="true" /> when the audit may start; <see langword="false" /> when a check failed or the user declined (the user has been told).</returns>
     private async Task<bool> CheckUnindexedInputsAsync(AppSettings settings)
     {
         ScanFolder[] folders = settings.ScanFolders;
@@ -181,6 +183,12 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         return false;
     }
 
+    /// <summary>
+    ///     Asks the user to confirm each type-list oddity that has not already been confirmed this session: a type that matches every file, and a type in both lists.
+    /// </summary>
+    /// <param name="include">The normalised File types entries.</param>
+    /// <param name="exclude">The normalised Exclude entries.</param>
+    /// <returns><see langword="true" /> when every needed confirmation was given; <see langword="false" /> when the user declined one.</returns>
     private async Task<bool> ConfirmTypeWarningsAsync(string[] include, string[] exclude)
     {
         string? matchAllEntry = include.FirstOrDefault(entry => new FileTypePattern(entry).MatchesEverything);
@@ -234,7 +242,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         return true;
     }
 
-    // The first problem with the folder list, as the message to show, or null when every folder is a full path that exists and none is listed twice.
+    /// <summary>Finds the first problem with the folder list.</summary>
+    /// <param name="folders">The folders the unindexed-files audit checks.</param>
+    /// <returns>The message to show, or <see langword="null" /> when every folder is a full path that exists and none is listed twice.</returns>
     private static string? FindFolderProblem(IReadOnlyList<ScanFolder> folders)
     {
         foreach (ScanFolder folder in folders)
@@ -257,7 +267,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
                 select $"This folder is listed twice:\n{PathText.Breakable(folder.Path)}").FirstOrDefault();
     }
 
-    // Creates and immediately removes the temporary file that ReportWriter uses, so the probe leaves nothing behind.
+    /// <summary>Creates and immediately removes the temporary file that <see cref="ReportWriter" /> uses, so the probe leaves nothing behind.</summary>
+    /// <param name="report">The report whose folder is probed.</param>
+    /// <returns>Success, or the error that says the folder cannot be written to.</returns>
     private static ErrorOr<Success> ProbeWritable(ReportPath report)
     {
         try
@@ -275,6 +287,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         }
     }
 
+    /// <summary>Determines whether a file is marked read-only.</summary>
+    /// <param name="path">The full path of the file.</param>
+    /// <returns><see langword="true" /> when the file is read-only; <see langword="false" /> when it is not or its attributes cannot be read.</returns>
     private static bool IsReadOnly(string path)
     {
         try
@@ -292,6 +307,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         }
     }
 
+    /// <summary>Creates a folder, and any missing folders above it.</summary>
+    /// <param name="folder">The full path of the folder.</param>
+    /// <returns><see langword="null" /> when the folder was created; otherwise what went wrong.</returns>
     private static string? TryCreateFolder(string folder)
     {
         try

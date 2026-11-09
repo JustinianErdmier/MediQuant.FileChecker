@@ -3,6 +3,7 @@ namespace FileAuditor.Services.Sql;
 /// <summary>Builds the audit statements from the table and column names entered by the user.</summary>
 public static class QueryBuilder
 {
+    /// <summary>The character that escapes <c>LIKE</c> wildcards in a folder prefix.</summary>
     private const char EscapeCharacter = '|';
 
     /// <summary>The most folders the prefix filter is built for; more than this loads every row.</summary>
@@ -59,8 +60,8 @@ public static class QueryBuilder
     /// <param name="pathColumn">The name of the column holding file paths.</param>
     /// <param name="folders">
     ///     The folders to check. For 1 to <see cref="MaxFilterFolders" /> folders the statement filters on a case-insensitive <c>LIKE</c> prefix per folder; for none,
-    ///     for more, or when any folder is empty (which has no prefix to match), the filter is dropped and every row is selected. The filter also selects every row that starts with a
-    ///     whitespace character, so that <see cref="IndexPathSet" /> can trim it as the spec requires.
+    ///     for more, or when any folder is empty (which has no prefix to match), the filter is dropped and every row is selected. The filter also selects every row that starts
+    ///     with a whitespace character, so that <see cref="IndexPathSet" />, which ignores surrounding whitespace, can still match it.
     /// </param>
     /// <returns>The query, or <c>Query.InvalidIdentifier</c> when a name is malformed.</returns>
     public static ErrorOr<PathQuery> BuildPaths(string table, string pathColumn, IReadOnlyList<string> folders)
@@ -109,9 +110,13 @@ public static class QueryBuilder
         return new PathQuery($"{sql} WHERE {string.Join(separator: " OR ", clauses)};", parameters);
     }
 
+    /// <summary>Determines whether a folder can be turned into a <c>LIKE</c> prefix: an empty folder has no prefix to match.</summary>
+    /// <param name="folder">The folder.</param>
+    /// <returns><see langword="true" /> when the folder is not empty.</returns>
     private static bool IsRepresentable(string folder) => folder.Length > 0;
 
     /// <summary>Builds a pattern matching a first character that <see cref="char.IsWhiteSpace(char)" /> accepts, from its code point ranges.</summary>
+    /// <returns>The <c>LIKE</c> pattern that matches any value starting with a white-space character.</returns>
     private static string WhitespacePattern()
     {
         (int First, int Last)[] ranges =
@@ -145,6 +150,9 @@ public static class QueryBuilder
                       .ToString();
     }
 
+    /// <summary>Builds the <c>LIKE</c> pattern for the paths under a folder: the folder with its wildcards escaped, a trailing backslash if it has none, and <c>%</c>.</summary>
+    /// <param name="folder">The normalised folder path.</param>
+    /// <returns>The pattern, to be used with the escape character.</returns>
     private static string EscapePrefix(string folder)
     {
         StringBuilder builder = new(folder.Length + 8);

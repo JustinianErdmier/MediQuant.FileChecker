@@ -6,8 +6,8 @@ internal static class Program
     /// <summary>Starts the application with the classic desktop lifetime.</summary>
     /// <param name="args">The command-line arguments.</param>
     /// <remarks>
-    ///     Initialisation code. Don't use any Avalonia, third-party APIs or any SynchronizationContext-reliant code before AppMain is called: things aren't initialised yet and stuff
-    ///     might break.
+    ///     Initialisation code. Don't use any Avalonia, third-party APIs or any SynchronizationContext-reliant code before AppMain is called: things aren't initialised yet and
+    ///     stuff might break.
     /// </remarks>
     [ STAThread ]
     public static void Main(string[] args)

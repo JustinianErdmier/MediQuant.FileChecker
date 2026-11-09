@@ -1,16 +1,18 @@
 namespace FileAuditor.Services.Reporting;
 
-/// <summary>Works out where the report goes from the user's settings (SDD §5.3).</summary>
+/// <summary>Works out where the report goes from the user's settings.</summary>
 public static class ReportPathResolver
 {
+    /// <summary>The folder that built report paths start from.</summary>
     private const string BuiltRoot = @"U:\Projects";
 
+    /// <summary>Stands in for the project folder in a built path until the project folder is filled in.</summary>
     private const string ProjectFolderPlaceholder = "<Project Folder>";
 
     /// <summary>
     ///     Resolves the report path for an audit direction. Built:
-    ///     <c>U:\Projects\&lt;Project Folder&gt;\DE\&lt;Project Stage&gt;\FileAuditor&lt;Missing|Unindexed&gt;Report_&lt;Audit Stage&gt;.txt</c>, complete once the project folder is
-    ///     filled in. Custom: the typed location and file name, complete once both are filled in.
+    ///     <c>U:\Projects\&lt;Project Folder&gt;\DE\&lt;Project Stage&gt;\FileAuditor&lt;Missing|Unindexed&gt;Report_&lt;Audit Stage&gt;.txt</c>, complete once the project folder
+    ///     is filled in. Custom: the typed location and file name, complete once both are filled in.
     /// </summary>
     /// <param name="settings">The current settings.</param>
     /// <param name="direction">The audit direction the report belongs to.</param>
@@ -45,7 +47,7 @@ public static class ReportPathResolver
     }
 
     /// <summary>
-    ///     Resolves the report folder alone, without a direction: the project file's folder follows the shared location, never a tab's file name (SDD §8.3). Built: the built folder,
+    ///     Resolves the report folder alone, without a direction: the project file's folder follows the shared location, never a tab's file name. Built: the built folder,
     ///     complete once the project folder is filled in. Custom: the typed location, complete once it is not empty.
     /// </summary>
     /// <param name="settings">The current settings.</param>
@@ -67,7 +69,9 @@ public static class ReportPathResolver
         };
     }
 
-    /// <summary>Determines whether a project folder is a single, valid folder name: not empty, not rooted, no separators, not <c>.</c> or <c>..</c>, no invalid characters.</summary>
+    /// <summary>
+    ///     Determines whether a project folder is a single, valid folder name: not empty, not rooted, no separators, not <c>.</c> or <c>..</c>, no invalid characters.
+    /// </summary>
     /// <param name="folder">The trimmed project folder.</param>
     /// <returns><see langword="true" /> when it can safely be combined into the built report path.</returns>
     public static bool IsSingleFolderName(string folder)

@@ -28,12 +28,23 @@ public partial class MessageDialogueWindow : ClassicWindow
     /// <summary>Gets the button that closed the dialogue; the last visible button when closed with the title-bar close box.</summary>
     public DialogueChoices Choice { get; private set; }
 
+    /// <summary>Closes the dialogue with the primary button as the choice.</summary>
+    /// <param name="sender">The primary button.</param>
+    /// <param name="eventArgs">The event data.</param>
     private void OnPrimaryClick(object? sender, RoutedEventArgs eventArgs) => CloseWith(DialogueChoices.Primary);
 
+    /// <summary>Closes the dialogue with the second button as the choice.</summary>
+    /// <param name="sender">The second button.</param>
+    /// <param name="eventArgs">The event data.</param>
     private void OnSecondaryClick(object? sender, RoutedEventArgs eventArgs) => CloseWith(DialogueChoices.Secondary);
 
+    /// <summary>Closes the dialogue with the third button as the choice.</summary>
+    /// <param name="sender">The third button.</param>
+    /// <param name="eventArgs">The event data.</param>
     private void OnTertiaryClick(object? sender, RoutedEventArgs eventArgs) => CloseWith(DialogueChoices.Tertiary);
 
+    /// <summary>Records the button that was chosen and closes the dialogue.</summary>
+    /// <param name="choice">The button that was chosen.</param>
     private void CloseWith(DialogueChoices choice)
     {
         Choice = choice;

@@ -7,27 +7,33 @@ namespace FileAuditor.ViewModels.Groups;
 public sealed class RecentRate
 {
     /// <summary>
-    ///     The averaging time constant in seconds. Thirty seconds is long enough to smooth the second-to-second noise of a network share and short enough to follow a real change in
-    ///     speed within a minute.
+    ///     The averaging time constant in seconds. Thirty seconds is long enough to smooth the second-to-second noise of a network share and short enough to follow a real change
+    ///     in speed within a minute.
     /// </summary>
     public const double TimeConstantSeconds = 30;
 
     /// <summary>
-    ///     The warm-up in seconds. A rate taken over the first few seconds is dominated by connection set-up and cache warming, so none is reported until this much time has passed;
-    ///     the average then starts from the warm-up's second half.
+    ///     The warm-up in seconds. A rate taken over the first few seconds is dominated by connection set-up and cache warming, so none is reported until this much time has
+    ///     passed; the average then starts from the warm-up's second half.
     /// </summary>
     public const double WarmUpSeconds = 5;
 
+    /// <summary>The count at the anchor sample, which the first rate is measured from.</summary>
     private long _anchorCount;
 
+    /// <summary>The time of the anchor sample, in seconds.</summary>
     private double _anchorSeconds;
 
+    /// <summary>Whether the anchor sample has been taken.</summary>
     private bool _hasAnchor;
 
+    /// <summary>The count at the previous sample.</summary>
     private long _previousCount;
 
+    /// <summary>The time of the previous sample, in seconds.</summary>
     private double _previousSeconds;
 
+    /// <summary>Whether the average has been seeded, which ends the warm-up.</summary>
     private bool _seeded;
 
     /// <summary>Gets the rate from the latest <see cref="Next" /> call, or <see langword="null" /> during the warm-up.</summary>

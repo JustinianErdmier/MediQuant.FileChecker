@@ -6,21 +6,28 @@ namespace FileAuditor.Startup;
 /// </summary>
 public static class UnexpectedErrorHandler
 {
+    /// <summary>The caption of the plain message box.</summary>
     private const string Title = "File Auditor";
 
+    /// <summary>The message box style that shows an OK button and the error icon (<c>MB_OK | MB_ICONERROR</c>).</summary>
     private const uint MessageBoxOkWithErrorIcon = 0x10;
 
+    /// <summary>The message box style that brings the box to the foreground (<c>MB_SETFOREGROUND</c>).</summary>
     private const uint MessageBoxSetForeground = 0x10000;
 
+    /// <summary>The message box style that keeps the box above other windows (<c>MB_TOPMOST</c>).</summary>
     private const uint MessageBoxTopmost = 0x40000;
 
+    /// <summary>The desktop lifetime whose main window owns the notices; <see langword="null" /> until <see cref="Install" /> runs.</summary>
     private static IClassicDesktopStyleApplicationLifetime? _desktop;
 
-    // Touched only on the UI thread, so it needs no lock.
+    /// <summary>Whether a notice is already open, so a burst of errors does not stack up dialogues. Touched only on the UI thread, so it needs no lock.</summary>
     private static bool _noticeIsOpen;
 
+    /// <summary>Set to 1 by the first fatal report, so a second fatal error on another thread waits instead of showing a second message.</summary>
     private static int _fatalReportStarted;
 
+    /// <summary>Whether <see cref="Install" /> has already hooked the exception events.</summary>
     private static bool _isInstalled;
 
     /// <summary>Starts watching for unexpected exceptions on the UI thread, in unobserved tasks and anywhere else in the process.</summary>
@@ -104,6 +111,9 @@ public static class UnexpectedErrorHandler
         Environment.Exit(exitCode: 1);
     }
 
+    /// <summary>Handles an exception thrown on the UI thread: reports it and carries on, unless it is fatal.</summary>
+    /// <param name="sender">The dispatcher that raised the event.</param>
+    /// <param name="eventArgs">The unhandled exception and the flag that marks it handled.</param>
     private static void OnDispatcherUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs eventArgs)
     {
         if (IsOutOfMemory(eventArgs.Exception))
@@ -118,6 +128,9 @@ public static class UnexpectedErrorHandler
         ReportRecoverable(eventArgs.Exception);
     }
 
+    /// <summary>Handles the exception of a task nobody awaited: marks it observed and reports it.</summary>
+    /// <param name="sender">The task that faulted.</param>
+    /// <param name="eventArgs">The unobserved exception.</param>
     private static void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs eventArgs)
     {
         eventArgs.SetObserved();
@@ -125,11 +138,20 @@ public static class UnexpectedErrorHandler
         ReportRecoverable(eventArgs.Exception);
     }
 
+    /// <summary>Handles an exception that reached the top of any thread: nothing can recover from it, so it ends the app.</summary>
+    /// <param name="sender">The application domain that raised the event.</param>
+    /// <param name="eventArgs">The unhandled exception object.</param>
     private static void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs eventArgs)
     {
         ReportFatalAndExit(eventArgs.ExceptionObject as Exception ?? new InvalidOperationException(eventArgs.ExceptionObject.ToString()));
     }
 
+    /// <summary>
+    ///     Shows the error dialogue over the main window and clears the open-notice flag when it closes. Falls back to the plain message box if the dialogue cannot be shown.
+    /// </summary>
+    /// <param name="owner">The window that owns the dialogue.</param>
+    /// <param name="message">The text to show.</param>
+    /// <returns>A task that completes when the notice has been closed.</returns>
     private static async Task ShowNoticeAsync(Window owner, string message)
     {
         try
@@ -156,16 +178,26 @@ public static class UnexpectedErrorHandler
         }
     }
 
-    // A task wraps its failure in an AggregateException, whose own message is boilerplate; the user needs the real one.
+    /// <summary>
+    ///     Gets the message to show for an exception. A task wraps its failure in an <see cref="AggregateException" />, whose own message is boilerplate, so the first inner
+    ///     message is used.
+    /// </summary>
+    /// <param name="exception">The exception to describe.</param>
+    /// <returns>The message the user needs to read.</returns>
     private static string MessageOf(Exception exception)
         => exception is AggregateException aggregate && aggregate.Flatten().InnerExceptions.FirstOrDefault() is { } inner
                ? inner.Message
                : exception.Message;
 
+    /// <summary>Determines whether an exception, or any exception inside an <see cref="AggregateException" />, is an <see cref="OutOfMemoryException" />.</summary>
+    /// <param name="exception">The exception to test.</param>
+    /// <returns><see langword="true" /> when the app cannot survive it.</returns>
     private static bool IsOutOfMemory(Exception exception)
         => exception is OutOfMemoryException
            || exception is AggregateException aggregate && aggregate.Flatten().InnerExceptions.Any(inner => inner is OutOfMemoryException);
 
+    /// <summary>Finds the native handle of the main window, to own the fatal message box.</summary>
+    /// <returns>The handle, or <see cref="IntPtr.Zero" /> when it cannot be had safely from the calling thread.</returns>
     private static IntPtr FindOwnerHandle()
     {
         // A window handle from another thread can deadlock against a UI thread that is itself waiting in a second fatal report.
@@ -185,7 +217,9 @@ public static class UnexpectedErrorHandler
         }
     }
 
-    // With no owner the box could sit behind other windows, so it asks to be topmost and in the foreground.
+    /// <summary>Shows the plain Windows message box. With no owner the box could sit behind other windows, so it asks to be topmost and in the foreground.</summary>
+    /// <param name="message">The text to show.</param>
+    /// <param name="ownerHandle">The handle of the owning window, or <see cref="IntPtr.Zero" /> for none.</param>
     private static void ShowMessageBox(string message, IntPtr ownerHandle)
         => MessageBoxW(ownerHandle,
                        message,
@@ -194,6 +228,12 @@ public static class UnexpectedErrorHandler
                            ? MessageBoxOkWithErrorIcon | MessageBoxSetForeground | MessageBoxTopmost
                            : MessageBoxOkWithErrorIcon);
 
+    /// <summary>Calls the Win32 <c>MessageBoxW</c> function, which shows a modal message box.</summary>
+    /// <param name="windowHandle">The handle of the owning window, or <see cref="IntPtr.Zero" /> for none.</param>
+    /// <param name="text">The message.</param>
+    /// <param name="caption">The caption of the box.</param>
+    /// <param name="type">The style flags: buttons, icon and behaviour.</param>
+    /// <returns>The identifier of the button the user pressed.</returns>
     [ DllImport("user32.dll", CharSet = CharSet.Unicode) ]
     private static extern int MessageBoxW(IntPtr windowHandle, string text, string caption, uint type);
 }

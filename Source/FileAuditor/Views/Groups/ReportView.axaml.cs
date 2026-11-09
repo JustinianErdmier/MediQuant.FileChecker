@@ -6,6 +6,9 @@ public partial class ReportView : UserControl
     /// <summary>Initialises a new instance of the <see cref="ReportView" /> class.</summary>
     public ReportView() => InitializeComponent();
 
+    /// <summary>Opens the folder picker when Browse is clicked and, when a folder is chosen, makes it the report location.</summary>
+    /// <param name="sender">The Browse button.</param>
+    /// <param name="eventArgs">The event data.</param>
     private async void OnBrowseClick(object? sender, RoutedEventArgs eventArgs)
     {
         try

@@ -1,6 +1,6 @@
 namespace FileAuditor.Services.Scanning;
 
-/// <summary>One normalised file type entry, such as <c>.pdf</c>, <c>.tar.gz</c> or <c>.zip.0??</c>, compiled for matching file names (milestone 4 spec §3.3).</summary>
+/// <summary>One normalised file type entry, such as <c>.pdf</c>, <c>.tar.gz</c> or <c>.zip.0??</c>, compiled for matching file names.</summary>
 public sealed class FileTypePattern
 {
     /// <summary>Stores the normalised file type pattern as dot-separated extension parts, excluding the leading dot.</summary>
@@ -98,7 +98,13 @@ public sealed class FileTypePattern
             .ToLowerInvariant();
     }
 
-    // Glob match of one part: '*' is any run (including none), '?' exactly one character; case-insensitive. The pattern is already lower case.
+    /// <summary>
+    ///     Matches one part of a file name against one part of the entry: <c>*</c> is any run of characters (including none) and <c>?</c> exactly one. Case is ignored; the pattern
+    ///     is already lower case.
+    /// </summary>
+    /// <param name="pattern">The part of the entry.</param>
+    /// <param name="text">The part of the file name.</param>
+    /// <returns><see langword="true" /> when the whole text matches the pattern.</returns>
     private static bool GlobMatches(string pattern, ReadOnlySpan<char> text)
     {
         int patternIndex     = 0;

@@ -3,11 +3,13 @@ namespace FileAuditor.Services.Settings;
 /// <summary>Holds the open project's settings file and baseline, and runs the one save rule with its prompts.</summary>
 public sealed class ProjectSettingsService
 {
+    /// <summary>Shows the save prompts.</summary>
     private readonly DialogueService _dialogues;
 
+    /// <summary>The settings as last loaded or saved, which the save rule compares the current settings with.</summary>
     private AppSettings _baseline = AppSettings.Default;
 
-    // The save prompt was answered No; it is not asked again this session.
+    /// <summary>Whether the save prompt was answered No, so it is not asked again this session.</summary>
     private bool _saveDeclined;
 
     /// <summary>Initialises a new instance.</summary>
@@ -81,7 +83,9 @@ public sealed class ProjectSettingsService
 
     /// <summary>Determines whether the current settings differ from the baseline.</summary>
     /// <param name="current">The current settings.</param>
-    /// <returns><see langword="true" /> when they differ. They are compared by value through their serialised form, because record equality would compare the list arrays by reference.</returns>
+    /// <returns>
+    ///     <see langword="true" /> when they differ. They are compared by value through their serialised form, because record equality would compare the list arrays by reference.
+    /// </returns>
     public bool IsChanged(AppSettings current)
         => SettingsStore.Serialise(current) != SettingsStore.Serialise(_baseline);
 
@@ -224,6 +228,11 @@ public sealed class ProjectSettingsService
         SavePointResult Done() => shouldTick ? SavePointResult.GoAndTick : SavePointResult.Go;
     }
 
+    /// <summary>Tells the user that the settings cannot be saved and asks whether to carry on without saving or to cancel.</summary>
+    /// <param name="path">The full path of the file that could not be written.</param>
+    /// <param name="reason">What went wrong.</param>
+    /// <param name="done">Produces the result for carrying on without saving.</param>
+    /// <returns>The result of the choice: <paramref name="done" /> for Skip Save, <see cref="SavePointResult.Cancel" /> for Cancel.</returns>
     private async Task<SavePointResult> CannotSaveAsync(string path, string reason, Func<SavePointResult> done)
     {
         DialogueChoices choice = await _dialogues.ChooseAsync($"This project's settings cannot be saved:\n{PathText.Breakable(path)}\n\n{reason}",
@@ -239,7 +248,10 @@ public sealed class ProjectSettingsService
         };
     }
 
-    // Compares the full paths, so a relative segment or a mixed separator does not make the same folder look different.
+    /// <summary>Compares two folders by their full paths, so a relative segment or a mixed separator does not make the same folder look different.</summary>
+    /// <param name="firstPath">The first folder.</param>
+    /// <param name="secondPath">The second folder.</param>
+    /// <returns><see langword="true" /> when both name the same folder, ignoring case and a trailing separator.</returns>
     private static bool SameFolder(string firstPath, string secondPath)
     {
         try

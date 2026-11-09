@@ -88,8 +88,13 @@ public static class SettingsStore
     /// <returns>The indented JSON text.</returns>
     public static string Serialise(AppSettings settings) => JsonSerializer.Serialize(ToFile(settings), SettingsJsonContext.Default.ProjectFile);
 
-    // A project file is a JSON object holding at least one of ProjectFile's keys. Anything else, such as another application's JSON or "{}", is refused rather than
-    // opened as a project of defaults. Throws JsonException for invalid JSON.
+    /// <summary>
+    ///     Determines whether JSON text is a project file: a JSON object holding at least one of <see cref="ProjectFile" />'s keys. Anything else, such as another application's
+    ///     JSON or <c>{}</c>, is refused rather than opened as a project of defaults.
+    /// </summary>
+    /// <param name="json">The JSON text.</param>
+    /// <returns><see langword="true" /> when the text is a project file.</returns>
+    /// <exception cref="JsonException">The text is not valid JSON.</exception>
     private static bool LooksLikeProject(string json)
     {
         using JsonDocument document = JsonDocument.Parse(json);
@@ -106,7 +111,9 @@ public static class SettingsStore
                        .Any(property => knownPropertyNames.Contains(property.Name));
     }
 
-    // Maps the settings to the file shape. Every member is set, so no null is written.
+    /// <summary>Maps the settings to the file shape. Every member is set, so no <see langword="null" /> is written.</summary>
+    /// <param name="settings">The settings to map.</param>
+    /// <returns>The file shape of the settings.</returns>
     private static ProjectFile ToFile(AppSettings settings)
         => new()
         {
@@ -129,8 +136,12 @@ public static class SettingsStore
             UnindexedCustomFileName = settings.UnindexedCustomFileName
         };
 
-    // A hand-edited or damaged file can hold nulls or numeric enum values that name nothing; each such value falls back to its default so one bad property never takes
-    // down the others.
+    /// <summary>
+    ///     Maps a project file to settings. A hand-edited or damaged file can hold nulls or numeric enum values that name nothing; each such value falls back to its default so one
+    ///     bad property never takes down the others.
+    /// </summary>
+    /// <param name="file">The file shape read from disk.</param>
+    /// <returns>The settings, with no nullable member.</returns>
     private static AppSettings ToSettings(ProjectFile file)
     {
         AppSettings defaults = AppSettings.Default;
@@ -157,7 +168,12 @@ public static class SettingsStore
         };
     }
 
-    // A null list is empty; a null element or one without a path is dropped; a null IncludeSubfolders is true.
+    /// <summary>
+    ///     Maps the scan folders of a project file. A null list is empty; a null element or one without a path is dropped; a null <c>IncludeSubfolders</c> is
+    ///     <see langword="true" />.
+    /// </summary>
+    /// <param name="folders">The folders as read from the file.</param>
+    /// <returns>The folders that are kept.</returns>
     private static ScanFolder[] NormaliseFolders(ProjectFileFolder?[]? folders)
     {
         if (folders is null)
@@ -178,8 +194,14 @@ public static class SettingsStore
         return [.. keptFolders];
     }
 
-    // A null list takes the fallback (a copy, never the shared default array). A null element is dropped. Each valid entry is normalised; an invalid one is kept as
-    // written (trimmed), so that the tab shows it, and the pre-flight names it when Start is pressed, instead of the file silently losing it.
+    /// <summary>
+    ///     Maps a file type list of a project file. A null list takes the fallback (a copy, never the shared default array). A null element is dropped. Each valid entry is
+    ///     normalised; an invalid one is kept as written (trimmed), so that the tab shows it, and the pre-flight names it when Start is pressed, instead of the file silently
+    ///     losing it.
+    /// </summary>
+    /// <param name="types">The entries as read from the file.</param>
+    /// <param name="fallback">The entries to use when the list is null.</param>
+    /// <returns>The entries that are kept, sorted.</returns>
     private static string[] NormaliseTypes(string?[]? types, string[] fallback)
     {
         if (types is null)

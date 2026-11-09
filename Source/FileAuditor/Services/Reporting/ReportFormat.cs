@@ -1,9 +1,9 @@
 namespace FileAuditor.Services.Reporting;
 
-/// <summary>The formatting rules both plain-text reports share (SDD §7): label padding, invariant counts, local timestamps, one-line values and the common header lines.</summary>
+/// <summary>The formatting rules both plain-text reports share: label padding, invariant counts, local timestamps, one-line values and the common header lines.</summary>
 public static class ReportFormat
 {
-    /// <summary>The width, in characters, used to align report labels and continued values.</summary>
+    /// <summary>The column, 17 characters from the left, at which every value starts: the longest label (<c>Project folder:</c>, 15 characters) plus a two-space gap.</summary>
     private const int LabelWidth = 17;
 
     /// <summary>The gap between the columns of an Other errors line.</summary>
@@ -109,6 +109,10 @@ public static class ReportFormat
                .Replace(oldChar: '\n', newChar: ' ')
                .Replace(oldChar: '\r', newChar: ' ');
 
+    /// <summary>Gets the text of the Result line.</summary>
+    /// <param name="result">How the run ended.</param>
+    /// <param name="failureMessage">The failure message, used only for a failed run.</param>
+    /// <returns>The text, such as <c>Completed</c>; a failed run carries its message on the same line.</returns>
     private static string ResultText(AuditResultKinds result, string? failureMessage)
         => result switch
         {
@@ -119,6 +123,8 @@ public static class ReportFormat
         };
 
     /// <summary>The report label of a project stage.</summary>
+    /// <param name="stage">The project stage.</param>
+    /// <returns>The label.</returns>
     private static string StageLabel(ProjectStages stage)
         => stage switch
         {
@@ -128,6 +134,8 @@ public static class ReportFormat
         };
 
     /// <summary>The report label of an audit stage.</summary>
+    /// <param name="stage">The audit stage.</param>
+    /// <returns>The label.</returns>
     private static string StageLabel(AuditStages stage)
         => stage switch
         {

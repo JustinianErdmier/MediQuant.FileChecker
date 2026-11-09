@@ -3,6 +3,7 @@ namespace FileAuditor.Common.Errors;
 /// <summary>The expected failures of the settings store.</summary>
 public static class SettingsErrors
 {
+    /// <summary>The metadata key under which <see cref="Unwritable" /> carries the bare detail.</summary>
     private const string DetailKey = "Detail";
 
     /// <summary>Creates the error for a project settings file that is missing, cannot be read or cannot be parsed.</summary>

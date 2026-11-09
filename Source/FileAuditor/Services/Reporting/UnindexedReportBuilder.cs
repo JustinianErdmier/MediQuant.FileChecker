@@ -1,11 +1,12 @@
 namespace FileAuditor.Services.Reporting;
 
 /// <summary>
-///     Builds the plain-text unindexed-files report (milestone 4 spec §3.7). The output is deterministic: invariant-culture numbers, ordinal case-insensitive ordering and CRLF
+///     Builds the plain-text unindexed-files report. The output is deterministic: invariant-culture numbers, ordinal case-insensitive ordering and CRLF
 ///     line endings.
 /// </summary>
 public static class UnindexedReportBuilder
 {
+    /// <summary>The order in which the Unverified groups are listed.</summary>
     private static readonly CheckOutcomes[] UnverifiedOrder =
     [
         CheckOutcomes.UnverifiedDriveOrShareNotFound,
@@ -40,6 +41,9 @@ public static class UnindexedReportBuilder
         return ReportFormat.Join(lines);
     }
 
+    /// <summary>Adds the title and the settings the run used.</summary>
+    /// <param name="lines">The report's lines.</param>
+    /// <param name="report">The audit to report on.</param>
     private static void AddHeader(List<string> lines, UnindexedReport report)
     {
         AppSettings settings = report.Settings;
@@ -72,6 +76,9 @@ public static class UnindexedReportBuilder
         ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Result, report.FailureMessage);
     }
 
+    /// <summary>Adds the Summary block: the counts of every kind of result.</summary>
+    /// <param name="lines">The report's lines.</param>
+    /// <param name="report">The audit to report on.</param>
     private static void AddSummary(List<string> lines, UnindexedReport report)
     {
         lines.Add(item: "Summary");
@@ -82,6 +89,9 @@ public static class UnindexedReportBuilder
         lines.Add(ReportFormat.Labelled(label: "Unverified:", ReportFormat.Count(report.Unverified.Count)));
     }
 
+    /// <summary>Adds the Unindexed Files section: the files grouped by input folder, in the order the user listed them, and then by file type.</summary>
+    /// <param name="lines">The report's lines.</param>
+    /// <param name="report">The audit to report on.</param>
     private static void AddUnindexed(List<string> lines, UnindexedReport report)
     {
         string heading = $"Unindexed Files ({ReportFormat.Count(report.Unindexed.Count)})";
@@ -143,11 +153,18 @@ public static class UnindexedReportBuilder
         }
     }
 
+    /// <summary>Gets the name of the file type group a file is listed under.</summary>
+    /// <param name="file">The file.</param>
+    /// <param name="groupByFound">Whether files are grouped by the extension found rather than the listed type.</param>
+    /// <returns>The extension found, or the listed type's text.</returns>
     private static string TypeKey(ScannedFile file, bool groupByFound)
         => groupByFound
                ? file.Type.FoundExtension(Path.GetFileName(file.Path))
                : file.Type.Text;
 
+    /// <summary>Adds the Unverified section: the folders that could not be listed and the links that were not followed, in one group for each reason.</summary>
+    /// <param name="lines">The report's lines.</param>
+    /// <param name="report">The audit to report on.</param>
     private static void AddUnverified(List<string> lines, UnindexedReport report)
     {
         string heading = $"Unverified ({ReportFormat.Count(report.Unverified.Count)})";
@@ -194,6 +211,10 @@ public static class UnindexedReportBuilder
         }
     }
 
+    /// <summary>Adds the lines of one Unverified group: the paths alone, or for Other errors the path, the reason and the system message in aligned columns.</summary>
+    /// <param name="lines">The report's lines.</param>
+    /// <param name="group">The group being listed.</param>
+    /// <param name="folders">The group's folders and links.</param>
     private static void AddFolderLines(List<string> lines, CheckOutcomes group, List<UnverifiedFolder> folders)
     {
         string[] paths = [.. folders.Select(folder => ReportFormat.Flatten(folder.Path))];
@@ -227,7 +248,12 @@ public static class UnindexedReportBuilder
         }
     }
 
-    // The report has six groups; every other reason (invalid characters, anything unforeseen) is an Other error that carries its own reason text.
+    /// <summary>
+    ///     Gets the group a folder is listed under. The report has six groups: five reasons have their own, and <see cref="CheckOutcomes.UnverifiedInvalidCharacters" />,
+    ///     <see cref="CheckOutcomes.UnverifiedPathEmpty" /> and <see cref="CheckOutcomes.UnverifiedOther" /> are all listed as Other errors, which carry their own reason text.
+    /// </summary>
+    /// <param name="folder">The folder or link.</param>
+    /// <returns>The group's outcome.</returns>
     private static CheckOutcomes GroupOf(UnverifiedFolder folder)
         => folder.Reason switch
         {
@@ -242,6 +268,9 @@ public static class UnindexedReportBuilder
             var _ => throw new UnreachableException()
         };
 
+    /// <summary>Gets the reason shown on an Other errors line.</summary>
+    /// <param name="folder">The folder or link.</param>
+    /// <returns>The reason text the walker recorded, or the standard text for the outcome.</returns>
     private static string ReasonOf(UnverifiedFolder folder)
         => folder.ReasonText
            ?? folder.Reason switch
@@ -257,6 +286,9 @@ public static class UnindexedReportBuilder
                var _ => throw new UnreachableException()
            };
 
+    /// <summary>Gets the heading of a group.</summary>
+    /// <param name="group">The group's outcome.</param>
+    /// <returns>The heading text, without the count.</returns>
     private static string GroupTitle(CheckOutcomes group)
         => group switch
         {

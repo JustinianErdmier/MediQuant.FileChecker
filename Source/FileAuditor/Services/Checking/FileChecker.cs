@@ -1,6 +1,6 @@
 namespace FileAuditor.Services.Checking;
 
-/// <summary>Classifies index paths as found, missing, or unverified (SDD §6.3). Thread-safe; use one instance per run, because it caches what it learns about roots and directories.</summary>
+/// <summary>Classifies index paths as found, missing, or unverified. Thread-safe; use one instance per run, because it caches what it learns about roots and directories.</summary>
 /// <param name="reportEmptyFiles">Whether a zero-length file is reported as <see cref="CheckOutcomes.MissingEmpty" />.</param>
 /// <remarks>
 ///     <c>File.Exists</c> and <c>Directory.Exists</c> are never used: they return <see langword="false" /> for every failure, which would report files that could not be checked
@@ -8,23 +8,32 @@ namespace FileAuditor.Services.Checking;
 /// </remarks>
 public sealed class FileChecker(bool reportEmptyFiles)
 {
+    /// <summary>The longest a single path component may be, in characters.</summary>
     private const int MaxSegmentLength = 255;
 
+    /// <summary>How long a root stays trusted as reachable after it was last confirmed, in milliseconds.</summary>
     private const long RootReprobeIntervalMilliseconds = 5_000;
 
+    /// <summary>The characters that make a path invalid: those the system rejects, plus the wildcards <c>*</c> and <c>?</c>.</summary>
     private static readonly char[] InvalidPathChars = [.. Path.GetInvalidPathChars(), '*', '?'];
 
+    /// <summary>The path separators, both of which Windows accepts.</summary>
     private static readonly char[] Separators = ['\\', '/'];
 
-    // Directories found unreachable, keyed with a trailing separator, with the outcome shared by every file under them.
+    /// <summary>The directories found unreachable, keyed with a trailing separator, with the outcome shared by every file under them.</summary>
     private readonly ConcurrentDictionary<string, MappedOutcome> _blockedDirectories = new(StringComparer.OrdinalIgnoreCase);
 
     // ReSharper disable once GrammarMistakeInComment
-    // When each reachable root was last confirmed reachable, in Environment.TickCount64 milliseconds. A not-found outcome only re-probes its root when this is stale,
-    // so a healthy root with many missing files is not probed once per file.
+    /// <summary>
+    ///     When each reachable root was last confirmed reachable, in <see cref="Environment.TickCount64" /> milliseconds. A not-found outcome only re-probes its root when this is
+    ///     stale, so a healthy root with many missing files is not probed once per file.
+    /// </summary>
     private readonly ConcurrentDictionary<string, long> _rootConfirmedAt = new(StringComparer.OrdinalIgnoreCase);
 
-    // A null value means the root is reachable; otherwise the outcome shared by every file under it. Lazy keeps a dead host to a single probe.
+    /// <summary>
+    ///     The outcome of probing each root: <see langword="null" /> when the root is reachable, otherwise the outcome shared by every file under it. Lazy keeps a dead host to a
+    ///     single probe.
+    /// </summary>
     private readonly ConcurrentDictionary<string, Lazy<MappedOutcome?>> _roots = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Checks one row.</summary>
@@ -42,6 +51,9 @@ public sealed class FileChecker(bool reportEmptyFiles)
         }
     }
 
+    /// <summary>Classifies one row. <see cref="Check" /> wraps this so that no exception escapes.</summary>
+    /// <param name="row">The row to check.</param>
+    /// <returns>The row's outcome.</returns>
     private CheckResult CheckCore(IndexRow row)
     {
         string path = row.Path;
@@ -130,9 +142,11 @@ public sealed class FileChecker(bool reportEmptyFiles)
     }
 
     /// <summary>
-    ///     Re-probes a root that was cached as reachable after a not-found outcome, at most once per interval. When the root is gone the cached entry is flipped so later files under
-    ///     it are not probed again.
+    ///     Re-probes a root that was cached as reachable after a not-found outcome, at most once per interval. When the root is gone the cached entry is flipped so later files
+    ///     under it are not probed again.
     /// </summary>
+    /// <param name="root">The root, with a trailing separator.</param>
+    /// <returns><see langword="null" /> when the root is still reachable; otherwise the outcome shared by every file under it.</returns>
     private MappedOutcome? RootHasVanished(string root)
     {
         long now = Environment.TickCount64;
@@ -157,6 +171,9 @@ public sealed class FileChecker(bool reportEmptyFiles)
         return failure;
     }
 
+    /// <summary>Probes a root and, when it is reachable, records when it was confirmed.</summary>
+    /// <param name="root">The root, with a trailing separator.</param>
+    /// <returns><see langword="null" /> when the root is reachable; otherwise the outcome shared by every file under it.</returns>
     private MappedOutcome? ProbeCachedRoot(string root)
     {
         MappedOutcome? failure = ProbeRoot(root);
@@ -170,6 +187,10 @@ public sealed class FileChecker(bool reportEmptyFiles)
     }
 
     /// <summary>Walks from the root's child down to the file's parent to find the first directory that cannot be reached, and caches it.</summary>
+    /// <param name="row">The row whose file could not be checked.</param>
+    /// <param name="fileOutcome">The outcome the file itself produced, used when every directory above it is reachable.</param>
+    /// <param name="ancestorsDeepestFirst">The file's ancestor directories, deepest first.</param>
+    /// <returns>The result for the row, naming the first unreachable directory when there is one.</returns>
     private CheckResult LocaliseFailure(IndexRow row, MappedOutcome fileOutcome, List<string> ancestorsDeepestFirst)
     {
         for (int index = ancestorsDeepestFirst.Count - 1; index >= 0; index--)
@@ -216,6 +237,8 @@ public sealed class FileChecker(bool reportEmptyFiles)
     }
 
     /// <summary>Probes a root once. Returns <see langword="null" /> when it is reachable.</summary>
+    /// <param name="root">The root, with a trailing separator.</param>
+    /// <returns>The outcome shared by every file under the root, or <see langword="null" /> when it is reachable.</returns>
     private static MappedOutcome? ProbeRoot(string root)
     {
         try
@@ -235,6 +258,9 @@ public sealed class FileChecker(bool reportEmptyFiles)
     }
 
     /// <summary>Lists the file's ancestor directories, deepest first, stopping before the root. Keys carry a trailing separator.</summary>
+    /// <param name="path">The full path of the file.</param>
+    /// <param name="root">The path's root, with a trailing separator.</param>
+    /// <returns>The ancestor directories, deepest first.</returns>
     private static List<string> GetAncestors(string path, string root)
     {
         List<string> ancestors = [];
@@ -257,7 +283,14 @@ public sealed class FileChecker(bool reportEmptyFiles)
         return ancestors;
     }
 
+    /// <summary>Gets the directory as a dictionary key, with a trailing separator.</summary>
+    /// <param name="directory">The directory path.</param>
+    /// <returns>The path, ending in <c>\</c> or <c>/</c>.</returns>
     private static string AsDirectoryKey(string directory) => directory.Length > 0 && directory[^1] is '\\' or '/' ? directory : directory + '\\';
 
+    /// <summary>Builds the result of a row from the outcome mapped for it.</summary>
+    /// <param name="row">The row that was checked.</param>
+    /// <param name="mapped">The outcome and its reason and system message.</param>
+    /// <returns>The row's result.</returns>
     private static CheckResult ToResult(IndexRow row, MappedOutcome mapped) => new(row, mapped.Outcome, mapped.Reason, mapped.SystemMessage);
 }

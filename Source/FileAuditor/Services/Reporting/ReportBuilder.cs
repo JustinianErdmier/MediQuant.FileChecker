@@ -1,12 +1,15 @@
 namespace FileAuditor.Services.Reporting;
 
-/// <summary>Builds the plain-text audit report (SDD §7). The output is deterministic: invariant-culture numbers, ordinal case-insensitive ordering and CRLF line endings.</summary>
+/// <summary>Builds the plain-text audit report. The output is deterministic: invariant-culture numbers, ordinal case-insensitive ordering and CRLF line endings.</summary>
 public static class ReportBuilder
 {
+    /// <summary>The gap between the columns of an Other errors line.</summary>
     private const string ColumnGap = ReportFormat.ColumnGap;
 
+    /// <summary>The order in which the Missing outcomes are listed.</summary>
     private static readonly CheckOutcomes[] MissingOrder = [CheckOutcomes.MissingEmpty, CheckOutcomes.MissingDoesNotExist];
 
+    /// <summary>The order in which the Unverified outcomes are listed.</summary>
     private static readonly CheckOutcomes[] UnverifiedOrder =
     [
         CheckOutcomes.UnverifiedDriveOrShareNotFound,
@@ -42,6 +45,9 @@ public static class ReportBuilder
         return ReportFormat.Join(lines);
     }
 
+    /// <summary>Adds the title and the settings the run used.</summary>
+    /// <param name="lines">The report's lines.</param>
+    /// <param name="report">The audit to report on.</param>
     private static void AddHeader(List<string> lines, AuditReport report)
     {
         AppSettings settings = report.Settings;
@@ -59,6 +65,9 @@ public static class ReportBuilder
         ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Result, report.FailureMessage);
     }
 
+    /// <summary>Adds the Summary block: the counts of every kind of result.</summary>
+    /// <param name="lines">The report's lines.</param>
+    /// <param name="report">The audit to report on.</param>
     private static void AddSummary(List<string> lines, AuditReport report)
     {
         long missing    = report.Problems.Count(result => result.Outcome is CheckOutcomes.MissingEmpty or CheckOutcomes.MissingDoesNotExist);
@@ -78,6 +87,12 @@ public static class ReportBuilder
         }
     }
 
+    /// <summary>Adds one section, with a heading and a group for each outcome that has files, or the empty text when none does.</summary>
+    /// <param name="lines">The report's lines.</param>
+    /// <param name="title">The section's title.</param>
+    /// <param name="emptyText">The line shown when the section has no files.</param>
+    /// <param name="order">The outcomes the section lists, in the order they appear.</param>
+    /// <param name="report">The audit to report on.</param>
     private static void AddSection(List<string> lines, string title, string emptyText, CheckOutcomes[] order, AuditReport report)
     {
         List<(CheckOutcomes Outcome, List<CheckResult> Results)> groups =
@@ -122,6 +137,11 @@ public static class ReportBuilder
         }
     }
 
+    /// <summary>Adds the file lines of one group: the optional ID, the path and, for Other errors, the reason and the system message, each in its own aligned column.</summary>
+    /// <param name="lines">The report's lines.</param>
+    /// <param name="outcome">The outcome the group lists.</param>
+    /// <param name="results">The group's files.</param>
+    /// <param name="settings">The settings the run used.</param>
     private static void AddFileLines(List<string> lines, CheckOutcomes outcome, List<CheckResult> results, AppSettings settings)
     {
         bool hasId = HasIdColumn(settings);
@@ -166,6 +186,9 @@ public static class ReportBuilder
         }
     }
 
+    /// <summary>Gets the heading of a group.</summary>
+    /// <param name="outcome">The group's outcome.</param>
+    /// <returns>The heading text, without the count.</returns>
     private static string GroupTitle(CheckOutcomes outcome)
         => outcome switch
         {
@@ -181,11 +204,24 @@ public static class ReportBuilder
             var _                                        => throw new UnreachableException()
         };
 
+    /// <summary>Formats a labelled value; see <see cref="ReportFormat.Labelled" />.</summary>
+    /// <param name="label">The label, with its colon.</param>
+    /// <param name="value">The value.</param>
+    /// <returns>The line, without trailing white space.</returns>
     private static string Labelled(string label, string value) => ReportFormat.Labelled(label, value);
 
+    /// <summary>Determines whether the settings name an ID column.</summary>
+    /// <param name="settings">The settings the run used.</param>
+    /// <returns><see langword="true" /> when an ID column is configured.</returns>
     private static bool HasIdColumn(AppSettings settings) => !string.IsNullOrWhiteSpace(settings.IdColumn);
 
+    /// <summary>Formats a count; see <see cref="ReportFormat.Count" />.</summary>
+    /// <param name="value">The count.</param>
+    /// <returns>The text, with thousands separators.</returns>
     private static string Count(long value) => ReportFormat.Count(value);
 
+    /// <summary>Keeps a value on one line; see <see cref="ReportFormat.Flatten" />.</summary>
+    /// <param name="text">The text.</param>
+    /// <returns>The text on one line.</returns>
     private static string Flatten(string text) => ReportFormat.Flatten(text);
 }

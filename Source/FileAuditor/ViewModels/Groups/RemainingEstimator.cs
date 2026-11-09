@@ -6,10 +6,13 @@ namespace FileAuditor.ViewModels.Groups;
 /// </summary>
 public sealed class RemainingEstimator
 {
+    /// <summary>The text shown once the run has finished.</summary>
     private const string Finished = "00:00:00";
 
-    // How long, in seconds of checking time, the processed count must stand still before the display holds. One refresh is 250 ms, and a single quiet refresh is
-    // the ordinary jitter on a slow share, not a stall.
+    /// <summary>
+    ///     How long, in seconds of checking time, the processed count must stand still before the display holds. One refresh is 250 ms, and a single quiet refresh is the ordinary
+    ///     jitter on a slow share, not a stall.
+    /// </summary>
     private const double StallHoldSeconds = 1;
 
     /// <summary>The placeholder shown until there is a rate to estimate from.</summary>
@@ -21,14 +24,19 @@ public sealed class RemainingEstimator
     /// </summary>
     public const double EasingSeconds = 3;
 
+    /// <summary>The recent rate the estimate is made from.</summary>
     private readonly RecentRate _rate = new();
 
+    /// <summary>The checking time at which the processed count last changed, in seconds.</summary>
     private double _changedSeconds;
 
+    /// <summary>The processed count at the previous sample; -1 before the first one.</summary>
     private long _lastProcessed = -1;
 
+    /// <summary>The checking time of the previous sample, in seconds.</summary>
     private double _lastSeconds;
 
+    /// <summary>The remaining time on display, in seconds; <see langword="null" /> until there is an estimate.</summary>
     private double? _shown;
 
     /// <summary>Gets the recent rate in rows per second, or <see langword="null" /> during the warm-up.</summary>

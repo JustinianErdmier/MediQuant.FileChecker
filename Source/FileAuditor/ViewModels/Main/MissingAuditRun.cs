@@ -6,6 +6,7 @@ namespace FileAuditor.ViewModels.Main;
 /// <param name="request">The settings and report path.</param>
 public sealed class MissingAuditRun(AuditViewModel audit, AuditRunner runner, AuditRequest request) : AuditRun(audit)
 {
+    /// <summary>The live counters of this run.</summary>
     private readonly AuditProgress _progress = new()
     {
         Phase = "Counting files..."

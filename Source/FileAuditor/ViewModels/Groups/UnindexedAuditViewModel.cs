@@ -3,13 +3,19 @@ namespace FileAuditor.ViewModels.Groups;
 /// <summary>The Audit group of the Unindexed Files tab: read-only run statistics as display strings, blank before the first run. It has no Remaining time.</summary>
 public sealed partial class UnindexedAuditViewModel : AuditStatusBase
 {
+    /// <summary>How far the moving block moves on each refresh, in units out of 100.</summary>
     private const double MarqueeStep = 5;
 
-    // The marquee block is MarqueeWidth of 100 units wide and moves MarqueeStep units on each refresh, so with four refreshes a second it crosses in four seconds.
+    /// <summary>
+    ///     The width of the moving block, in units out of 100. It moves <see cref="MarqueeStep" /> units on each refresh, so with four refreshes a second it crosses in four
+    ///     seconds.
+    /// </summary>
     private const double MarqueeWidth = 20;
 
+    /// <summary>Works out the recent rate of finding files.</summary>
     private readonly RecentRate _recentRate = new();
 
+    /// <summary>The position of the moving block's left edge, in units out of 100.</summary>
     private double _marqueePosition;
 
     /// <summary>Gets or sets the elapsed time as <c>hh:mm:ss</c>.</summary>
@@ -17,8 +23,8 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     public partial string Elapsed { get; set; } = string.Empty;
 
     /// <summary>
-    ///     Gets or sets the files found per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up has passed by
-    ///     the recent figure in parentheses; blank until a full second has elapsed. The recent figure is timed from the start of the scan.
+    ///     Gets or sets the files found per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up has passed
+    ///     by the recent figure in parentheses; blank until a full second has elapsed. The recent figure is timed from the start of the scan.
     /// </summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = string.Empty;
@@ -112,6 +118,8 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
         }
     }
 
+    /// <summary>Moves the block to a position by setting the gaps before and after it.</summary>
+    /// <param name="position">The position of the block's left edge, in units out of 100.</param>
     private void SetMarquee(double position)
     {
         _marqueePosition = position;

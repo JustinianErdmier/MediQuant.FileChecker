@@ -6,14 +6,19 @@ namespace FileAuditor.Services.Auditing;
 /// </summary>
 public sealed class UnindexedProgress
 {
+    /// <summary>The number of files found that are in the index. Read and written with <see cref="Interlocked" />.</summary>
     private long _indexed;
 
+    /// <summary>The status-bar text for the current phase.</summary>
     private volatile string _phase = string.Empty;
 
+    /// <summary>Times the folder scan; <see langword="null" /> until the scan begins.</summary>
     private volatile Stopwatch? _scanClock;
 
+    /// <summary>The number of files found that are not in the index. Read and written with <see cref="Interlocked" />.</summary>
     private long _unindexed;
 
+    /// <summary>The number of folders that could not be listed plus links not followed. Read and written with <see cref="Interlocked" />.</summary>
     private long _unverified;
 
     /// <summary>Gets the number of files found that are in the index.</summary>
@@ -42,7 +47,9 @@ public sealed class UnindexedProgress
     /// <summary>Starts the scan clock. The runner calls it just before the folder walk begins, after the index is loaded.</summary>
     public void StartScan() => _scanClock = Stopwatch.StartNew();
 
-    /// <summary>Stops the scan clock. The runner calls it as soon as the folder walk ends, so writing the report is not counted as scan time; <see cref="ScanElapsed" /> stays readable.</summary>
+    /// <summary>
+    ///     Stops the scan clock. The runner calls it as soon as the folder walk ends, so writing the report is not counted as scan time; <see cref="ScanElapsed" /> stays readable.
+    /// </summary>
     public void StopScan() => _scanClock?.Stop();
 
     /// <summary>Records one file that was checked against the index.</summary>

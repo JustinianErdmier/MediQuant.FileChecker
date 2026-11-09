@@ -1,8 +1,9 @@
 namespace FileAuditor.Services.Scanning;
 
-/// <summary>Parses, normalises and formats the File types and Exclude lists (milestone 4 spec §3.3).</summary>
+/// <summary>Parses, normalises and formats the File types and Exclude lists.</summary>
 public static class FileTypeList
 {
+    /// <summary>The characters no file type may contain: those not allowed in a file name, except the wildcards <c>*</c> and <c>?</c>.</summary>
     private static readonly char[] Forbidden =
     [
         .. Path.GetInvalidFileNameChars()
@@ -27,7 +28,9 @@ public static class FileTypeList
 
     /// <summary>Parses the text of a file types box: entries separated by white space or commas.</summary>
     /// <param name="text">The text typed.</param>
-    /// <returns>The normalised entries (lower case, one leading dot, no duplicates, sorted), or a validation error naming the first invalid entry as typed. Empty text is an empty list.</returns>
+    /// <returns>
+    ///     The normalised entries (lower case, one leading dot, no duplicates, sorted), or a validation error naming the first invalid entry as typed. Empty text is an empty list.
+    /// </returns>
     public static ErrorOr<string[]> Parse(string text)
     {
         SortedSet<string> entries = new(StringComparer.Ordinal);
@@ -58,6 +61,9 @@ public static class FileTypeList
     /// <returns>The text.</returns>
     public static string Format(IEnumerable<string> types) => string.Join(separator: ' ', types.OrderBy(type => type, StringComparer.Ordinal));
 
+    /// <summary>Normalises one typed entry to lower case with exactly one leading dot, dropping a leading <c>*.</c>.</summary>
+    /// <param name="typedEntry">The entry as typed.</param>
+    /// <returns>The normalised entry, or <see langword="null" /> when it is empty, has an empty part or contains a forbidden character.</returns>
     private static string? Normalise(string typedEntry)
     {
         string entry = typedEntry.ToLowerInvariant();

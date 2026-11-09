@@ -155,6 +155,11 @@ public static class IndexTableReader
         }
     }
 
+    /// <summary>Reads one column of the current row as text, whatever its SQL type.</summary>
+    /// <param name="reader">The reader, positioned on a row.</param>
+    /// <param name="ordinal">The column's position; with sequential access the columns must be read in order.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    /// <returns>The value as text, or <see langword="null" /> when the database value is <c>NULL</c>.</returns>
     private static async Task<string?> ReadStringAsync(SqlDataReader reader, int ordinal, CancellationToken cancellationToken)
     {
         if (await reader.IsDBNullAsync(ordinal, cancellationToken))

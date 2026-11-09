@@ -305,17 +305,17 @@ names are the report file names, as its remarks document.
 
 **Files:** every `.cs` file under `Source/FileAuditor/`.
 
-- [ ] **Step 1: Strip the pointers.** **9.** Remove every pointer to the SDD, a spec, a milestone or a `§` section from doc and `//` comments. Rewrite each sentence so it still
+- [x] **Step 1: Strip the pointers.** **9.** Remove every pointer to the SDD, a spec, a milestone or a `§` section from doc and `//` comments. Rewrite each sentence so it still
   reads whole. A search for `SDD`, `spec`, `milestone` and `§` must find nothing in the source.
-- [ ] **Step 2: Document every member.** **10.** Every type and member, whatever its access modifier, gets an XML doc comment:
+- [x] **Step 2: Document every member.** **10.** Every type and member, whatever its access modifier, gets an XML doc comment:
   - classes, records, structs, enums and their members, nested types, fields, constants, properties, constructors, methods and event handlers;
   - generated-property partial declarations and the `.axaml.cs` code-behind as well;
   - `<param>`, `<returns>` and `<typeparam>` where they apply.
   - A `//` comment that describes a whole member becomes its doc comment; `//` notes inside a body stay as they are.
-- [ ] **Step 3: Fix `LabelWidth`'s comment.** **8.** Its doc must state what the value is: the column, 17 characters from the left, at which every value starts. That is the
+- [x] **Step 3: Fix `LabelWidth`'s comment.** **8.** Its doc must state what the value is: the column, 17 characters from the left, at which every value starts. That is the
   longest label (`Project folder:`, 15 characters) plus a two-space gap. Check the 15 against both report builders' labels before writing it.
-- [ ] **Step 4: Build.** Build with 0 warnings and confirm that no pointer search hits remain.
-- [ ] **Step 5: Commit.** Use `docs(📝): document every type and member and drop the pointers to the design documents`.
+- [x] **Step 4: Build.** Build with 0 warnings and confirm that no pointer search hits remain.
+- [x] **Step 5: Commit.** Use `docs(📝): document every type and member and drop the pointers to the design documents`.
 
 ### Task 8: SDD sync and ledger
 
