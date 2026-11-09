@@ -35,7 +35,7 @@ in a project file now falls back to its default instead of making the file unrea
 `git log --oneline c5a05cf..HEAD`, newest first (`c5a05cf` and `c76b4ea` are the plan):
 
 ```
-(Task 8)  docs(📝): sync the SDD with the code review clean-up and close the milestone 6 ledger
+0e50f54 docs(📝): sync the SDD with the code review clean-up and close the milestone 6 ledger
 55adafa docs(📝): correct the AbandonOpen doc and tidy the task 7 wording
 c7e6fdd docs(📝): document every type and member and drop the pointers to the design documents
 e9493e7 refactor(♻️): wrap the over-long lines and finish the task 6 renames
@@ -98,10 +98,10 @@ Decisions taken without the user, each with what it costs if wrong.
 
 For the user, before the pull request:
 
-- **A manual look at the fatal-box flags.** The ownerless box's topmost and foreground flags, and the owner-only-on-the-UI-thread rule, were added in `eff6f62` and checked from the
-  code only; the box itself was seen at runtime before that round.
-- **A Stop-button check per tab.** Task 6 believed Stop was one shared button; each tab has its own. The per-tab enabling from milestone 5 was not re-checked after the XAML and
-  naming passes (Task 5's screenshots were pixel-identical idle, and the Missing tab's Stop was enabled while running).
+- **A manual look at the fatal-box flags (done in fix wave 1, see below).** The ownerless box's topmost and foreground flags, and the owner-only-on-the-UI-thread rule, were
+  added in `eff6f62` and checked from the code only; the box itself was seen at runtime before that round.
+- **A Stop-button check per tab (done in fix wave 1, see below).** Task 6 believed Stop was one shared button; each tab has its own. The per-tab enabling from milestone 5 was
+  not re-checked after the XAML and naming passes (Task 5's screenshots were pixel-identical idle, and the Missing tab's Stop was enabled while running).
 - **The `Project stage:` and `Audit stage:` report lines were checked by reading the code only** (see the plan defects). The stage loading was checked (a `Sample` file shows
   Sample; a `Final` / `Final` file shows Final / Final). Worth one look in a report written to the real location.
 - **The OneDrive scan stall from milestone 5 is still open.** An Unindexed scan of OneDrive stalled at 3,717 files within 11 seconds. Not part of this milestone; not investigated.
@@ -113,6 +113,41 @@ Revisit when something changes:
 - Files written between `2cdf814` and `24f3aef` (R3) load default stages.
 - The doc-comment rule covers every member, so a new private field needs one; there is no analyser enforcing it (a `GenerateDocumentationFile` build was clean at the end of Task
   7).
+
+## Final review and fix wave 1
+
+The final whole-branch review (Opus) found no Critical findings and these follow-ups, all fixed in `ef106eb`:
+
+- `AuditRunner` and `UnindexedAuditRunner` held only constants and one method, but were still instantiated; both are static classes now, and `MainWindowViewModel`,
+  `MissingAuditRun` and `UnindexedAuditRun` no longer carry an instance. SDD §9 and §12 name them among the static services.
+- One doc comment in `UnindexedProgress` was 196 characters long; it is wrapped.
+- The About handler was a bare `async` lambda, and three fire-and-forget tasks (the close confirmation, the report probe and the untick confirmation) could fault unseen until
+  finalisation. Each body now reports through `UnexpectedErrorHandler.ReportRecoverable`; the probe keeps its `OperationCanceledException` catch. The About handler is a named
+  `async void` method.
+- SDD §12 now says the enum-location rule covers the app's shared enums and that a private enum used by one type (`FolderWalker.LinkStates`) stays nested. SDD §9 lists every
+  `async void` handler and fire-and-forget task, and says a fault that repeats shows the notice again after *OK*, never more than one at a time.
+
+Rulings:
+
+- **R12:** the runners were made static rather than left as instances. Cost if wrong: re-add two fields and two constructor parameters.
+- **R13:** the fire-and-forget bodies and the About handler were wrapped because the user asked that every survivable error be shown. Cost if wrong: remove the `catch`
+  blocks.
+
+Runtime checks (LocalDB scratch database of 2.5 million rows, dropped afterwards):
+
+- **Stop per tab:** with the Missing audit running, the Missing tab's Stop was enabled and the Unindexed tab's disabled; with the Unindexed audit running, the reverse. Stopping
+  through each tab's own button ended the run. This closes the outstanding Stop-button check.
+- **Old keys:** a file with `ProjectStages` and `AuditStages` plus ordinary keys opened and showed the default stages (Final and Interim).
+- **Fatal box:** a plain background thread throwing a few seconds after start showed the box in front of every other window at five sample points, and the process exited with
+  code 1. The box was not made the foreground window (Windows does not let a background process take the foreground), and `WS_EX_TOPMOST` did not read back as set, on the
+  box or on a plain `MessageBoxW` probe with the same flags.
+- **Nested modal:** with `OnOkClick` made to throw, the notice appeared on top of the Edit File Types dialogue; after its *OK* the dialogue was still open and usable, and after
+  *Cancel* the main window was usable again.
+- **Smoke:** a project opened, a changed table name was saved to the project file in the same keys with no `null`, the project closed, tabs switched, and *View Report* enabled
+  after a completed Unindexed run.
+
+Incidents: two screenshots taken with `CopyFromScreen` captured parts of the user's screen (the Open dialogue's folder listing, and an unrelated window); both were deleted after a
+glance, and every later capture used `PrintWindow` on the app's own window. The fix wave was committed in `ef106eb`; this ledger update follows it.
 
 ## Incidents
 
