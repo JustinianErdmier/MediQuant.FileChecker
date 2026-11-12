@@ -11,7 +11,8 @@ public static class QueryBuilder
 
     /// <summary>Builds the counts, select and empty-ID statements, quoting every identifier part.</summary>
     /// <remarks>
-    ///     Each row is classified in SQL: empty (<c>NULL</c> or only white space), skip marker (the rule of <see cref="SkipMarker" />) or real path. The select statement is
+    ///     The path column must be <c>nvarchar</c> (checked by <see cref="PathColumnType" /> before these statements run), so the classification works on the column itself, with
+    ///     no cast. Each row is classified in SQL: empty (<c>NULL</c> or only white space), skip marker (the rule of <see cref="SkipMarker" />) or real path. The select statement is
     ///     <c>DISTINCT</c> over the real paths only, so a path listed on several rows (an index built around patients rather than files) is checked once. With an ID column the
     ///     distinct unit is the path and ID pair: the ID is expected to be unique to its path, and the app does not check that. The white-space characters are passed as the
     ///     <c>@ws</c> parameter, listed in <see cref="AuditQuery.Parameters" />.
@@ -59,16 +60,15 @@ public static class QueryBuilder
         // The aliases are deliberately unlikely names and the table's columns are always qualified, so a table or column named like an alias cannot collide.
         string source = $"""
                          FROM {tableSql} AS [fa_t]
-                         CROSS APPLY (SELECT CAST([fa_t].{pathSql} AS nvarchar(max)) AS [FaValue]) AS [fa_v]
-                         CROSS APPLY (SELECT SUBSTRING([fa_v].[FaValue],
-                                                       PATINDEX(N'%[^' + @ws + N']%', [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2),
-                                                       LEN([fa_v].[FaValue] + N'x') - 1
-                                                       - PATINDEX(N'%[^' + @ws + N']%', [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2)
-                                                       - PATINDEX(N'%[^' + @ws + N']%', REVERSE([fa_v].[FaValue]) COLLATE Latin1_General_100_BIN2) + 2) AS [FaTrimmed]) AS [fa_n]
-                         CROSS APPLY (SELECT CASE WHEN [fa_v].[FaValue] IS NULL
-                                                       OR [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^' + @ws + N']%'
+                         CROSS APPLY (SELECT SUBSTRING([fa_t].{pathSql},
+                                                       PATINDEX(N'%[^' + @ws + N']%', [fa_t].{pathSql} COLLATE Latin1_General_100_BIN2),
+                                                       LEN([fa_t].{pathSql} + N'x') - 1
+                                                       - PATINDEX(N'%[^' + @ws + N']%', [fa_t].{pathSql} COLLATE Latin1_General_100_BIN2)
+                                                       - PATINDEX(N'%[^' + @ws + N']%', REVERSE([fa_t].{pathSql}) COLLATE Latin1_General_100_BIN2) + 2) AS [FaTrimmed]) AS [fa_n]
+                         CROSS APPLY (SELECT CASE WHEN [fa_t].{pathSql} IS NULL
+                                                       OR [fa_t].{pathSql} COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^' + @ws + N']%'
                                                   THEN 1
-                                                  WHEN [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[Ss][Kk][Ii][Pp]%'
+                                                  WHEN [fa_t].{pathSql} COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[Ss][Kk][Ii][Pp]%'
                                                   THEN 0
                                                   WHEN [fa_n].[FaTrimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp]'
                                                        OR [fa_n].[FaTrimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp][Pp][Ee][Dd]'
@@ -103,7 +103,9 @@ public static class QueryBuilder
                               $"{realSql};",
                               emptyIdsSql,
                               [new KeyValuePair<string, string>(key: "@ws", WhitespaceClass())],
-                              idSql is not null);
+                              idSql is not null,
+                              tableSql,
+                              pathParts.Value[index: 0]);
     }
 
     /// <summary>Builds the statement that selects the distinct values of the path column, restricted to the rows under the given folders where that is possible.</summary>
@@ -140,7 +142,7 @@ public static class QueryBuilder
 
         if (!canFilter)
         {
-            return new PathQuery($"{sql};", []);
+            return new PathQuery($"{sql};", [], tableSql, pathParts.Value[index: 0]);
         }
 
         List<KeyValuePair<string, string>> parameters = new(folders.Count);
@@ -158,7 +160,7 @@ public static class QueryBuilder
         clauses.Add($"{columnSql} COLLATE Latin1_General_100_BIN2 LIKE @pw");
         parameters.Add(new KeyValuePair<string, string>(key: "@pw", WhitespacePattern()));
 
-        return new PathQuery($"{sql} WHERE {string.Join(separator: " OR ", clauses)};", parameters);
+        return new PathQuery($"{sql} WHERE {string.Join(separator: " OR ", clauses)};", parameters, tableSql, pathParts.Value[index: 0]);
     }
 
     /// <summary>Determines whether a folder can be turned into a <c>LIKE</c> prefix: an empty folder has no prefix to match.</summary>

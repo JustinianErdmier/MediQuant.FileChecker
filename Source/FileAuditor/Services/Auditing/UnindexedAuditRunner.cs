@@ -8,7 +8,7 @@ public static class UnindexedAuditRunner
     /// <param name="progress">Receives the live statistics.</param>
     /// <param name="cancellationToken">Stops the run; once the walk has started, whatever was found is reported.</param>
     /// <returns>
-    ///     The report that was written for a completed or stopped audit; a SQL error when loading the index failed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped
+    ///     The report that was written for a completed or stopped audit; a <c>Sql.PathColumnNotFound</c> or <c>Sql.PathColumnNotNvarchar</c> error when the path column is missing or is not <c>nvarchar</c>; a SQL error when loading the index failed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped
     ///     while the index was loading; or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
     public static async Task<ErrorOr<UnindexedReport>> RunAsync(AuditRequest request, UnindexedProgress progress, CancellationToken cancellationToken)
@@ -49,7 +49,26 @@ public static class UnindexedAuditRunner
 
         try
         {
-            loaded = await IndexTableReader.ReadPathsAsync(ConnectionStrings.Build(settings.Server, settings.Database), built.Value, paths.Add, cancellationToken);
+            string connectionString = ConnectionStrings.Build(settings.Server, settings.Database);
+
+            ErrorOr<(string TypeName, short MaxLength)?> columnType = await IndexTableReader.ReadPathColumnTypeAsync(connectionString,
+                                                                                                                      built.Value.QuotedTable,
+                                                                                                                      built.Value.PathColumnName,
+                                                                                                                      cancellationToken);
+
+            if (columnType.IsError)
+            {
+                return columnType.Errors;
+            }
+
+            ErrorOr<Success> typeChecked = PathColumnType.Check(settings.Table, settings.PathColumn, columnType.Value);
+
+            if (typeChecked.IsError)
+            {
+                return typeChecked.Errors;
+            }
+
+            loaded = await IndexTableReader.ReadPathsAsync(connectionString, built.Value, paths.Add, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

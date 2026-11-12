@@ -3,6 +3,66 @@ namespace FileAuditor.Services.Sql;
 /// <summary>Counts and streams the rows of the file index table.</summary>
 public static class IndexTableReader
 {
+    /// <summary>Reads the system type and length of a column of the index table.</summary>
+    /// <param name="connectionString">The connection string.</param>
+    /// <param name="tableSql">The quoted table name, as the audit statements use it; it is passed to <c>OBJECT_ID</c> as a parameter.</param>
+    /// <param name="column">The unquoted column name, compared with <c>sys.columns.name</c>.</param>
+    /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
+    /// <returns>
+    ///     The system type name (<c>TYPE_NAME(system_type_id)</c>, so an alias type reports the type it is built on) and <c>max_length</c> in bytes (-1 for <c>max</c>); <see langword="null" />
+    ///     when there is no such column or table; or <c>Sql.QueryFailed</c> when SQL Server reports an error.
+    /// </returns>
+    public static async Task<ErrorOr<(string TypeName, short MaxLength)?>> ReadPathColumnTypeAsync(string            connectionString,
+                                                                                                    string            tableSql,
+                                                                                                    string            column,
+                                                                                                    CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using SqlConnection connection = new(connectionString);
+
+            await connection.OpenAsync(cancellationToken);
+
+            await using SqlCommand command = new("SELECT TYPE_NAME(c.system_type_id), c.max_length FROM sys.columns AS c WHERE c.object_id = OBJECT_ID(@table) AND c.name = @column;",
+                                                 connection);
+
+            command.CommandTimeout = 0;
+
+            command.Parameters.Add(new SqlParameter("@table", SqlDbType.NVarChar, 4000)
+            {
+                Value = tableSql
+            });
+
+            command.Parameters.Add(new SqlParameter("@column", SqlDbType.NVarChar, 4000)
+            {
+                Value = column
+            });
+
+            await using CancellationTokenRegistration registration = cancellationToken.Register(command.Cancel);
+            await using SqlDataReader                 reader       = await command.ExecuteReaderAsync(cancellationToken);
+
+            if (!await reader.ReadAsync(cancellationToken))
+            {
+                (string TypeName, short MaxLength)? none = null;
+
+                return none;
+            }
+
+            (string TypeName, short MaxLength)? found = (reader.GetString(i: 0), reader.GetInt16(i: 1));
+
+            return found;
+        }
+        catch (SqlException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            return SqlErrors.QueryFailed(exception.Message);
+        }
+        catch (SqlException)
+        {
+            // SqlClient may fault a cancelled command with a SqlException; report it as the cancellation it is.
+            throw new OperationCanceledException(cancellationToken);
+        }
+    }
+
     /// <summary>Counts how the rows of the table divide into empty paths, skip markers, distinct real paths and duplicates.</summary>
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The audit query.</param>

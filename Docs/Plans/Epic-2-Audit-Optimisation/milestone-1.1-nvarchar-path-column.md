@@ -81,13 +81,13 @@ Before Task 1 the controller creates branch `feat/milestone-1.1-nvarchar-path-co
 - `QueryBuilder` exposes the quoted table name both runners need (e.g. a `QuotedTable` member on `AuditQuery` and `PathQuery`, or a public helper) — the implementer's choice,
   provided both runners and the lookup use the same quoting.
 
-- [ ] **Step 1: Lookup and check.** The statement: `SELECT TYPE_NAME(c.system_type_id), c.max_length FROM sys.columns AS c WHERE c.object_id = OBJECT_ID(@table) AND
+- [x] **Step 1: Lookup and check.** The statement: `SELECT TYPE_NAME(c.system_type_id), c.max_length FROM sys.columns AS c WHERE c.object_id = OBJECT_ID(@table) AND
   c.name = @column;` (both `NVarChar` parameters). Zero rows → `null`.
-- [ ] **Step 2: Runners.** `AuditRunner` and `UnindexedAuditRunner` build their query, then read and check the type before counting / loading; any error returns as the run's
+- [x] **Step 2: Runners.** `AuditRunner` and `UnindexedAuditRunner` build their query, then read and check the type before counting / loading; any error returns as the run's
   error (no report), cancellation as `StoppedBeforeChecking`. Update the XML docs of `RunAsync` (`<returns>`).
-- [ ] **Step 3: No cast.** In `QueryBuilder.Build`, remove the `[fa_v]` apply and use `[fa_t].<column>` wherever `[fa_v].[FaValue]` was; keep everything else (binary
+- [x] **Step 3: No cast.** In `QueryBuilder.Build`, remove the `[fa_v]` apply and use `[fa_t].<column>` wherever `[fa_v].[FaValue]` was; keep everything else (binary
   collation, `@ws`, the prefilter, the weighted sum). Update the comments that mention the cast.
-- [ ] **Step 4: Verify.** Clean build. In `FileAuditorE2M11Scratch`:
+- [x] **Step 4: Verify.** Clean build. In `FileAuditorE2M11Scratch`:
     - the milestone 1 seed (the list in milestone 1's plan, Task 1 Step 3, in an `nvarchar(400)` column): the four counts both ways unchanged, `SelectSql` the real rows,
       `EmptyIdsSql` IDs 10–14;
     - timing: a 200,000-row table (140,000 real, 40,000 empty, 20,000 `SKIP`, `nvarchar(400)`): `CountsSql` and `SelectSql` with the cast (milestone 1's statements, from
@@ -95,7 +95,7 @@ Before Task 1 the controller creates branch `feat/milestone-1.1-nvarchar-path-co
     - in the app, on both tabs: the Review Focus 1–3 columns and names (one table per case), reading each error dialogue's text by UI Automation; an accepted column
       runs to completion.
   Drop the database.
-- [ ] **Step 5: Commit** — `perf(⚡): require an nvarchar path column and classify it without a cast`.
+- [x] **Step 5: Commit** — `perf(⚡): require an nvarchar path column and classify it without a cast`.
 
 ### Task 2: SDD and user guide
 

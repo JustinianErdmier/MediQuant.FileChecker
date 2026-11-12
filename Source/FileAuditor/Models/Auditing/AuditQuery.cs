@@ -9,4 +9,12 @@ namespace FileAuditor.Models.Auditing;
 /// <param name="EmptyIdsSql">The statement that selects the ID of every empty-path row, or <see langword="null" /> when there is no ID column.</param>
 /// <param name="Parameters">The parameters (name and text value) that apply to all of the statements.</param>
 /// <param name="HasIdColumn">Whether <paramref name="SelectSql" /> returns an <c>Id</c> column as its second column.</param>
-public sealed record AuditQuery(string CountsSql, string SelectSql, string? EmptyIdsSql, IReadOnlyList<KeyValuePair<string, string>> Parameters, bool HasIdColumn);
+/// <param name="QuotedTable">The table name with every part quoted, exactly as the statements use it.</param>
+/// <param name="PathColumnName">The unquoted name of the path column, as it is compared with <c>sys.columns.name</c>.</param>
+public sealed record AuditQuery(string                                       CountsSql,
+                                string                                       SelectSql,
+                                string?                                      EmptyIdsSql,
+                                IReadOnlyList<KeyValuePair<string, string>> Parameters,
+                                bool                                         HasIdColumn,
+                                string                                       QuotedTable,
+                                string                                       PathColumnName);
