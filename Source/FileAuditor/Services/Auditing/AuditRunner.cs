@@ -104,6 +104,18 @@ public static class AuditRunner
                                         {
                                             CheckResult result = checker.Check(row);
 
+                                            // The database classified this row as a real path, so a Skipped outcome here means the two skip tests disagree (the checker folds
+                                            // some non-ASCII letters that SQL does not). List it with the other errors rather than counting it nowhere.
+                                            if (result.Outcome is CheckOutcomes.Skipped)
+                                            {
+                                                result = result with
+                                                         {
+                                                             Outcome       = CheckOutcomes.UnverifiedOther,
+                                                             Reason        = "Skip marker not recognised by the database",
+                                                             SystemMessage = "The path looks like a skip marker to the checker but not to the database, so it was not skipped."
+                                                         };
+                                            }
+
                                             if (result.Outcome is not CheckOutcomes.Found)
                                             {
                                                 problems.Add(result);

@@ -30,7 +30,6 @@ public sealed partial class AuditViewModel : AuditStatusBase
     public partial string Found { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the number of missing files, formatted with thousands separators.</summary>
-
     [ ObservableProperty ]
     public partial string Missing { get; set; } = string.Empty;
 
