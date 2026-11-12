@@ -6,7 +6,7 @@ namespace FileAuditor.Models.Reporting;
 /// <param name="FinishedUtc">When the run finished, in UTC.</param>
 /// <param name="Result">How the run ended.</param>
 /// <param name="FailureMessage">The failure message; used only when <paramref name="Result" /> is <see cref="AuditResultKinds.Failed" />.</param>
-/// <param name="TotalFiles">The table's row count.</param>
+/// <param name="TotalFiles">The number of distinct rows the audit query returns (§6.2).</param>
 /// <param name="FoundCount">How many files were found.</param>
 /// <param name="SkippedCount">How many index rows were skipped because their path value was a skip marker; they are neither checked nor listed.</param>
 /// <param name="Problems">

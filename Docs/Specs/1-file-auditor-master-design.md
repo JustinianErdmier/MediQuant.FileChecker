@@ -443,9 +443,15 @@ stop-and-exit question (§6.4).
 Built from the inputs; each identifier part is bracket-quoted with `]` escaped as `]]` (never string-concatenated raw):
 
 ```sql
-SELECT COUNT_BIG(*) FROM [schema].[table];
-SELECT [PathColumn] AS [Path], [IdColumn] AS [Id] FROM [schema].[table];   -- ID part omitted when no ID column
+SELECT COUNT_BIG(*) FROM (SELECT DISTINCT [PathColumn] AS [Path], [IdColumn] AS [Id] FROM [schema].[table]) AS [Rows];
+SELECT DISTINCT [PathColumn] AS [Path], [IdColumn] AS [Id] FROM [schema].[table];   -- ID part omitted when no ID column
 ```
+
+Both statements are `DISTINCT`, because many index tables are built around patients rather than files, so one path can sit on many rows; each path is read and checked once.
+With an ID column the distinct unit is the path and ID pair, so the ID column is expected to be **unique to its path** (one ID per file). The app does not check that: an ID
+that varies across the rows of one path brings that path back once per distinct ID, and that expectation is on the user. Duplicates are judged by the column's collation, so
+under the usual case-insensitive collation `U:\A.pdf` and `u:\a.pdf` are one row, as are values that differ only in trailing spaces. Rows with an empty path collapse the
+same way (one `NULL` and one empty row at most, per ID).
 
 The count runs first (status `Counting files...`) so progress and remaining time can be shown. Values are read as strings (`NULL` → empty). Command timeouts are long
 enough for large tables. The unindexed direction reads only the path column, in the query of §6.5.2.
@@ -554,7 +560,7 @@ A match-every-file entry alone in File types, with an empty Exclude list, is acc
 Status `Loading the index...`. Only the path column is read (never the ID), forward-only and with no command timeout:
 
 ```sql
-SELECT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filter>;   -- every part bracket-quoted as in §6.2
+SELECT DISTINCT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filter>;   -- every part bracket-quoted as in §6.2
 ```
 
 - **Prefix filter.** For one to 20 folders the statement asks SQL only for rows under those folders: one case-insensitive `LIKE '<folder>\%'` per folder (`COLLATE
@@ -677,9 +683,9 @@ Rules:
 - `ID column:` reads `(none)` when not set. `Empty files:` reads `Reported as missing` or `Not reported`. The Project folder / stage lines are omitted when a custom location
   is used.
 - Missing groups appear in the order *Empty*, *Does not exist*; Unverified groups in the order of the table in §6.3, *Other errors* last.
-- `Total files:` is always the table's row count (never less than the rows processed, should the table have grown after it was counted). `Skipped:` follows `Unverified:`, is
-  always present on the missing-files report (`0` when none) and counts the skipped rows (§6.3); they are not listed. When the result is *Stopped by user* or *Failed*, the
-  Summary adds a `Not checked:` line, so that Found + Missing + Unverified + Skipped + Not checked = Total files. The line is omitted for a completed run.
+- `Total files:` is always the count of distinct rows of §6.2 (never less than the rows processed, should the table have grown after it was counted). `Skipped:` follows
+  `Unverified:`, is always present on the missing-files report (`0` when none) and counts the skipped rows (§6.3); they are not listed. When the result is *Stopped by user*
+  or *Failed*, the Summary adds a `Not checked:` line, so that Found + Missing + Unverified + Skipped + Not checked = Total files. The line is omitted for a completed run.
 
 ### 7.1 The unindexed report
 
@@ -944,7 +950,10 @@ so ordinary builds and `dotnet run` are unchanged.
 - The set of Unverified reasons and their wording (§6.3).
 - Status bar messages and keyboard shortcuts.
 - Extra report header lines (Empty files, Project folder, stages).
-- `Total files` stays the table's row count on Stop or failure, with a `Not checked:` line (§7).
+- `Total files` stays the distinct row count on Stop or failure, with a `Not checked:` line (§7).
+- Distinct paths (from user feedback, after milestone 5): both directions' queries are `DISTINCT`, and the count counts the same distinct rows, so a path on many rows is
+  checked once; with an ID column the unit is the path and ID pair, and the ID's uniqueness per path is the user's to keep, not checked (§6.2). The unindexed direction already
+  kept one hash per path, so there `DISTINCT` only cuts the rows sent.
 - Project settings (milestone 2, §8): *Open project...* runs the save rule first and forgets the *No* answer, since the new file is a different project; a cancelled picker or
   an unreadable file leaves the current project untouched; "nothing has changed" compares the current inputs with the settings last loaded or saved; an opened project
   whose report location is incomplete saves back to its own file without asking; every close, including an operating-system logoff close, goes through the save rule.

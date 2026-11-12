@@ -18,7 +18,7 @@ public sealed class AuditProgress
     /// <summary>The number of rows skipped so far. Read and written with <see cref="Interlocked" />.</summary>
     private long _skipped;
 
-    /// <summary>The table's row count. Read and written with <see cref="Interlocked" />.</summary>
+    /// <summary>The audit query's distinct row count. Read and written with <see cref="Interlocked" />.</summary>
     private long _total;
 
     /// <summary>The number of unverified files found so far. Read and written with <see cref="Interlocked" />.</summary>
@@ -54,7 +54,7 @@ public sealed class AuditProgress
     public long Unverified => Interlocked.Read(ref _unverified);
 
     /// <summary>Records the row count and starts the checking clock.</summary>
-    /// <param name="total">The table's row count.</param>
+    /// <param name="total">The audit query's distinct row count.</param>
     public void SetTotal(long total)
     {
         Interlocked.Exchange(ref _total, total);

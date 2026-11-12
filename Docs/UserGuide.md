@@ -123,7 +123,8 @@ The **File Index Table** group holds:
 - **Table:** required. Type the table's name, or `schema.table` if it is not in the default schema.
 - **Path column:** required. The column holding each document's full path.
 - **ID column:** optional. When it is filled in, the Missing Files report shows each row's ID beside its path. The Unindexed Files audit does not use it (a file that is not in
-  the table has no ID), but it is still saved with the project.
+  the table has no ID), but it is still saved with the project. The ID must be **unique to its file**: one ID per path, such as a document ID. Do not use a patient or account
+  ID that several files share or that repeats across a file's rows (see §4.1); the app does not check this.
 
 You never type SQL. The app builds the query from these names and quotes each one safely, so a name with spaces or unusual characters is fine.
 
@@ -196,7 +197,10 @@ These checks ensure that you never find out _after_ a long run that the report c
 
 ## 4.1 Overview
 
-The Missing Files audit reads every row of the index table and checks that the file at its path exists on disk. Each row lands in exactly one outcome:
+The Missing Files audit reads every row of the index table and checks that the file at its path exists on disk. Many index tables are built around patients rather than
+files, so one path can appear on many rows; the app reads each distinct path once, so each file is checked and counted once. With an ID column set, it reads each distinct path
+and ID pair instead, which is why the ID must be unique to its file: a path listed with three different IDs is checked three times. Letter case and trailing spaces usually
+do not make two paths distinct. Each row lands in exactly one outcome:
 
 | Outcome                                       | When                                                                                          |
 |-----------------------------------------------|-----------------------------------------------------------------------------------------------|
@@ -335,8 +339,8 @@ How to read it:
 - **Skipped rows are not listed**, only counted.
 
 **Note — blank lines under "Path is empty".** If no ID column is used, a row whose path is empty has nothing to print, so it appears as a **blank line** under
-*[Path is empty in the index table]*. That is intended: there is one blank line per such row, so the group's count still matches its lines. Set an ID column and rerun the audit to
-see which rows they are.
+*[Path is empty in the index table]*. That is intended: there is one blank line per such row, so the group's count still matches its lines. Because each distinct path is read
+once, there are at most two (one for `NULL`, one for empty or blank). Set an ID column and rerun the audit to see which rows they are.
 
 # 5. Unindexed Files Audit
 

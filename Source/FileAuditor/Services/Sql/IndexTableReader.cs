@@ -3,7 +3,7 @@ namespace FileAuditor.Services.Sql;
 /// <summary>Counts and streams the rows of the file index table.</summary>
 public static class IndexTableReader
 {
-    /// <summary>Counts the rows in the index table.</summary>
+    /// <summary>Counts the distinct rows the audit query returns.</summary>
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The audit query.</param>
     /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
@@ -37,7 +37,7 @@ public static class IndexTableReader
         }
     }
 
-    /// <summary>Streams every row of the index table to a callback.</summary>
+    /// <summary>Streams the distinct rows of the index table to a callback.</summary>
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The audit query.</param>
     /// <param name="onRow">Called once per row, in order.</param>

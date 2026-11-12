@@ -10,6 +10,10 @@ public static class QueryBuilder
     public const int MaxFilterFolders = 20;
 
     /// <summary>Builds the count and select statements, quoting every identifier part.</summary>
+    /// <remarks>
+    ///     Both statements are <c>DISTINCT</c>, so a path listed on several rows (an index built around patients rather than files) is checked once. With an ID column the
+    ///     distinct unit is the path and ID pair: the ID is expected to be unique to its path, and the app does not check that.
+    /// </remarks>
     /// <param name="table">The table name, either <c>table</c> or <c>schema.table</c>.</param>
     /// <param name="pathColumn">The name of the column holding file paths.</param>
     /// <param name="idColumn">The name of the optional ID column; empty or whitespace for none.</param>
@@ -34,28 +38,26 @@ public static class QueryBuilder
         string selectList = $"{SqlIdentifier.Quote(pathParts.Value[index: 0])} AS [Path]";
         bool   hasId      = !string.IsNullOrWhiteSpace(idColumn);
 
-        if (!hasId)
+        if (hasId)
         {
-            return new AuditQuery($"SELECT COUNT_BIG(*) FROM {tableSql};",
-                                  $"SELECT {selectList} FROM {tableSql};",
-                                  hasId);
+            ErrorOr<IReadOnlyList<string>> idParts = SqlIdentifier.ParseMultipart(idColumn, maxParts: 1);
+
+            if (idParts.IsError)
+            {
+                return idParts.Errors;
+            }
+
+            selectList += $", {SqlIdentifier.Quote(idParts.Value[index: 0])} AS [Id]";
         }
 
-        ErrorOr<IReadOnlyList<string>> idParts = SqlIdentifier.ParseMultipart(idColumn, maxParts: 1);
+        string distinctSql = $"SELECT DISTINCT {selectList} FROM {tableSql}";
 
-        if (idParts.IsError)
-        {
-            return idParts.Errors;
-        }
-
-        selectList += $", {SqlIdentifier.Quote(idParts.Value[index: 0])} AS [Id]";
-
-        return new AuditQuery($"SELECT COUNT_BIG(*) FROM {tableSql};",
-                              $"SELECT {selectList} FROM {tableSql};",
+        return new AuditQuery($"SELECT COUNT_BIG(*) FROM ({distinctSql}) AS [Rows];",
+                              $"{distinctSql};",
                               hasId);
     }
 
-    /// <summary>Builds the statement that selects the path column, restricted to the rows under the given folders where that is possible.</summary>
+    /// <summary>Builds the statement that selects the distinct values of the path column, restricted to the rows under the given folders where that is possible.</summary>
     /// <param name="table">The table name, either <c>table</c> or <c>schema.table</c>.</param>
     /// <param name="pathColumn">The name of the column holding file paths.</param>
     /// <param name="folders">
@@ -82,7 +84,7 @@ public static class QueryBuilder
 
         string tableSql  = string.Join(separator: '.', tableParts.Value.Select(SqlIdentifier.Quote));
         string columnSql = SqlIdentifier.Quote(pathParts.Value[index: 0]);
-        string sql       = $"SELECT {columnSql} AS [Path] FROM {tableSql}";
+        string sql       = $"SELECT DISTINCT {columnSql} AS [Path] FROM {tableSql}";
 
         bool canFilter = folders.Count is >= 1 and <= MaxFilterFolders
                          && folders.All(IsRepresentable);
