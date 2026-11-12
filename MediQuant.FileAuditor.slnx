@@ -15,6 +15,7 @@
     </Folder>
     <Folder Name="/Docs/Ledgers/Epic-2-Audit-Optimisation/">
         <File Path="Docs/Ledgers/Epic-2-Audit-Optimisation/milestone-1-ledger.md" />
+        <File Path="Docs/Ledgers/Epic-2-Audit-Optimisation/milestone-1.1-ledger.md" />
     </Folder>
     <Folder Name="/Docs/Plans/" />
     <Folder Name="/Docs/Plans/Epic-1-MVP/">
@@ -28,6 +29,7 @@
     </Folder>
     <Folder Name="/Docs/Plans/Epic-2-Audit-Optimisation/">
         <File Path="Docs/Plans/Epic-2-Audit-Optimisation/milestone-1-row-accounting.md" />
+        <File Path="Docs/Plans/Epic-2-Audit-Optimisation/milestone-1.1-nvarchar-path-column.md" />
     </Folder>
     <Folder Name="/Docs/Specs/">
         <File Path="Docs/Specs/1-file-auditor-master-design.md" />
