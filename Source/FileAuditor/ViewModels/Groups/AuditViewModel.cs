@@ -16,10 +16,18 @@ public sealed partial class AuditViewModel : AuditStatusBase
 
     /// <summary>
     ///     Gets or sets the files checked per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up has passed
-    ///     by the recent figure in parentheses; blank until a full second has elapsed. The recent figure is the rate behind Remaining, which counts skipped rows as well as checked ones.
+    ///     by the recent figure in parentheses; blank until a full second has elapsed. The recent figure is the rate behind Remaining, which counts checked rows only.
     /// </summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the number of duplicate rows, formatted with thousands separators; blank until the counting ends.</summary>
+    [ ObservableProperty ]
+    public partial string Duplicates { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the number of files found, formatted with thousands separators.</summary>
+    [ ObservableProperty ]
+    public partial string Found { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the number of missing files, formatted with thousands separators.</summary>
     [ ObservableProperty ]
@@ -33,15 +41,19 @@ public sealed partial class AuditViewModel : AuditStatusBase
     [ ObservableProperty ]
     public partial string Remaining { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the number of skipped rows, formatted with thousands separators.</summary>
+    /// <summary>Gets or sets the number of skipped rows, formatted with thousands separators; blank until the counting ends.</summary>
     [ ObservableProperty ]
     public partial string Skipped { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the total number of files, formatted with thousands separators.</summary>
+    /// <summary>
+    ///     Gets or sets the number of distinct files the audit checks, followed by the table's row count in parentheses when the two differ; blank until the counting ends.
+    /// </summary>
     [ ObservableProperty ]
     public partial string TotalFiles { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the number of unverified files, formatted with thousands separators.</summary>
+    /// <summary>
+    ///     Gets or sets the number of unverified files, followed by the number of empty paths in parentheses when there are any; the empty paths are known when the counting ends.
+    /// </summary>
     [ ObservableProperty ]
     public partial string Unverified { get; set; } = string.Empty;
 
@@ -51,7 +63,9 @@ public sealed partial class AuditViewModel : AuditStatusBase
         _remainingEstimator.Reset();
 
         TotalFiles     = string.Empty;
+        Duplicates     = string.Empty;
         Checked        = string.Empty;
+        Found          = string.Empty;
         Missing        = string.Empty;
         Unverified     = string.Empty;
         Skipped        = string.Empty;
@@ -68,25 +82,35 @@ public sealed partial class AuditViewModel : AuditStatusBase
     /// <param name="isFinished">Whether the run has ended, which makes an empty table read 100%.</param>
     public void Update(AuditProgress progress, TimeSpan elapsed, bool isFinished)
     {
-        // Checked and Skipped are each read once, so that everything shown from this refresh agrees: Checked + Skipped never exceeds Total.
-        long done    = progress.Checked;
-        long skipped = progress.Skipped;
-        long handled = done + skipped;
-        long total   = Math.Max(progress.TotalFiles, handled);
+        // Each counter is read once and Checked is their sum, so that everything shown from this refresh agrees even while the workers are still recording.
+        long       found      = progress.Found;
+        long       missing    = progress.Missing;
+        long       unverified = progress.Unverified;
+        long       done       = found + missing + unverified;
+        RowCounts? counts     = progress.Counts;
+        long       total      = counts?.Distinct ?? 0;
 
         // The displayed rate is over the whole run, the span the Elapsed box shows; Remaining uses the recent checking-time rate, which excludes the counting phase.
         double wholeRunSeconds = elapsed.TotalSeconds;
 
-        TotalFiles     = progress.HasTotal ? total.ToString(format: "N0", CultureInfo.CurrentCulture) : string.Empty;
-        Checked        = done.ToString(format: "N0", CultureInfo.CurrentCulture);
-        Missing        = progress.Missing.ToString(format: "N0", CultureInfo.CurrentCulture);
-        Unverified     = progress.Unverified.ToString(format: "N0", CultureInfo.CurrentCulture);
-        Skipped        = skipped.ToString(format: "N0", CultureInfo.CurrentCulture);
-        Elapsed        = TimeText.Format(elapsed.TotalSeconds);
-        Remaining      = _remainingEstimator.Next(handled, total, progress.CheckingElapsed, progress.HasTotal, isFinished);
+        TotalFiles = counts is null ? string.Empty : WithParenthesis(counts.Distinct, counts.TableRows, show: counts.TableRows != counts.Distinct);
+        Duplicates = counts is null ? string.Empty : Format(counts.Duplicates);
+        Skipped    = counts is null ? string.Empty : Format(counts.Skipped);
+        Checked    = Format(done);
+        Found      = Format(found);
+        Missing    = Format(missing);
+        Unverified = WithParenthesis(unverified, counts?.EmptyPaths ?? 0, show: counts is { EmptyPaths: > 0 });
+        Elapsed    = TimeText.Format(elapsed.TotalSeconds);
+        Remaining  = _remainingEstimator.Next(done, total, progress.CheckingElapsed, progress.HasTotal, isFinished);
         FilesPerSecond = wholeRunSeconds >= 1 ? RecentRate.Format(done / wholeRunSeconds, isFinished ? null : _remainingEstimator.RecentRate) : string.Empty;
 
-        Percent       = total > 0 ? Math.Min(val1: 100, handled * 100.0 / total) : isFinished && progress.HasTotal ? 100 : 0;
+        Percent       = total > 0 ? done * 100.0 / total : isFinished && progress.HasTotal ? 100 : 0;
         StatusPercent = progress.HasTotal ? $"{Percent:0}%" : string.Empty;
     }
+
+    /// <summary>Formats a count with thousands separators.</summary>
+    private static string Format(long value) => value.ToString(format: "N0", CultureInfo.CurrentCulture);
+
+    /// <summary>Formats a count, followed by a second count in parentheses when <paramref name="show" /> is set.</summary>
+    private static string WithParenthesis(long value, long inParentheses, bool show) => show ? $"{Format(value)} ({Format(inParentheses)})" : Format(value);
 }

@@ -106,10 +106,10 @@ the GitHub repository is the user's call, outside this design).
 
 ## 5. The main window
 
-A single, **fixed-size** window: 640 × 651 pixels (outer), not resizable, no maximise button; minimise and close only. Classic.Avalonia supplies the Win9x chrome. The height is the
-minimum the Missing Files tab needs with nothing clipped and no dead space, measured at the current display scale (milestone 4.1, re-measured in milestone 5); it must be
-re-measured whenever a group on that tab changes. The tab control fills the window's star row (§5.2a), so the size is the same on both tabs and switching tabs never moves the
-window's edges. Tab order runs top to bottom, left to right.
+A single, **fixed-size** window: 640 × 668 pixels (outer), not resizable, no maximise button; minimise and close only. Classic.Avalonia supplies the Win9x chrome. The height is the
+minimum the Missing Files tab needs with nothing clipped and no dead space, measured at the current display scale (milestone 4.1, re-measured in milestone 5 and in Epic 2's
+milestone 1); it must be re-measured whenever a group on that tab changes. The tab control fills the window's star row (§5.2a), so the size is the same on both tabs and switching
+tabs never moves the window's edges. Tab order runs top to bottom, left to right.
 
 The window holds one audit **direction** per tab (a standard Win9x tab control): **Missing Files**, where every file the index table points to is on disk, and **Unindexed
 Files**, where every file on disk is in the index table. The inputs both directions use (the Database and File Index Table groups, side by side, and the Project Settings group,
@@ -137,7 +137,9 @@ Audit Stage, and the last two predate the tab control, the per-direction report 
 *Progress* there), and the project settings (the *Save project settings with the report* checkbox and the *Open project...* and *Close project* menu items, milestone 2). All of
 them predate milestone 4's final layout (the Database and File Index Table groups side by side, the fixed tab height, the compact Unindexed tab and the File Types dialogue) and
 milestone 4.1's (the Project Settings group, disabled rather than hidden custom-location options, the right-hand *Include subfolders* column and the fixed height) and milestone 5's
-(the three-column statistics and the 651-pixel height), and they are kept as historical references, not refreshed. The XAML and this section are the contract.
+(the three-column statistics and the 651-pixel height) and Epic 2's milestone 1 (the four-row statistics of §5.4 and the 668-pixel height), and they are kept as historical
+references, not refreshed. The approved mock-up of the Audit group's statistics is [`row-accounting-stats.html`](../UserInterfaceDesign/Mockups/row-accounting-stats.html). The XAML
+and this section are the contract.
 
 ```text
 ┌ File Auditor ───────────────────────────────────────────────── _ × ┐
@@ -166,9 +168,10 @@ milestone 4.1's (the Project Settings group, disabled rather than hidden custom-
 │ │ │ File name:   [FileAuditorMissingReport_Interim.txt]        │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
 │ │ ┌ Audit ─────────────────────────────────────────────────────┐ │ │
-│ │ │ Total files: 2,450  Missing:    12  Elapsed:      00:02:14 │ │ │
-│ │ │ Checked:     1,159  Unverified: 3   Remaining:    00:02:18 │ │ │
-│ │ │                     Skipped:    41  Files/second: 9 (9)    │ │ │
+│ │ │ Total files: 6 (10) Found:      4     Elapsed:   00:02:14  │ │ │
+│ │ │ Duplicates:  2      Missing:    1     Remaining: 00:02:18  │ │ │
+│ │ │ Checked:     6      Unverified: 1 (1) Files/second: 9      │ │ │
+│ │ │                     Skipped:    1                          │ │ │
 │ │ │ [██████████████████                            ]           │ │ │
 │ │ │ [View Report]                      [Start]  [Stop]         │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
@@ -247,7 +250,7 @@ reverse.)
 ### 5.2a Tab control and Options group
 
 - A standard Win9x **tab control** sits below those two groups, one tab per audit direction: **Missing Files** and **Unindexed Files**. It fills the window's remaining (star) row,
-  so its height is whatever the fixed 651-pixel window leaves (§5), which is the Missing Files tab's content height; the window does not change size when the tab
+  so its height is whatever the fixed 668-pixel window leaves (§5), which is the Missing Files tab's content height; the window does not change size when the tab
   changes. The Unindexed Files tab is taller, so its content sits in a scroll viewer that scrolls vertically when needed and never horizontally. The selected tab is not
   saved; the window opens on the first tab. Switching tabs is allowed while an audit runs.
 - The Missing Files tab holds, top to bottom: an **Options** group, the **Report** group (§5.3) and the **Audit** group (§5.4).
@@ -329,27 +332,31 @@ unchanged from milestone 2:
 
 The Audit group sits at the bottom of its tab, below the Report group; each direction's tab has its own, so a tab's statistics are those of its own last run.
 
-- Read-only statistics in three columns of up to three rows: **Total files** and **Checked** on the left; **Missing**, **Unverified** and **Skipped** in the centre; **Elapsed**,
-  **Remaining** and **Files/second** on the right. Counts use thousands separators (`N0`); times are `hh:mm:ss`. Blank before the first run.
-    - **Checked** is Found + Missing + Unverified and never includes skipped rows (§6.3); **Skipped** is the rows the skip rule passed over. On screen *Total files* is
-      `max(count, processed)`, where *processed* is Checked + Skipped, so a table that grew after it was counted never shows Checked + Skipped above Total.
+- Read-only statistics in three columns of up to four rows (the approved mock-up is [`row-accounting-stats.html`](../UserInterfaceDesign/Mockups/row-accounting-stats.html)):
+  **Total files**, **Duplicates** and **Checked** on the left; **Found**, **Missing**, **Unverified** and **Skipped** in the centre; **Elapsed**, **Remaining** and
+  **Files/second** on the right. Counts use thousands separators (`N0`, current culture); times are `hh:mm:ss`. Blank before the first run. The grid's columns are 74, 128, 68,
+  118, 82 and `*` pixels wide, so `9,999,999 (99,999,999)` fits in *Total files* and `9,999,999 (9,999,999)` in *Unverified*.
+    - The figures are those of §6.2's row kinds: T is the table's rows, D its distinct real paths, E its empty-path rows, S its skip-marker rows, Dup the duplicates and U the
+      checked *Unverified* outcomes (E is not part of U). **Total files** is `D`, or `D (T)` when T differs from D. **Duplicates** is Dup = T − D − E − S. **Unverified** is `U`, or
+      `U (E)` when E is above zero: the parenthesised rows are the empty-path rows, which are *Unverified* but never reach the checks (§6.3). **Skipped** is S. *Total files*,
+      *Duplicates*, *Skipped* and the parenthesised E are set the moment counting ends and do not change during the run.
+    - **Checked** is Found + Missing + U (each counter read once per refresh, so the three never disagree) and never includes skipped or empty-path rows. **Found** is the files
+      that exist (and are not empty, when that option is on). When the run completes, Found + Missing + U = D and D + Dup + E + S = T. The table is assumed not to change during a
+      run (§6.2), so *Total files* is never adjusted to match what was read.
     - **Files/second** is a whole number (`N0`, culture-aware thousands separators, rounded). Its first figure counts checked files only: the whole run's average, files checked
       divided by **Elapsed** (the span the window shows, counting included); it stays blank until at least one full second has elapsed. Once the 5-second warm-up of checking has
       passed, and only while the run is under way, the **recent rate** follows in parentheses, as in `54,112 (60,001)`. The recent rate is the rate behind **Remaining**: rows
-      *processed* (skipped rows included) per second of *checking* time, which excludes the counting. The two figures therefore have different bases, on purpose: the first answers
-      "how fast has this run been", the second "how fast is it going now". After the run, the whole-run figure stands alone again. Parentheses rather than a middot: a Win9x
-      dialogue
-      puts a secondary figure in parentheses, and a middot was no Win9x convention.
+      *checked* per second of *checking* time, which excludes the counting. The two figures therefore have different bases, on purpose: the first answers "how fast has this run
+      been", the second "how fast is it going now". After the run, the whole-run figure stands alone again. Parentheses rather than a middot: a Win9x dialogue puts a secondary
+      figure in parentheses, and a middot was no Win9x convention.
     - **Remaining** is `Calculating...` while the rows are counted and for the first 5 seconds of checking, then the time left at the **recent rate**, an exponentially weighted
-      rate
-      over roughly the last 30 seconds (a 30-second time constant) of checking time, counting processed rows. The rate is seeded from the second half of the warm-up (from 2.5 s),
-      so
-      the slow start-up ramp does not drag it down. Between refreshes the display counts down one second per second and eases toward each new estimate with a 3-second time
-      constant,
-      so it neither holds still nor jumps. When the processed count has been unchanged for about 1 second the display holds where it is (no countdown, no easing) instead of running
-      on to zero, while the rate keeps decaying, so a long stall lets Remaining rise when work resumes. The shown value is clamped to 36,000,000 seconds (10,000 hours) so no stall
-      can overflow the format. A table that grew past its count reads `00:00:00`, as does the display when the run ends.
-- A progress bar (percentage of rows processed: checked and skipped).
+      rate over roughly the last 30 seconds (a 30-second time constant) of checking time, counting checked rows, over the D − checked rows still to do. The rate is seeded from the
+      second half of the warm-up (from 2.5 s), so the slow start-up ramp does not drag it down. Between refreshes the display counts down one second per second and eases toward
+      each new estimate with a 3-second time constant, so it neither holds still nor jumps. When the checked count has been unchanged for about 1 second the display holds where it
+      is (no countdown, no easing) instead of running on to zero, while the rate keeps decaying, so a long stall lets Remaining rise when work resumes. The shown value is clamped
+      to 36,000,000 seconds (10,000 hours) so no stall can overflow the format. It reads `00:00:00` when the run ends.
+- A progress bar (percentage of the distinct real paths D checked; only checked rows move it, since skipped and empty-path rows are counted up front and never checked). With D = 0
+  the run still completes and the bar reads 100%.
 - A row of command buttons: **View Report** left-justified; **Start** then **Stop** right-justified. There is no Close button.
 
 ### 5.4a Unindexed Audit group
@@ -371,11 +378,12 @@ The Unindexed Files tab has its own group (headed *Audit*, `UnindexedAuditView`)
 
 ### 5.5 Status bar
 
-One status bar for the window, with two sunken panes: a message pane that fills the width (`Ready`, `Counting files...`, `Loading the index...`, `Checking files...`, `Writing
-report...`, `Completed`, `Stopped`, `Failed`) and a fixed-width percentage pane at the right edge. **While an audit runs**, the bar shows that run's phase and percentage
-whichever tab is selected, so switching tabs never hides a run. **Otherwise** it shows the selected tab's own state: with no run on that tab, the message reads `Ready` only while
-that tab's **Start** is enabled, and `Enter the required details` while it is not. Once a run has ended, its result (`Completed`, `Stopped` or `Failed`) stays on that tab until
-its next run starts. Each tab keeps its own last result.
+One status bar for the window, with two sunken panes: a message pane that fills the width (`Ready`, `Counting files...`, `Loading the index...`, `Checking files...`,
+`Reading empty paths...`, `Writing report...`, `Completed`, `Stopped`, `Failed`) and a fixed-width percentage pane at the right edge. `Reading empty paths...` is the missing-files
+audit's phase between `Checking files...` and `Writing report...`, shown only while the IDs of the empty-path rows are read after a completed check (§6.4). **While an audit runs**,
+the bar shows that run's phase and percentage whichever tab is selected, so switching tabs never hides a run. **Otherwise** it shows the selected tab's own state: with no run on
+that tab, the message reads `Ready` only while that tab's **Start** is enabled, and `Enter the required details` while it is not. Once a run has ended, its result (`Completed`,
+`Stopped` or `Failed`) stays on that tab until its next run starts. Each tab keeps its own last result.
 
 ### 5.6 Menu bar
 
@@ -440,42 +448,81 @@ stop-and-exit question (§6.4).
 
 ### 6.2 Query
 
-Built from the inputs; each identifier part is bracket-quoted with `]` escaped as `]]` (never string-concatenated raw):
+Built from the inputs; each identifier part is bracket-quoted with `]` escaped as `]]` (never string-concatenated raw). Three statements are used (`QueryBuilder.Build`), all
+built over the same classification of each row, written here in outline (`<path>` and `<id>` stand for the quoted columns; `<empty>` and `<skip>` for the predicates below):
 
 ```sql
-SELECT COUNT_BIG(*) FROM [schema].[table];
-SELECT [PathColumn] AS [Path], [IdColumn] AS [Id] FROM [schema].[table];   -- ID part omitted when no ID column
+-- 1. Counts (one round trip): the table's rows T, its empty-path rows E, its skip-marker rows S, and the distinct real paths D.
+SELECT T, E, S, D FROM ...;
+-- 2. The stream: distinct real paths only (ID part omitted when no ID column).
+SELECT DISTINCT <path> AS [Path], <id> AS [Id] FROM [schema].[table] WHERE NOT <empty> AND NOT <skip>;
+-- 3. Only with an ID column and E > 0, after the check completes: the ID of every empty-path row, not distinct.
+SELECT <id> AS [Id] FROM [schema].[table] WHERE <empty>;
 ```
 
-The count runs first (status `Counting files...`) so progress and remaining time can be shown. Values are read as strings (`NULL` → empty). Command timeouts are long
-enough for large tables. The unindexed direction reads only the path column, in the query of §6.5.2.
+**The row kinds.** Every row of the table is exactly one of:
+
+| Kind              | Rule                                                                                                  | Symbol |
+|-------------------|-------------------------------------------------------------------------------------------------------|--------|
+| Empty path        | `NULL`, or made only of white-space characters (`char.IsWhiteSpace`), including the empty string      | E      |
+| Skip marker       | Not empty, and a skip marker by the rule of §6.3                                                      | S      |
+| First of its kind | Neither of the above, and the first row of its distinct path (or path and ID pair, with an ID column) | D      |
+| Duplicate         | Neither of the above, and not the first row of its distinct path (or pair)                            | Dup    |
+
+T (the table's rows) = D + Dup + E + S; Dup is never counted directly but is T − D − E − S. Of the D distinct real paths, each lands in Found, Missing or Unverified (U, the
+checked *Unverified* outcomes; E is not part of U), so **Found + Missing + U + Not checked = D** (Not checked is 0 for a completed run) and **D + Dup + E + S = T**.
+
+**The classification is done in SQL and matches the app's rules exactly.** The empty and skip predicates are built so they agree with `string.IsNullOrWhiteSpace` and
+`SkipMarker` character for character, whatever the column's collation: the same binary-collation technique as the unindexed white-space clause (§6.5.2, `WhitespacePattern`),
+with `[^<white space>]` classes to find the first and last non-white-space characters, so a value is empty when it has none and is otherwise trimmed on both ends. The skip rule's
+`SKIP`, `SKIPPED`, `SKIP:…` and `SKIPPED:…` are matched on ASCII letters in either case (a binary `LIKE` with `[Ss][Kk]…` classes); the non-ASCII letters that
+`OrdinalIgnoreCase` also folds to `I` or `S` (such as `ı` and `ſ`) do not occur in marker values and are not handled. The white-space characters are passed as the `@ws` parameter.
+
+**The shape of the statements.** The table is aliased (`FROM <table> AS [fa_t]`), every column of the user's table is qualified with that alias, and the helper aliases and columns
+(`[fa_v]`, `[fa_n]`, `[fa_k]`, `[FaValue]`, `[FaTrimmed]`, `[FaKind]`) are deliberately unlikely names, so a table called `p` or `n`, or a path or ID column called `V` or `Lead`,
+cannot collide. Each row's kind is one `CASE`: empty is a single binary `LIKE` with no non-white-space character (or `NULL`); a cheap binary test for `skip` anywhere in the value
+comes next and yields a real path, so the trim (`PATINDEX`, `REVERSE`, `SUBSTRING`) and the four skip `LIKE`s run only for the few rows that contain the word. SQL Server inlines
+the `CROSS APPLY` scalars, so a value is recomputed at every reference: the counts therefore reference the kind once, as a weight (empty 1, skip marker 2^32) in a single `SUM`,
+and take the distinct count over the select statement, which is the only second pass. The value is cast to `nvarchar(max)` so that the trim is exact for any string column type.
+
+The stream is `DISTINCT` because many index tables are built around patients rather than files, so one path can sit on many rows; each path is read and checked once. With an ID
+column the distinct unit is the path and ID pair, so the ID column is expected to be **unique to its path** (one ID per file). The app does not check that: an ID that varies
+across the rows of one path brings that path back once per distinct ID, and that expectation is on the user. Duplicates are judged by the column's collation, so under the usual
+case-insensitive collation `U:\A.pdf` and `u:\a.pdf` are one row, as are values that differ only in trailing spaces.
+
+**The table is assumed not to change during a run.** The counts are taken once, before checking; the app does not snapshot the table, reconcile the counts with the rows it later
+streams or reads, or clamp any figure. Changing the index table mid-audit is the user's responsibility, and the sums above hold only for a table that stays as it was counted.
+
+The counts run first (status `Counting files...`) so progress and remaining time can be shown. Values are read as strings (`NULL` → empty). Command timeouts are long enough for
+large tables. The unindexed direction reads only the path column, in the query of §6.5.2, and is unchanged by row accounting.
 
 ### 6.3 Checking a file
 
-Each row is checked concurrently with bounded parallelism (builder chooses the mechanism and degree; the old app's unbounded `ThreadPool` + 1 million queue cap is not a
-requirement). Each file lands in exactly one outcome:
+Each distinct real path is checked concurrently with bounded parallelism (builder chooses the mechanism and degree; the old app's unbounded `ThreadPool` + 1 million queue cap is
+not a requirement). Empty-path rows and skip markers never reach the checks: SQL classifies and removes them (§6.2), so the checker only ever sees real paths. It keeps its own skip
+and empty tests as a safety net that should never fire; a stray one is recorded as an *Unverified* outcome so the sums of §6.2 still hold. Each file lands in exactly one outcome:
 
-| Outcome                                       | When                                                                             |
-|-----------------------------------------------|----------------------------------------------------------------------------------|
-| Skipped                                       | Missing audit only: the path value is a skip marker (below); no check is made    |
-| Found                                         | The file exists (and, if the empty option is on, its length > 0)                 |
-| Missing — Does not exist                      | The path's root exists, but the file or a directory below the root does not      |
-| Missing — Empty                               | Empty option on, and the file exists with length 0                               |
-| Unverified — Drive or share not found         | The path's root (drive letter, or `\\server\share`) does not exist for this user |
-| Unverified — Permission denied                | Access to the file or its location is denied                                     |
-| Unverified — Network location unreachable     | The server or share in a UNC path cannot be reached                              |
-| Unverified — Path too long                    | The path exceeds what the system can handle                                      |
-| Unverified — Link not followed                | Unindexed audit only: a link (junction or symlink) was skipped, not checked      |
-| Unverified — Invalid characters in path       | The path is malformed or contains illegal characters                             |
-| Unverified — Path is empty in the index table | The path value is `NULL`, empty or whitespace                                    |
-| Unverified — Other errors                     | Any other I/O failure; the reason and system message are recorded per file       |
+| Outcome                                       | When                                                                                |
+|-----------------------------------------------|-------------------------------------------------------------------------------------|
+| Skipped                                       | Missing audit only: the path value is a skip marker (below); counted, never checked |
+| Found                                         | The file exists (and, if the empty option is on, its length > 0)                    |
+| Missing — Does not exist                      | The path's root exists, but the file or a directory below the root does not         |
+| Missing — Empty                               | Empty option on, and the file exists with length 0                                  |
+| Unverified — Drive or share not found         | The path's root (drive letter, or `\\server\share`) does not exist for this user    |
+| Unverified — Permission denied                | Access to the file or its location is denied                                        |
+| Unverified — Network location unreachable     | The server or share in a UNC path cannot be reached                                 |
+| Unverified — Path too long                    | The path exceeds what the system can handle                                         |
+| Unverified — Link not followed                | Unindexed audit only: a link (junction or symlink) was skipped, not checked         |
+| Unverified — Invalid characters in path       | The path is malformed or contains illegal characters                                |
+| Unverified — Path is empty in the index table | The path is `NULL`, empty or whitespace; counted, listed by ID if set, not checked  |
+| Unverified — Other errors                     | Any other I/O failure; the reason and system message are recorded per file          |
 
 **The skip rule (missing-files audit only).** Index rows can carry a marker instead of a path, written by hand or by the tool that builds the index table. Before any other
 check (before the empty-path test and before the path is parsed), the value is trimmed, and it is a **skip marker** when it equals `SKIP` or `SKIPPED`, or starts with `SKIP:` or
-`SKIPPED:`, comparing ignoring case (`StringComparison.OrdinalIgnoreCase`). Nothing else is one: not `SKIP preflight`, not `SKIPPEDX`, not `SKIPPED :x`, and not a path that merely
-contains the word (`C:\SKIPPED\a.txt` is checked as a file). A `NULL` value is not a marker; it stays *Path is empty in the index table*. A skipped row is never checked on disk
-and never listed in the report; it is counted (*Skipped*) and treated as done by the progress bar and *Remaining*. The Unindexed audit is unaffected: it reads the index only to
-learn which paths exist, and a marker there matches no file.
+`SKIPPED:`, comparing ASCII letters in either case (§6.2). Nothing else is one: not `SKIP preflight`, not `SKIPPEDX`, not `SKIPPED :x`, and not a path that merely contains the
+word (`C:\SKIPPED\a.txt` is checked as a file). A `NULL` or white-space-only value is not a marker; it is an empty path (§6.2), *Path is empty in the index table*. A skipped row is
+never checked on disk and never listed in the report; it is counted (*Skipped*) in the counts statement, so it is final the moment counting ends, and takes no part in the progress
+bar or *Remaining*. The Unindexed audit is unaffected: it reads the index only to learn which paths exist, and a marker there matches no file.
 
 The check must not use `File.Exists` alone, because it returns `false` for every failure and would report unreachable files as missing. Use an API that surfaces the error (e.g.
 `FileInfo` / `File.GetAttributes`) and map exceptions and Win32 error codes to the outcomes above.
@@ -501,13 +548,18 @@ long*, *Invalid characters in path*, *Path is empty in the index table*) never s
 This section describes the missing-files audit; §6.5.4 gives the unindexed audit's differences. Closing the window mid-run and the save rule behave the same for both.
 
 - The UI refreshes stats a few times per second. Remaining follows the recent checking speed and Files/second shows the whole-run average with the recent rate beside it (§5.4).
-  Skipped rows count as processed for the progress bar and Remaining.
-- **Stop**: stops reading rows and checking files, then writes the report with `Result: Stopped by user`. Counts reflect only what was checked, and *Skipped* is the skipped rows
-  reached before the stop. Each tab's *Stop* button is enabled only on the running audit's tab; the menu item and Esc stop it from either tab (§5.8).
-  If Stop is pressed while the rows are still being counted (before the count query returns), no report is written and the status bar reads `Stopped`: nothing
-  has been checked, so there is nothing to report.
-- **SQL failure** (connection, bad table/column, timeout): error dialog with the message. If no rows were checked, no report is written. If it fails mid-run, the report is
-  written with `Result: Failed — <message>` and the counts so far.
+  The progress bar and Remaining run over D, the distinct real paths; checked files are the only processed rows, since skipped and empty-path rows are counted up front and never
+  checked. With D = 0 (a table with no real paths, or no rows) the run completes, the bar reads 100% and the report is written.
+- **Empty-path IDs.** When E > 0 and an ID column is set, after the checking **completes** one more query reads the ID of every empty-path row (§6.2), with the status
+  `Reading empty paths...`. It never changes the run's result: Stop (or *Stop it and exit? → Yes*) while it runs abandons it and the result stays *Completed*, since every file was
+  checked. Whenever the IDs are not listed the group *[Path is empty in the index table]* keeps its count and holds one line instead (§7).
+- **Stop**: stops reading rows and checking files, then writes the report with `Result: Stopped by user`. Counts reflect only what was checked; *Total files*, *Duplicates*,
+  *Skipped* and the empty-path count are from the up-front counts and so are complete. Each tab's *Stop* button is enabled only on the running audit's tab; the menu item and Esc
+  stop it from either tab (§5.8). If Stop is pressed while the rows are still being counted (before the count query returns), no report is written and the status bar reads
+  `Stopped`: nothing has been checked, so there is nothing to report.
+- **SQL failure** (connection, bad table/column, timeout): error dialog with the message. If no rows were checked, no report is written, even though the up-front counts are
+  known. If it fails mid-run, the report is written with `Result: Failed — <message>` and the counts so far. A failure of the empty-path ID read alone is not a failure of the
+  audit: the report is still written and the group says why the IDs are missing (§7).
 - **Report write failure**: error dialog.
 - **Closing the window mid-run**: a prompt, *"An audit is in progress. Stop it and exit?"*, with **Yes** and **No**. Yes stops the run, writes the report as
   `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same. If Yes is chosen before the count query returns, no report is written (as for
@@ -554,7 +606,7 @@ A match-every-file entry alone in File types, with an empty Exclude list, is acc
 Status `Loading the index...`. Only the path column is read (never the ID), forward-only and with no command timeout:
 
 ```sql
-SELECT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filter>;   -- every part bracket-quoted as in §6.2
+SELECT DISTINCT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filter>;   -- every part bracket-quoted as in §6.2
 ```
 
 - **Prefix filter.** For one to 20 folders the statement asks SQL only for rows under those folders: one case-insensitive `LIKE '<folder>\%'` per folder (`COLLATE
@@ -639,47 +691,61 @@ Result:          Completed
 
 Summary
 -------
-Total files:     124,500
-Found:           124,445
-Missing:         12
-Unverified:      3
-Skipped:         40
+Total files:     98,200 (124,500)
+Duplicates:      24,750
+Found:           97,820
+Missing:         260
+Unverified:      120 (310)
+Skipped:         1,240
 
-Missing Files (12)
-------------------
-[Empty (3)]
+Missing Files (260)
+-------------------
+[Empty (60)]
 doc_id 10871   \\fs01\docs\2019\05\10871.tif
 ...
 
-[Does not exist (9)]
+[Does not exist (200)]
 doc_id 10443   \\fs01\docs\2019\04\10443.pdf
 doc_id 10502   \\fs01\docs\2019\04\10502.pdf
 ...
 
-Unverified Files (3)
---------------------
-[Permission denied (1)]
+Unverified Files (430)
+----------------------
+[Permission denied (100)]
 doc_id 22010   \\fs02\restricted\22010.pdf
+...
 
-[Path is empty in the index table (1)]
+[Path is empty in the index table (310)]
 doc_id 22011
+doc_id 22012
+...
 
-[Other errors (1)]
+[Other errors (20)]
 doc_id 22030   \\fs03\docs\22030.pdf   I/O error   The semaphore timeout period has expired.
+...
 ```
+
+In the Summary, *Total files* is D, the distinct real paths checked, with the table's rows T in parentheses when they differ; *Unverified* is U, with the empty-path rows E in
+parentheses when there are any. Both mirror the screen (§5.4) and use `ReportFormat.Count` (`N0`, invariant culture).
 
 Rules:
 
 - Group titles and their counts are wrapped in square brackets, each on its own line, with a blank line between groups.
 - A group with no files is omitted. A section with no groups reads `No missing files.` / `No unverified files.`
-- With no ID column set, a file line is just the path, so a row in *[Path is empty in the index table]* prints as a **blank line** — one per such row, so the
-  group's count still matches its lines. This is intended; the user guide should call it out.
+- *[Path is empty in the index table]* is built from the up-front counts, not from the checks, so its count is the empty-path rows E. With an ID column set it holds one line per
+  empty-path row (not per distinct ID, so the count matches the lines), `<IdColumn> <id>`, sorted as the other groups are. Otherwise it holds one line in place of the IDs and
+  never blank lines. The line is, in the order of precedence: `Missing filepaths not listed because no ID column was specified` (no ID column, whatever the result);
+  `Missing filepaths not listed because the audit was stopped`; `Missing filepaths not listed because the audit failed`; or, when the read of the IDs failed,
+  `Missing filepaths not listed because they could not be read: <message>` (an abandoned read, by Stop during `Reading empty paths...`, gives the *stopped* line).
 - `ID column:` reads `(none)` when not set. `Empty files:` reads `Reported as missing` or `Not reported`. The Project folder / stage lines are omitted when a custom location
   is used.
 - Missing groups appear in the order *Empty*, *Does not exist*; Unverified groups in the order of the table in §6.3, *Other errors* last.
-- `Total files:` is always the table's row count (never less than the rows processed, should the table have grown after it was counted). `Skipped:` follows `Unverified:`, is
-  always present on the missing-files report (`0` when none) and counts the skipped rows (§6.3); they are not listed. When the result is *Stopped by user* or *Failed*, the
-  Summary adds a `Not checked:` line, so that Found + Missing + Unverified + Skipped + Not checked = Total files. The line is omitted for a completed run.
+- The Summary lines come in this order: `Total files:`, `Duplicates:`, `Found:`, `Missing:`, `Unverified:`, `Skipped:`, then `Not checked:` for a *Stopped by user* or *Failed*
+  result only. `Duplicates:` and `Skipped:` are always present (`0` when none). `Total files:` is `D`, or `D (T)` when T differs from D; `Unverified:` is `U`, or `U (E)` when E is
+  above zero (§5.4). Skipped rows are counted, never listed. `Not checked:` is D − Found − Missing − U, so Found + Missing + U + Not checked = D, and D + Duplicates + E +
+  Skipped = T (§6.2); the line is omitted for a completed run.
+- The *Unverified Files* section's heading count is U + E, since it lists both the checked outcomes and the empty-path rows. There are no blank lines other than the one between
+  groups and sections.
 
 ### 7.1 The unindexed report
 
@@ -944,7 +1010,23 @@ so ordinary builds and `dotnet run` are unchanged.
 - The set of Unverified reasons and their wording (§6.3).
 - Status bar messages and keyboard shortcuts.
 - Extra report header lines (Empty files, Project folder, stages).
-- `Total files` stays the table's row count on Stop or failure, with a `Not checked:` line (§7).
+- `Total files` stays the distinct real-path count D on Stop or failure, with a `Not checked:` line (§7).
+- Distinct paths (from user feedback, after milestone 5; commit `b22d63c`, the groundwork of Epic 2's milestone 1): both directions' queries are `DISTINCT`, so a path on many rows
+  is checked once; with an ID column the unit is the path and ID pair, and the ID's uniqueness per path is the user's to keep, not checked (§6.2). The unindexed direction already
+  kept one hash per path, so there `DISTINCT` only cuts the rows sent.
+- Row accounting (Epic 2, milestone 1), settled with the user: the table's rows, empty-path rows and skip-marker rows are counted up front, so Duplicates, Skipped and the empty
+  count are final when counting ends, and `DISTINCT` no longer hides them; *Total files* is `D (T)` when they differ; a *Duplicates* statistic sits between *Total files* and
+  *Checked*; *Found* is added on screen; empty paths stay under *Unverified*, with their count in parentheses on *Unverified*; skipped rows are counted by query, not one by one,
+  and non-ASCII case folding in skip markers is not handled; the table is assumed not to change during a run, so the app does not reconcile drift; without an ID column the empty
+  group shows its count and `Missing filepaths not listed because no ID column was specified`; the report's Summary mirrors the screen.
+- Row accounting, decided by Claude (for the user to check): *Unverified* hides its parentheses when E = 0, by analogy with *Total files*; the empty-path IDs are read only after a
+  completed check, Stop abandons that read without changing the result, and its status is `Reading empty paths...`; the lines that replace the IDs when they were not read (§7) are
+  worded after the user's no-ID line; a failure with nothing checked still writes no report; empty-path rows are listed one line per row, not per distinct ID; the old `max(count,
+  processed)` guard on *Total files* is dropped, since the table is assumed unchanged; the window grows to 640 × 668 for the fourth statistics row, with the grid columns of §5.4;
+  on screen *Checked* is Found + Missing + U with each counter read once per refresh, because reading a separate Checked counter gave a torn snapshot mid-run (Checked below
+  Missing); the checker keeps its skip and empty tests as an unreachable safety net, and a stray one is recorded as *Unverified — Other errors* with the reason `Skip marker not
+  recognised by the database` (reachable, because the checker's `OrdinalIgnoreCase` folds `ſkip` to `SKIP` where the database does not), so it is counted and listed; a failure of
+  the empty-path ID read alone keeps the completed audit's report.
 - Project settings (milestone 2, §8): *Open project...* runs the save rule first and forgets the *No* answer, since the new file is a different project; a cancelled picker or
   an unreadable file leaves the current project untouched; "nothing has changed" compares the current inputs with the settings last loaded or saved; an opened project
   whose report location is incomplete saves back to its own file without asking; every close, including an operating-system logoff close, goes through the save rule.
@@ -965,14 +1047,15 @@ so ordinary builds and `dotnet run` are unchanged.
   and, when it reaches Start by a hand-edited file, is refused; what "matches every file" means is defined in §6.5.1.
 
 - Skipped rows and run statistics (milestone 5, from the user's five requests): the skip rule is exact and checked before every other check (§6.3); a skipped row is never listed,
-  and the report's `Skipped:` line is always present on the missing-files report; on-screen *Total files* is `max(count, processed)` so the numbers agree with the report if the
-  table grew; the processed count (checked plus skipped) drives the progress bar and Remaining. Remaining is the 30-second recent rate seeded from the warm-up's second half (the
-  whole-warm-up average included the start-up ramp, so Remaining fell 1.4 to 1.9 s per second for the first half-minute), eased with a 3-second constant, and held once the
-  processed count has stood still for about 1 second; the display is clamped to 36,000,000 seconds. The recent rate sits in parentheses after the whole-run Files/second, not
-  after a middot (Win9x convention). The Missing figures have two bases (checked over wall time; processed over checking time, the rate behind Remaining) and the Unindexed
-  recent rate runs on a scan clock that starts with the walk, so the index load does not use up its warm-up. `N (0)` after a stall is shown as it is. The statistics became three
-  columns on both tabs, which took the Audit group from four rows to three and the window from 668 to 651 pixels high. The Unindexed columns (Total files and Indexed; Unindexed
-  and Unverified; Elapsed and Files/second) follow the user's Missing layout by analogy. `Esc` was not changed.
+  and the report's `Skipped:` line is always present on the missing-files report; on-screen *Total files* was `max(count, processed)` so the numbers agreed with the report if the
+  table grew (dropped in Epic 2's milestone 1, §6.2); the processed count (checked plus skipped) drove the progress bar and Remaining (since then checked rows only, §6.4).
+  Remaining is the 30-second recent rate seeded from the warm-up's second half (the whole-warm-up average included the start-up ramp, so Remaining fell 1.4 to 1.9 s per second for
+  the first half-minute), eased with a 3-second constant, and held once the processed count has stood still for about 1 second; the display is clamped to 36,000,000 seconds. The
+  recent rate sits in parentheses after the whole-run Files/second, not after a middot (Win9x convention). The Missing figures have two bases (checked over wall time; processed
+  over checking time, the rate behind Remaining) and the Unindexed recent rate runs on a scan clock that starts with the walk, so the index load does not use up its warm-up. `N
+  (0)` after a stall is shown as it is. The statistics became three columns on both tabs, which took the Audit group from four rows to three and the window from 668 to 651 pixels
+  high (it is 668 again since Epic 2's milestone 1, which added a fourth row). The Unindexed columns (Total files and Indexed; Unindexed and Unverified; Elapsed and Files/second)
+  follow the user's Missing layout by analogy. `Esc` was not changed.
 
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
 that failed, found by walking the path (§6.3); the close-mid-run prompt.
@@ -998,11 +1081,11 @@ Settled by the build (milestone 1), with no change in behaviour (milestone 4's a
   modal, fixed-size, centred on its owner, buttons along the bottom right.
 - **Number and time formatting in the report:** counts are formatted `N0` with the invariant culture, so reports diff identically on any machine; elapsed time is shown in
   total hours (at least two digits), not rolled over into days.
-- **Window size and access keys (milestone 4, size revised in 4.1 and 5):** the window is 640 × 651 pixels (outer), measured at the current display scale (668 until milestone 5,
-  which cut the Audit group from four rows to three); the tab control fills the remaining row. On the Unindexed tab, *File t_ypes:* is `Y` and *E_xclude:* is `X`; *Add...*,
-  *Remove*, both *Edit...* buttons and the *Group file types by* radios carry none, because every letter is taken. In the File Types dialogue *New*, *Edit*, *Delete* and *Clear*
-  (milestone 4.1) and *Reset* are `N`, `E`, `D`, `L` and `R`, and *OK* and *Cancel* carry none. In the Project Settings group the checkbox's access key is `G`; its label no longer
-  says *with the report*, which the status message covers.
+- **Window size and access keys (milestone 4, size revised in 4.1, 5 and Epic 2's 1):** the window is 640 × 668 pixels (outer), measured at the current display scale (651 in
+  milestone 5, which cut the Audit group from four rows to three; 668 again once Epic 2's milestone 1 added the fourth row); the tab control fills the remaining row. On the
+  Unindexed tab, *File t_ypes:* is `Y` and *E_xclude:* is `X`; *Add...*, *Remove*, both *Edit...* buttons and the *Group file types by* radios carry none, because every letter is
+  taken. In the File Types dialogue *New*, *Edit*, *Delete* and *Clear* (milestone 4.1) and *Reset* are `N`, `E`, `D`, `L` and `R`, and *OK* and *Cancel* carry none. In the Project
+  Settings group the checkbox's access key is `G`; its label no longer says *with the report*, which the status message covers.
 - **Concurrency and memory (milestone 4):** up to 16 folder listings at once; index paths held as 128-bit MD5 hashes (§6.5.2); the statistics refresh every 250 ms.
 - **Progress bar (milestone 4):** the Unindexed audit's moving block (§5.4a) is drawn by the view from a timer-driven column split, because the theme's marquee has a blank gap.
 - **Full-path validation:** a path is accepted as absolute only if `Path.IsPathFullyQualified` says so, so `C:x` and `\x` (which would resolve against the application's
