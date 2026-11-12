@@ -148,18 +148,18 @@ values cannot fit at 640)
   …)` as today.
 - Produces: `AuditViewModel.Duplicates` and `AuditViewModel.Found` (`string`, observable, blank in `Reset`).
 
-- [ ] **Step 1: View model.** `TotalFiles`, `Duplicates`, `Skipped` and the `(E)` part of `Unverified` come from `Counts` once known (blank before); `Found`, `Missing`,
+- [x] **Step 1: View model.** `TotalFiles`, `Duplicates`, `Skipped` and the `(E)` part of `Unverified` come from `Counts` once known (blank before); `Found`, `Missing`,
   `Checked` and `U` from the counters. Parentheses per Global Constraints. `Percent` and `RemainingEstimator.Next` use `Checked` over `Counts.Distinct`; D = 0 at the end reads
   100%. Remove the `Math.Max` and the `done + skipped` logic and update the XML docs (the recent rate now counts checked rows only).
-- [ ] **Step 2: View.** Four rows (spec §5 table, mock-up): left *Total files*, *Duplicates*, *Checked*; middle *Found*, *Missing*, *Unverified*, *Skipped*; right *Elapsed*,
+- [x] **Step 2: View.** Four rows (spec §5 table, mock-up): left *Total files*, *Duplicates*, *Checked*; middle *Found*, *Missing*, *Unverified*, *Skipped*; right *Elapsed*,
   *Remaining*, *Files/second*. Widen the value columns so the Review Focus 5 values fit; keep the Unindexed tab's group unchanged.
-- [ ] **Step 3: Window.** Re-measure the natural height on the Missing tab (temporarily `SizeToContent="Height"`, read it, restore a fixed `Height`), as milestones 4.1 and 5
+- [x] **Step 3: Window.** Re-measure the natural height on the Missing tab (temporarily `SizeToContent="Height"`, read it, restore a fixed `Height`), as milestones 4.1 and 5
   did. Record the old and new size in the ledger.
-- [ ] **Step 4: Verify.** Clean build. Run the Task 2 cases (a), (b) and (d) in the app: the stats match the mock-up's arrangement and the report; *Total files*, *Duplicates*,
+- [x] **Step 4: Verify.** Clean build. Run the Task 2 cases (a), (b) and (d) in the app: the stats match the mock-up's arrangement and the report; *Total files*, *Duplicates*,
   *Skipped* and the `(E)` appear as soon as counting ends and do not change; the bar reaches 100%; Checked = Found + Missing + U. Use the 200,000-row table to watch the
   live values. Then set long values temporarily (or a design-time `Design.DataContext`) to confirm Review Focus 5 at the window's width. Screenshot the Audit group on both
   tabs. Drop the database.
-- [ ] **Step 5: Commit** — `feat(✨): show duplicates, found and the empty-path count in the Audit group`.
+- [x] **Step 5: Commit** — `feat(✨): show duplicates, found and the empty-path count in the Audit group`.
 
 ### Task 4: SDD, user guide and mock-ups
 

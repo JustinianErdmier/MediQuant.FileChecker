@@ -50,12 +50,6 @@ public sealed class AuditProgress
         set => _phase = value;
     }
 
-    /// <summary>Gets the number of rows whose path is a skip marker, as counted up front; zero until the counts are known.</summary>
-    public long Skipped => _counts?.Skipped ?? 0;
-
-    /// <summary>Gets the number of distinct real paths the audit checks, as counted up front; zero until the counts are known.</summary>
-    public long TotalFiles => _counts?.Distinct ?? 0;
-
     /// <summary>Gets the number of unverified files found so far.</summary>
     public long Unverified => Interlocked.Read(ref _unverified);
 
