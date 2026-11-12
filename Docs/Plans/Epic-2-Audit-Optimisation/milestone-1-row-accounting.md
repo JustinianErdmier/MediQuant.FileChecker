@@ -166,10 +166,10 @@ values cannot fit at 640)
 **Files:** Modify `Docs/Specs/1-file-auditor-master-design.md`, `Docs/UserGuide.md`; and the older mock-ups only where they now contradict the SDD (mark superseded, do not
 redraw).
 
-- [ ] **Step 1: SDD.** §5.4 (Missing tab statistics, four rows, the parentheses, Checked = Found + Missing + Unverified), §5.5 (the new status), the window size, §6.2 (the three
+- [x] **Step 1: SDD.** §5.4 (Missing tab statistics, four rows, the parentheses, Checked = Found + Missing + Unverified), §5.5 (the new status), the window size, §6.2 (the three
   statements, the row kinds, the table assumed unchanged), §6.3 (empty and skip rows never reach the checker), §6.4 (progress over D; no report when nothing was checked), §7
   (the Summary example and rules, the empty group without blank lines, the four replacement lines; drop `max(count, processed)`), §10 (this milestone's rulings, from the
   design's §8 and the ledger). Remove every statement this milestone makes false.
-- [ ] **Step 2: User guide.** The Missing Files sections: the new statistics and Summary lines and how the sums work, Duplicates explained for patient-centred tables, the
+- [x] **Step 2: User guide.** The Missing Files sections: the new statistics and Summary lines and how the sums work, Duplicates explained for patient-centred tables, the
   empty-path group (IDs, or the no-ID line), and the FAQ entry about blank lines (now gone). Markdown hard-wrapped at 180 characters, measured with PowerShell.
-- [ ] **Step 3: Commit** — `docs(📝): document row accounting in the SDD and user guide`.
+- [x] **Step 3: Commit** — `docs(📝): document row accounting in the SDD and user guide`.
