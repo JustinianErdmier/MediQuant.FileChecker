@@ -36,10 +36,9 @@ public static class QueryBuilder
             return pathParts.Errors;
         }
 
-        string tableSql   = string.Join(separator: '.', tableParts.Value.Select(SqlIdentifier.Quote));
-        string pathSql    = SqlIdentifier.Quote(pathParts.Value[index: 0]);
-        string selectList = $"{pathSql} AS [Path]";
-        string? idSql     = null;
+        string  tableSql = string.Join(separator: '.', tableParts.Value.Select(SqlIdentifier.Quote));
+        string  pathSql  = SqlIdentifier.Quote(pathParts.Value[index: 0]);
+        string? idSql    = null;
 
         if (!string.IsNullOrWhiteSpace(idColumn))
         {
@@ -50,39 +49,55 @@ public static class QueryBuilder
                 return idParts.Errors;
             }
 
-            idSql      =  SqlIdentifier.Quote(idParts.Value[index: 0]);
-            selectList += $", {idSql} AS [Id]";
+            idSql = SqlIdentifier.Quote(idParts.Value[index: 0]);
         }
 
-        // The trimmed value is computed once per row: [n] finds the first and last non-white-space characters, [k] decides empty and trims, [s] decides skip marker.
-        // Every comparison is binary so that the rule matches SkipMarker and char.IsWhiteSpace exactly, whatever the column's collation.
+        // Every row gets one kind in one pass: 0 real path, 1 empty, 2^32 skip marker (a weight, see the counts). Every comparison is binary so that the rule matches SkipMarker and char.IsWhiteSpace
+        // exactly, whatever the column's collation. Empty is a single LIKE (no non-white-space character). The trim and the four skip LIKEs are guarded by a cheap
+        // test for "skip" anywhere in the value (a WHEN of the CASE, ahead of them), so they run only for the few rows that could be markers. SQL Server inlines the apply
+        // scalars: [fa_n] is not computed once per row, it is recomputed in each LIKE that uses it, which is cheap only because of that guard.
+        // The aliases are deliberately unlikely names and the table's columns are always qualified, so a table or column named like an alias cannot collide.
         string source = $"""
-                         FROM {tableSql}
-                         CROSS APPLY (SELECT CAST({pathSql} AS nvarchar(max)) AS [V]) AS [p]
-                         CROSS APPLY (SELECT PATINDEX(N'%[^' + @ws + N']%', [p].[V] COLLATE Latin1_General_100_BIN2)          AS [Lead],
-                                             PATINDEX(N'%[^' + @ws + N']%', REVERSE([p].[V]) COLLATE Latin1_General_100_BIN2) AS [Trail],
-                                             LEN([p].[V] + N'x') - 1                                                           AS [Length]) AS [n]
-                         CROSS APPLY (SELECT CASE WHEN [p].[V] IS NULL OR [n].[Lead] = 0 THEN 1 ELSE 0 END AS [IsEmpty],
-                                             SUBSTRING([p].[V], [n].[Lead], [n].[Length] - [n].[Lead] - [n].[Trail] + 2) AS [Trimmed]) AS [k]
-                         CROSS APPLY (SELECT CASE WHEN [k].[IsEmpty] = 0
-                                                       AND ([k].[Trimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp]'
-                                                            OR [k].[Trimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp][Pp][Ee][Dd]'
-                                                            OR [k].[Trimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp]:%'
-                                                            OR [k].[Trimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp][Pp][Ee][Dd]:%')
-                                                  THEN 1 ELSE 0 END AS [IsSkip]) AS [s]
+                         FROM {tableSql} AS [fa_t]
+                         CROSS APPLY (SELECT CAST([fa_t].{pathSql} AS nvarchar(max)) AS [FaValue]) AS [fa_v]
+                         CROSS APPLY (SELECT SUBSTRING([fa_v].[FaValue],
+                                                       PATINDEX(N'%[^' + @ws + N']%', [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2),
+                                                       LEN([fa_v].[FaValue] + N'x') - 1
+                                                       - PATINDEX(N'%[^' + @ws + N']%', [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2)
+                                                       - PATINDEX(N'%[^' + @ws + N']%', REVERSE([fa_v].[FaValue]) COLLATE Latin1_General_100_BIN2) + 2) AS [FaTrimmed]) AS [fa_n]
+                         CROSS APPLY (SELECT CASE WHEN [fa_v].[FaValue] IS NULL
+                                                       OR [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^' + @ws + N']%'
+                                                  THEN 1
+                                                  WHEN [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[Ss][Kk][Ii][Pp]%'
+                                                  THEN 0
+                                                  WHEN [fa_n].[FaTrimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp]'
+                                                       OR [fa_n].[FaTrimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp][Pp][Ee][Dd]'
+                                                       OR [fa_n].[FaTrimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp]:%'
+                                                       OR [fa_n].[FaTrimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp][Pp][Ee][Dd]:%'
+                                                  THEN CAST(4294967296 AS bigint)
+                                                  ELSE 0
+                                             END AS [FaKind]) AS [fa_k]
                          """;
 
-        string realSql   = $"SELECT DISTINCT {selectList} {source} WHERE [k].[IsEmpty] = 0 AND [s].[IsSkip] = 0";
+        string pathRef = $"[fa_t].{pathSql}";
+        string idRef   = idSql is null ? string.Empty : $"[fa_t].{idSql}";
+
+        string realSql = $"SELECT DISTINCT {pathRef} AS [Path]{(idSql is null ? string.Empty : $", {idRef} AS [Id]")} {source} WHERE [fa_k].[FaKind] = 0";
+
+        // The counts read the kind once. SQL Server inlines the apply scalars, so every extra reference to [FaKind] would classify the whole table again (three references
+        // cost three times as much), and the kind is therefore a weight that one SUM can carry: an empty row weighs 1 and a skip marker weighs 2^32, so the sum holds the
+        // empty count below 2^32 and the skip count above it. The distinct real paths are counted over the select statement, a second pass over the table.
         string countsSql = $"""
-                            SELECT [c].[Total], [c].[Empty], [c].[Skipped], [d].[Distinct]
-                            FROM (SELECT COUNT_BIG(*)                                  AS [Total],
-                                         COALESCE(SUM(CAST([k].[IsEmpty] AS bigint)), 0) AS [Empty],
-                                         COALESCE(SUM(CAST([s].[IsSkip] AS bigint)), 0)  AS [Skipped]
+                            SELECT [c].[Total],
+                                   CAST([c].[Weights] % 4294967296 AS bigint) AS [Empty],
+                                   CAST([c].[Weights] / 4294967296 AS bigint) AS [Skipped],
+                                   [d].[Distinct]
+                            FROM (SELECT COUNT_BIG(*) AS [Total], COALESCE(SUM([fa_k].[FaKind]), CAST(0 AS bigint)) AS [Weights]
                                   {source}) AS [c]
                             CROSS JOIN (SELECT COUNT_BIG(*) AS [Distinct] FROM ({realSql}) AS [r]) AS [d];
                             """;
 
-        string? emptyIdsSql = idSql is null ? null : $"SELECT {idSql} AS [Id] {source} WHERE [k].[IsEmpty] = 1;";
+        string? emptyIdsSql = idSql is null ? null : $"SELECT {idRef} AS [Id] {source} WHERE [fa_k].[FaKind] = 1;";
 
         return new AuditQuery(countsSql,
                               $"{realSql};",
