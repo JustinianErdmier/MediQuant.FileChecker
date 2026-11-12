@@ -65,25 +65,32 @@ public static class ReportBuilder
         ReportFormat.AddTimingLines(lines, report.StartedUtc, report.FinishedUtc, report.Result, report.FailureMessage);
     }
 
-    /// <summary>Adds the Summary block: the counts of every kind of result.</summary>
+    /// <summary>Adds the Summary block: the counts of every kind of row and result.</summary>
     /// <param name="lines">The report's lines.</param>
     /// <param name="report">The audit to report on.</param>
     private static void AddSummary(List<string> lines, AuditReport report)
     {
+        RowCounts counts = report.Counts;
+
         long missing    = report.Problems.Count(result => result.Outcome is CheckOutcomes.MissingEmpty or CheckOutcomes.MissingDoesNotExist);
         long unverified = report.Problems.Count - missing;
 
+        string total = counts.TableRows != counts.Distinct ? $"{Count(counts.Distinct)} ({Count(counts.TableRows)})" : Count(counts.Distinct);
+
+        string unverifiedText = counts.EmptyPaths > 0 ? $"{Count(unverified)} ({Count(counts.EmptyPaths)})" : Count(unverified);
+
         lines.Add(item: "Summary");
         lines.Add(item: "-------");
-        lines.Add(Labelled(label: "Total files:", Count(report.TotalFiles)));
+        lines.Add(Labelled(label: "Total files:", total));
+        lines.Add(Labelled(label: "Duplicates:", Count(counts.Duplicates)));
         lines.Add(Labelled(label: "Found:", Count(report.FoundCount)));
         lines.Add(Labelled(label: "Missing:", Count(missing)));
-        lines.Add(Labelled(label: "Unverified:", Count(unverified)));
-        lines.Add(Labelled(label: "Skipped:", Count(report.SkippedCount)));
+        lines.Add(Labelled(label: "Unverified:", unverifiedText));
+        lines.Add(Labelled(label: "Skipped:", Count(counts.Skipped)));
 
         if (report.Result is not AuditResultKinds.Completed)
         {
-            lines.Add(Labelled(label: "Not checked:", Count(report.TotalFiles - report.FoundCount - report.Problems.Count - report.SkippedCount)));
+            lines.Add(Labelled(label: "Not checked:", Count(counts.Distinct - report.FoundCount - report.Problems.Count)));
         }
     }
 
@@ -111,29 +118,79 @@ public static class ReportBuilder
                select (outcome, results)
         ];
 
-        int    total   = groups.Sum(group => group.Results.Count);
+        // The empty-path group sits in the Unverified order but is built from the counts, not from the problems.
+        bool hasEmptyGroup = order.Contains(CheckOutcomes.UnverifiedPathEmpty) && report.Counts.EmptyPaths > 0;
+
+        long   total   = groups.Sum(group => (long)group.Results.Count) + (hasEmptyGroup ? report.Counts.EmptyPaths : 0);
         string heading = $"{title} ({Count(total)})";
 
         lines.Add(heading);
         lines.Add(new string(c: '-', heading.Length));
 
-        if (groups.Count is 0)
+        if (groups.Count is 0 && !hasEmptyGroup)
         {
             lines.Add(emptyText);
 
             return;
         }
 
-        for (int index = 0; index < groups.Count; index++)
+        bool first = true;
+
+        foreach (CheckOutcomes outcome in order)
         {
-            if (index > 0)
+            if (outcome is CheckOutcomes.UnverifiedPathEmpty && hasEmptyGroup)
+            {
+                if (!first)
+                {
+                    lines.Add(string.Empty);
+                }
+
+                first = false;
+
+                AddEmptyPathGroup(lines, report);
+            }
+
+            List<CheckResult>? results = groups.Where(group => group.Outcome == outcome)
+                                               .Select(group => group.Results)
+                                               .FirstOrDefault();
+
+            if (results is null)
+            {
+                continue;
+            }
+
+            if (!first)
             {
                 lines.Add(string.Empty);
             }
 
-            lines.Add($"[{GroupTitle(groups[index].Outcome)} ({Count(groups[index].Results.Count)})]");
+            first = false;
 
-            AddFileLines(lines, groups[index].Outcome, groups[index].Results, report.Settings);
+            lines.Add($"[{GroupTitle(outcome)} ({Count(results.Count)})]");
+
+            AddFileLines(lines, outcome, results, report.Settings);
+        }
+    }
+
+    /// <summary>Adds the Path is empty in the index table group: one line per ID, or the single note that says why they are not listed.</summary>
+    /// <param name="lines">The report's lines.</param>
+    /// <param name="report">The audit to report on.</param>
+    private static void AddEmptyPathGroup(List<string> lines, AuditReport report)
+    {
+        lines.Add($"[{GroupTitle(CheckOutcomes.UnverifiedPathEmpty)} ({Count(report.Counts.EmptyPaths)})]");
+
+        if (report.EmptyPathIds is null)
+        {
+            lines.Add(report.EmptyPathNote ?? string.Empty);
+
+            return;
+        }
+
+        string[] ids = [.. report.EmptyPathIds.Order(StringComparer.OrdinalIgnoreCase).ThenBy(id => id, StringComparer.Ordinal)];
+
+        foreach (string id in ids)
+        {
+            lines.Add($"{report.Settings.IdColumn} {Flatten(id)}".TrimEnd());
         }
     }
 

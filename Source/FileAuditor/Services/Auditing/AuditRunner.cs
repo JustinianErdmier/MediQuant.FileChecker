@@ -51,9 +51,9 @@ public static class AuditRunner
             return counted.Errors;
         }
 
-        long total = counted.Value.Distinct;
+        RowCounts counts = counted.Value;
 
-        progress.SetTotal(total);
+        progress.SetCounts(counts);
         progress.Phase = "Checking files...";
 
         FileChecker checker = new(settings.ReportEmptyFiles);
@@ -104,7 +104,7 @@ public static class AuditRunner
                                         {
                                             CheckResult result = checker.Check(row);
 
-                                            if (result.Outcome is not (CheckOutcomes.Found or CheckOutcomes.Skipped))
+                                            if (result.Outcome is not CheckOutcomes.Found)
                                             {
                                                 problems.Add(result);
                                             }
@@ -142,7 +142,6 @@ public static class AuditRunner
         }
 
         long             checkedCount   = progress.Checked;
-        long             skippedCount   = progress.Skipped;
         AuditResultKinds result         = AuditResultKinds.Completed;
         string?          failureMessage = null;
 
@@ -152,7 +151,7 @@ public static class AuditRunner
         }
         else if (readResult.IsError)
         {
-            if (checkedCount + skippedCount is 0)
+            if (checkedCount is 0)
             {
                 return readResult.Errors;
             }
@@ -161,18 +160,59 @@ public static class AuditRunner
             failureMessage = readResult.FirstError.Description;
         }
 
+        IReadOnlyList<string>? emptyPathIds  = null;
+        string?                emptyPathNote = null;
+
+        if (counts.EmptyPaths > 0)
+        {
+            if (query.EmptyIdsSql is null)
+            {
+                emptyPathNote = "Missing filepaths not listed because no ID column was specified";
+            }
+            else if (result is AuditResultKinds.StoppedByUser)
+            {
+                emptyPathNote = "Missing filepaths not listed because the audit was stopped";
+            }
+            else if (result is AuditResultKinds.Failed)
+            {
+                emptyPathNote = "Missing filepaths not listed because the audit failed";
+            }
+            else
+            {
+                progress.Phase = "Reading empty paths...";
+
+                try
+                {
+                    ErrorOr<IReadOnlyList<string>> read = await IndexTableReader.ReadEmptyIdsAsync(connectionString, query, cancellationToken);
+
+                    if (read.IsError)
+                    {
+                        emptyPathNote = $"Missing filepaths not listed because they could not be read: {read.FirstError.Description}";
+                    }
+                    else
+                    {
+                        emptyPathIds = read.Value;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    emptyPathNote = "Missing filepaths not listed because the audit was stopped";
+                }
+            }
+        }
+
         progress.Phase = "Writing report...";
 
-        // The table may have grown since it was counted; the report's arithmetic must still add up.
         AuditReport report = new(settings,
                                  startedUtc,
                                  DateTime.UtcNow,
                                  result,
                                  failureMessage,
-                                 Math.Max(total, checkedCount + skippedCount),
-                                 checkedCount - problems.Count,
-                                 skippedCount,
-                                 problems.ToArray());
+                                 counts,
+                                 progress.Found,
+                                 problems.ToArray(),
+                                 emptyPathIds,
+                                 emptyPathNote);
 
         ErrorOr<Success> written = ReportWriter.Write(request.ReportPath.FullPath, ReportBuilder.Build(report));
 

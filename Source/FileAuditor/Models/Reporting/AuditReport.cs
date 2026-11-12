@@ -6,19 +6,24 @@ namespace FileAuditor.Models.Reporting;
 /// <param name="FinishedUtc">When the run finished, in UTC.</param>
 /// <param name="Result">How the run ended.</param>
 /// <param name="FailureMessage">The failure message; used only when <paramref name="Result" /> is <see cref="AuditResultKinds.Failed" />.</param>
-/// <param name="TotalFiles">The number of distinct rows the audit query returns (§6.2).</param>
+/// <param name="Counts">How the table's rows divide into empty paths, skip markers, distinct real paths and duplicates, as counted before checking.</param>
 /// <param name="FoundCount">How many files were found.</param>
-/// <param name="SkippedCount">How many index rows were skipped because their path value was a skip marker; they are neither checked nor listed.</param>
 /// <param name="Problems">
 ///     The Missing and Unverified results only, so a very large run need not keep every Found row in memory. Files checked = <paramref name="FoundCount" /> plus
 ///     the number of problems.
 /// </param>
+/// <param name="EmptyPathIds">
+///     The IDs of the rows whose path is empty; <see langword="null" /> when there are none or they could not be listed, in which case <paramref name="EmptyPathNote" />
+///     says why. When <c>Counts.EmptyPaths</c> is above zero, exactly one of the two is not <see langword="null" />.
+/// </param>
+/// <param name="EmptyPathNote">The line that stands in for the empty-path IDs when they are not listed; <see langword="null" /> otherwise.</param>
 public sealed record AuditReport(AppSettings                Settings,
                                  DateTime                   StartedUtc,
                                  DateTime                   FinishedUtc,
                                  AuditResultKinds           Result,
                                  string?                    FailureMessage,
-                                 long                       TotalFiles,
+                                 RowCounts                  Counts,
                                  long                       FoundCount,
-                                 long                       SkippedCount,
-                                 IReadOnlyList<CheckResult> Problems);
+                                 IReadOnlyList<CheckResult> Problems,
+                                 IReadOnlyList<string>?     EmptyPathIds,
+                                 string?                    EmptyPathNote);

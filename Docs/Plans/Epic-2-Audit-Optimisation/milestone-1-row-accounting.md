@@ -117,25 +117,25 @@ Before Task 1 the controller creates branch `feat/milestone-1-row-accounting` fr
 - Produces: `AuditReport(AppSettings Settings, DateTime StartedUtc, DateTime FinishedUtc, AuditResultKinds Result, string? FailureMessage, RowCounts Counts, long FoundCount,
   IReadOnlyList<CheckResult> Problems, IReadOnlyList<string>? EmptyPathIds, string? EmptyPathNote)` — when `Counts.EmptyPaths > 0`, exactly one of the last two is non-null.
 
-- [ ] **Step 1: Progress.** `Record` counts Found (new), Missing and Unverified and increments `Checked` for each. The checker keeps its own skip and empty tests, but the
+- [x] **Step 1: Progress.** `Record` counts Found (new), Missing and Unverified and increments `Checked` for each. The checker keeps its own skip and empty tests, but the
   stream excludes those rows, so a `Skipped` outcome should never arrive: if one does, record it under Unverified (never throw, never touch the counted Skipped) and keep it
   out of the report's empty group. Likewise a `PathEmpty` outcome stays an ordinary Unverified problem. Note this safety net in the ledger.
-- [ ] **Step 2: Runner.** Count with `CountRowsAsync` (Stop → `StoppedBeforeChecking`, as now), `SetCounts`, stream and check as now. Afterwards:
+- [x] **Step 2: Runner.** Count with `CountRowsAsync` (Stop → `StoppedBeforeChecking`, as now), `SetCounts`, stream and check as now. Afterwards:
   - result as now, except that "no report" is `progress.Checked is 0` on failure;
   - when `Counts.EmptyPaths > 0`: no ID column → the no-ID line; *Stopped* → the stopped line; *Failed* → the failed line; *Completed* → status `Reading empty paths...` and
     `ReadEmptyIdsAsync` with the caller's token: success → the IDs; cancelled → the stopped line, result stays *Completed*; error → the could-not-be-read line with the
     message, result unchanged;
   - build `AuditReport` with `Counts` as counted (no `Math.Max`).
-- [ ] **Step 3: Report.** Summary per Global Constraints (`Not checked:` = `Counts.Distinct − FoundCount − Problems.Count`). *Unverified Files* heading count =
+- [x] **Step 3: Report.** Summary per Global Constraints (`Not checked:` = `Counts.Distinct − FoundCount − Problems.Count`). *Unverified Files* heading count =
   unverified problems + E. The *Path is empty in the index table (E)* group sits in its usual place in the Unverified order and is built from `Counts`/`EmptyPathIds`/
   `EmptyPathNote`, not from `Problems`: one `<IdColumn> <id>` line per ID (sorted `OrdinalIgnoreCase` then `Ordinal`), or the one note line. Update the XML docs.
-- [ ] **Step 4: Verify.** Clean build. Create the existing files the Task 1 rows name under a scratch folder (point the paths at it) and run the Missing audit in the app
+- [x] **Step 4: Verify.** Clean build. Create the existing files the Task 1 rows name under a scratch folder (point the paths at it) and run the Missing audit in the app
   against `dbo.Idx`: (a) with ID column `Id` — the report's Summary reads Total files `7 (22)`, Duplicates `3`, Skipped `7`, Unverified `n (5)`, the empty group lists
   `Id 10` … `Id 14`, and both sums hold; (b) without an ID column — `6 (22)`, Duplicates `4`, the group reads `(5)` and the no-ID line; (c) a 200,000-row variant
   (repeated paths, every tenth row empty or a marker), stopped after a few seconds — `Not checked:` present, both sums hold, the group carries the stopped line; (d) a table
   with only empty and skip rows, and an empty table — Completed, report written, `Total files: 0 (…)`/`0`. The on-screen stats are not checked yet (Task 3). Keep the database
   for Task 3.
-- [ ] **Step 5: Commit** — `feat(✨): report duplicates, empty paths and skipped rows from the up-front counts`.
+- [x] **Step 5: Commit** — `feat(✨): report duplicates, empty paths and skipped rows from the up-front counts`.
 
 ### Task 3: The four-row Audit group
 
