@@ -4,5 +4,5 @@ namespace FileAuditor.Models.Auditing;
 /// <param name="Sql">The statement; every folder value is referenced as a parameter, never concatenated.</param>
 /// <param name="Parameters">The parameter names (<c>@p0</c>, <c>@p1</c>, …) and their <c>NVarChar</c> values.</param>
 /// <param name="QuotedTable">The table name with every part quoted, exactly as <paramref name="Sql" /> uses it.</param>
-/// <param name="PathColumnName">The unquoted name of the path column, as it is compared with <c>sys.columns.name</c>.</param>
-public sealed record PathQuery(string Sql, IReadOnlyList<KeyValuePair<string, string>> Parameters, string QuotedTable, string PathColumnName);
+/// <param name="QuotedPathColumn">The name of the path column, quoted exactly as <paramref name="Sql" /> uses it.</param>
+public sealed record PathQuery(string Sql, IReadOnlyList<KeyValuePair<string, string>> Parameters, string QuotedTable, string QuotedPathColumn);

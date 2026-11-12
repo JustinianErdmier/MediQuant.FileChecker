@@ -42,7 +42,7 @@ public static class AuditRunner
         {
             ErrorOr<(string TypeName, short MaxLength)?> columnType = await IndexTableReader.ReadPathColumnTypeAsync(connectionString,
                                                                                                                       query.QuotedTable,
-                                                                                                                      query.PathColumnName,
+                                                                                                                      query.QuotedPathColumn,
                                                                                                                       cancellationToken);
 
             if (columnType.IsError)

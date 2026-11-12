@@ -3,18 +3,26 @@ namespace FileAuditor.Services.Sql;
 /// <summary>Counts and streams the rows of the file index table.</summary>
 public static class IndexTableReader
 {
-    /// <summary>Reads the system type and length of a column of the index table.</summary>
+    /// <summary>The SQL Server error numbers for an invalid column name and an invalid object name.</summary>
+    private static readonly int[] NotFoundErrorNumbers = [207, 208];
+
+    /// <summary>Reads the system type and length of the path column as the audit statements see it.</summary>
+    /// <remarks>
+    ///     The type is read from the result-set metadata of <c>SELECT TOP (0) [fa_t].&lt;column&gt; FROM &lt;table&gt; AS [fa_t]</c> (<c>sp_describe_first_result_set</c>),
+    ///     the shape the audit statements use, so permissions, synonyms (also to another database) and views behave exactly as they do for the statements: no permission is
+    ///     reported as SQL Server reports it (error 229), not as a missing column.
+    /// </remarks>
     /// <param name="connectionString">The connection string.</param>
-    /// <param name="tableSql">The quoted table name, as the audit statements use it; it is passed to <c>OBJECT_ID</c> as a parameter.</param>
-    /// <param name="column">The unquoted column name, compared with <c>sys.columns.name</c>.</param>
+    /// <param name="tableSql">The quoted table name, as the audit statements use it.</param>
+    /// <param name="columnSql">The quoted column name, as the audit statements use it.</param>
     /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
     /// <returns>
-    ///     The system type name (<c>TYPE_NAME(system_type_id)</c>, so an alias type reports the type it is built on) and <c>max_length</c> in bytes (-1 for <c>max</c>); <see langword="null" />
-    ///     when there is no such column or table; or <c>Sql.QueryFailed</c> when SQL Server reports an error.
+    ///     The system type name (an alias type reports the type it is built on) and <c>max_length</c> in bytes (-1 for <c>max</c>); <see langword="null" /> when SQL Server reports
+    ///     an invalid column or object name (errors 207 and 208); or <c>Sql.QueryFailed</c> for any other SQL Server error.
     /// </returns>
     public static async Task<ErrorOr<(string TypeName, short MaxLength)?>> ReadPathColumnTypeAsync(string            connectionString,
                                                                                                     string            tableSql,
-                                                                                                    string            column,
+                                                                                                    string            columnSql,
                                                                                                     CancellationToken cancellationToken)
     {
         try
@@ -23,19 +31,13 @@ public static class IndexTableReader
 
             await connection.OpenAsync(cancellationToken);
 
-            await using SqlCommand command = new("SELECT TYPE_NAME(c.system_type_id), c.max_length FROM sys.columns AS c WHERE c.object_id = OBJECT_ID(@table) AND c.name = @column;",
-                                                 connection);
+            await using SqlCommand command = new("EXEC sp_describe_first_result_set @tsql = @tsql;", connection);
 
             command.CommandTimeout = 0;
 
-            command.Parameters.Add(new SqlParameter("@table", SqlDbType.NVarChar, 4000)
+            command.Parameters.Add(new SqlParameter("@tsql", SqlDbType.NVarChar, -1)
             {
-                Value = tableSql
-            });
-
-            command.Parameters.Add(new SqlParameter("@column", SqlDbType.NVarChar, 4000)
-            {
-                Value = column
+                Value = $"SELECT TOP (0) [fa_t].{columnSql} FROM {tableSql} AS [fa_t];"
             });
 
             await using CancellationTokenRegistration registration = cancellationToken.Register(command.Cancel);
@@ -48,13 +50,27 @@ public static class IndexTableReader
                 return none;
             }
 
-            (string TypeName, short MaxLength)? found = (reader.GetString(i: 0), reader.GetInt16(i: 1));
+            // system_type_name is the system type with its length ("nvarchar(300)" for an alias over it) and is NULL for a CLR type, which only has a user type name.
+            string? systemType = reader.IsDBNull(reader.GetOrdinal("system_type_name")) ? null : reader.GetString(reader.GetOrdinal("system_type_name"));
+            string  typeName   = systemType ?? reader.GetString(reader.GetOrdinal("user_type_name"));
+            int     paren      = typeName.IndexOf(value: '(');
+
+            (string TypeName, short MaxLength)? found = (paren < 0 ? typeName : typeName[..paren], reader.GetInt16(reader.GetOrdinal("max_length")));
 
             return found;
         }
         catch (SqlException exception) when (!cancellationToken.IsCancellationRequested)
         {
-            return SqlErrors.QueryFailed(exception.Message);
+            // An invalid name is reported with its own error first, then wrapped (11501, 11529): the first error decides, so 229 and everything else stay a plain failure.
+            if (NotFoundErrorNumbers.Contains(exception.Errors[index: 0].Number))
+            {
+                (string TypeName, short MaxLength)? none = null;
+
+                return none;
+            }
+
+            // The first error is the real one; the wrapper SQL Server adds after it (for example 11529) only repeats that the metadata could not be determined.
+            return SqlErrors.QueryFailed(exception.Errors[index: 0].Message);
         }
         catch (SqlException)
         {

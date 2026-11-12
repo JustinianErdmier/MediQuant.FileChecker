@@ -8,8 +8,9 @@ public static class UnindexedAuditRunner
     /// <param name="progress">Receives the live statistics.</param>
     /// <param name="cancellationToken">Stops the run; once the walk has started, whatever was found is reported.</param>
     /// <returns>
-    ///     The report that was written for a completed or stopped audit; a <c>Sql.PathColumnNotFound</c> or <c>Sql.PathColumnNotNvarchar</c> error when the path column is missing or is not <c>nvarchar</c>; a SQL error when loading the index failed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped
-    ///     while the index was loading; or <c>Report.Unwritable</c> when the report could not be written.
+    ///     The report that was written for a completed or stopped audit; a <c>Sql.PathColumnNotFound</c> or <c>Sql.PathColumnNotNvarchar</c> error when the path column is
+    ///     missing or is not <c>nvarchar</c>; a SQL error when loading the index failed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while the index was
+    ///     loading; or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
     public static async Task<ErrorOr<UnindexedReport>> RunAsync(AuditRequest request, UnindexedProgress progress, CancellationToken cancellationToken)
     {
@@ -53,7 +54,7 @@ public static class UnindexedAuditRunner
 
             ErrorOr<(string TypeName, short MaxLength)?> columnType = await IndexTableReader.ReadPathColumnTypeAsync(connectionString,
                                                                                                                       built.Value.QuotedTable,
-                                                                                                                      built.Value.PathColumnName,
+                                                                                                                      built.Value.QuotedPathColumn,
                                                                                                                       cancellationToken);
 
             if (columnType.IsError)
