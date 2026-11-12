@@ -209,7 +209,7 @@ Before it checks anything, the app sorts every row of the table into one of four
 |------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
 | Distinct   | A real path, the first row to carry it (or the first row with that path and ID, when an ID column is set). These are the files that get checked. |
 | Duplicate  | A further row for a path (or path and ID) already counted. Not checked again.                                                                    |
-| Empty path | The path is `NULL`, empty, or only whitespace. Never checked, but always listed (see *Unverified — Path is empty*, below).                       |
+| Empty path | The path is `NULL`, empty, or only whitespace. Never checked; counted, and listed by ID when an ID column is set (see *Path is empty*, below).   |
 | Skipped    | The path is a skip marker (below). Never checked and never listed.                                                                               |
 
 Every row of the table is exactly one of these, so **distinct + duplicates + empty paths + skipped = the table's rows**. Each distinct path then lands in exactly one outcome:
@@ -250,7 +250,7 @@ Press **Start**. The app runs its pre-flight checks (section 3.4), saves the pro
 1. **Counts the rows** (status `Counting files...`): the table's rows, the empty paths, the skipped rows and the distinct paths, so it can show progress and the time remaining.
 2. **Checks the files** (status `Checking files...`), many at a time. Only the distinct paths are checked; empty and skipped rows never reach this step.
 3. **Reads the empty paths** (status `Reading empty paths...`), only when the check completed, some rows had an empty path, and you set an ID column: it fetches the ID of each such
-   row so the report can list them. It is one more pass over the table, so on a very large table it can take about as long as counting did.
+   row so the report can list them. It is one more pass over the table, but a lighter one than counting, which has to work out every row's kind and its distinct path.
 4. **Writes the report** (status `Writing report...`).
 
 **The statistics**
@@ -691,8 +691,8 @@ This section briefly explains how each audit stays fast on large projects and tr
 - **Unreachable folders are found once.** When a file cannot be reached, the app walks its path one folder at a time to find the first folder that cannot be reached, and
   remembers that folder. Every later file under it gets the same answer straight away, whilst files elsewhere are still checked normally. A single blocked folder therefore costs
   one slow lookup, not one per file, and its files are still listed one by one in the report.
-- **Skip markers and empty paths never leave the database.** The database recognises them whilst counting, so they are counted but never sent to the app or checked, and cost
-  nothing during the check.
+- **Skip markers and empty paths are not streamed.** The database recognises them whilst counting, so they are counted but never sent to the app as rows to check. Only the IDs
+  of the empty-path rows are read, once, at the end of a completed check, and only when an ID column is set.
 - **An honest Remaining.** The estimate follows a speed weighted to the last 30 seconds, ignores the first few seconds of start-up, counts down smoothly, and holds still during a
   stall, so it is useful on long audits over a variable network.
 
@@ -778,13 +778,13 @@ Their path value is a skip marker (`SKIP`, `SKIPPED`, or either followed by a co
 listed.
 
 **Why is Total files smaller than the number of rows in my table?**
-Many index tables repeat a file on several rows (a document listed once per patient, say). The app checks each
-distinct path once and shows that as Total files, with the table's rows in brackets, `98,200 (124,500)`. The rows it did not check again are the *Duplicates* (and any empty-path or
-skipped rows, which are counted separately). Total files + Duplicates + empty paths + Skipped = the table's rows.
+Many index tables repeat a file on several rows (a document listed once per patient, say). The app checks each distinct path once and shows that as Total files, with the table's
+rows in brackets, `98,200 (124,500)`. The rows it did not check again are the *Duplicates* (and any empty-path or skipped rows, which are counted separately). Total files +
+Duplicates + empty paths + Skipped = the table's rows.
 
 **Where are the rows with no path, and why does my report not list them?**
-They are under *[Path is empty in the index table]*, which lists one ID per row when you set an ID
-column. With no ID column, or when the audit stopped, failed, or could not read the IDs, the group has one line saying why instead (section 4.4).
+They are under *[Path is empty in the index table]*, which lists one ID per row when you set an ID column. With no ID column, or when the audit stopped, failed, or could not read
+the IDs, the group has one line saying why instead (section 4.4).
 
 **Why does Total files not equal Checked when I stop an audit?**
 The report adds a *Not checked* line for the distinct files it did not reach, so Found + Missing + Unverified + Not checked = Total files.

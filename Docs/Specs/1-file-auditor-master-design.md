@@ -478,6 +478,13 @@ with `[^<white space>]` classes to find the first and last non-white-space chara
 `SKIP`, `SKIPPED`, `SKIP:…` and `SKIPPED:…` are matched on ASCII letters in either case (a binary `LIKE` with `[Ss][Kk]…` classes); the non-ASCII letters that
 `OrdinalIgnoreCase` also folds to `I` or `S` (such as `ı` and `ſ`) do not occur in marker values and are not handled. The white-space characters are passed as the `@ws` parameter.
 
+**The shape of the statements.** The table is aliased (`FROM <table> AS [fa_t]`), every column of the user's table is qualified with that alias, and the helper aliases and columns
+(`[fa_v]`, `[fa_n]`, `[fa_k]`, `[FaValue]`, `[FaTrimmed]`, `[FaKind]`) are deliberately unlikely names, so a table called `p` or `n`, or a path or ID column called `V` or `Lead`,
+cannot collide. Each row's kind is one `CASE`: empty is a single binary `LIKE` with no non-white-space character (or `NULL`); a cheap binary test for `skip` anywhere in the value
+comes next and yields a real path, so the trim (`PATINDEX`, `REVERSE`, `SUBSTRING`) and the four skip `LIKE`s run only for the few rows that contain the word. SQL Server inlines
+the `CROSS APPLY` scalars, so a value is recomputed at every reference: the counts therefore reference the kind once, as a weight (empty 1, skip marker 2^32) in a single `SUM`,
+and take the distinct count over the select statement, which is the only second pass. The value is cast to `nvarchar(max)` so that the trim is exact for any string column type.
+
 The stream is `DISTINCT` because many index tables are built around patients rather than files, so one path can sit on many rows; each path is read and checked once. With an ID
 column the distinct unit is the path and ID pair, so the ID column is expected to be **unique to its path** (one ID per file). The app does not check that: an ID that varies
 across the rows of one path brings that path back once per distinct ID, and that expectation is on the user. Duplicates are judged by the column's collation, so under the usual
@@ -488,6 +495,7 @@ streams or reads, or clamp any figure. Changing the index table mid-audit is the
 
 The counts run first (status `Counting files...`) so progress and remaining time can be shown. Values are read as strings (`NULL` → empty). Command timeouts are long enough for
 large tables. The unindexed direction reads only the path column, in the query of §6.5.2, and is unchanged by row accounting.
+
 ### 6.3 Checking a file
 
 Each distinct real path is checked concurrently with bounded parallelism (builder chooses the mechanism and degree; the old app's unbounded `ThreadPool` + 1 million queue cap is
@@ -506,7 +514,7 @@ and empty tests as a safety net that should never fire; a stray one is recorded 
 | Unverified — Path too long                    | The path exceeds what the system can handle                                         |
 | Unverified — Link not followed                | Unindexed audit only: a link (junction or symlink) was skipped, not checked         |
 | Unverified — Invalid characters in path       | The path is malformed or contains illegal characters                                |
-| Unverified — Path is empty in the index table | The path value is `NULL`, empty or whitespace; counted and listed, never checked    |
+| Unverified — Path is empty in the index table | The path is `NULL`, empty or whitespace; counted, listed by ID if set, not checked  |
 | Unverified — Other errors                     | Any other I/O failure; the reason and system message are recorded per file          |
 
 **The skip rule (missing-files audit only).** Index rows can carry a marker instead of a path, written by hand or by the tool that builds the index table. Before any other
@@ -1016,8 +1024,9 @@ so ordinary builds and `dotnet run` are unchanged.
   worded after the user's no-ID line; a failure with nothing checked still writes no report; empty-path rows are listed one line per row, not per distinct ID; the old `max(count,
   processed)` guard on *Total files* is dropped, since the table is assumed unchanged; the window grows to 640 × 668 for the fourth statistics row, with the grid columns of §5.4;
   on screen *Checked* is Found + Missing + U with each counter read once per refresh, because reading a separate Checked counter gave a torn snapshot mid-run (Checked below
-  Missing); the checker keeps its skip and empty tests as an unreachable safety net, and a stray one is recorded under *Unverified*; a failure of the empty-path ID read alone keeps
-  the completed audit's report.
+  Missing); the checker keeps its skip and empty tests as an unreachable safety net, and a stray one is recorded as *Unverified — Other errors* with the reason `Skip marker not
+  recognised by the database` (reachable, because the checker's `OrdinalIgnoreCase` folds `ſkip` to `SKIP` where the database does not), so it is counted and listed; a failure of
+  the empty-path ID read alone keeps the completed audit's report.
 - Project settings (milestone 2, §8): *Open project...* runs the save rule first and forgets the *No* answer, since the new file is a different project; a cancelled picker or
   an unreadable file leaves the current project untouched; "nothing has changed" compares the current inputs with the settings last loaded or saved; an opened project
   whose report location is incomplete saves back to its own file without asking; every close, including an operating-system logoff close, goes through the save rule.
