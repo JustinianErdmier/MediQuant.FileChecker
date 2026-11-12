@@ -64,7 +64,9 @@ public sealed partial class AuditViewModel : AuditStatusBase
         _remainingEstimator.Reset();
 
         TotalFiles     = string.Empty;
+        Duplicates     = string.Empty;
         Checked        = string.Empty;
+        Found          = string.Empty;
         Missing        = string.Empty;
         Unverified     = string.Empty;
         Skipped        = string.Empty;
