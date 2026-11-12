@@ -101,9 +101,9 @@ Before Task 1 the controller creates branch `feat/milestone-1.1-nvarchar-path-co
 
 **Files:** Modify `Docs/Specs/1-file-auditor-master-design.md`, `Docs/UserGuide.md`
 
-- [ ] **Step 1: SDD.** §6.1 or §6.2 (the type rule, the lookup, the two errors, both audits), §6.2 (the statements without the cast; remove the cast's rationale), §6.5.2 (the
+- [x] **Step 1: SDD.** §6.1 or §6.2 (the type rule, the lookup, the two errors, both audits), §6.2 (the statements without the cast; remove the cast's rationale), §6.5.2 (the
   Unindexed audit now checks the type first), §10 (this milestone's rulings, from the ledger). Remove every statement this milestone makes false.
-- [ ] **Step 2: User guide.** Where the File Index Table inputs are described: the path column must be `nvarchar` (Unicode); a short reason in plain words — the app must read
+- [x] **Step 2: User guide.** Where the File Index Table inputs are described: the path column must be `nvarchar` (Unicode); a short reason in plain words — the app must read
   each path exactly as Windows sees it, character for character, and only a Unicode column guarantees that; other types are refused with a message naming the type. The
   troubleshooting/FAQ section gets the two error messages and what to do (ask for the column to be converted, or use a view that casts it). Hard-wrap at 180 characters.
-- [ ] **Step 3: Commit** — `docs(📝): document the nvarchar path column rule`.
+- [x] **Step 3: Commit** — `docs(📝): document the nvarchar path column rule`.
