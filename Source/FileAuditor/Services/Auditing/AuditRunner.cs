@@ -35,11 +35,11 @@ public static class AuditRunner
 
         progress.Phase = "Counting files...";
 
-        ErrorOr<long> counted;
+        ErrorOr<RowCounts> counted;
 
         try
         {
-            counted = await IndexTableReader.CountAsync(connectionString, query, cancellationToken);
+            counted = await IndexTableReader.CountRowsAsync(connectionString, query, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -51,7 +51,7 @@ public static class AuditRunner
             return counted.Errors;
         }
 
-        long total = counted.Value;
+        long total = counted.Value.Distinct;
 
         progress.SetTotal(total);
         progress.Phase = "Checking files...";

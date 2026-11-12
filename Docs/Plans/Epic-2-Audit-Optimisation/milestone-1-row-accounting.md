@@ -76,7 +76,7 @@ Before Task 1 the controller creates branch `feat/milestone-1-row-accounting` fr
   `CountAsync`); `IndexTableReader.ReadEmptyIdsAsync(string connectionString, AuditQuery query, CancellationToken cancellationToken) : Task<ErrorOr<IReadOnlyList<string>>>`
   (each row's ID as text, `NULL` → empty); `ReadAsync` unchanged in signature. Errors and cancellation behave as the existing methods do.
 
-- [ ] **Step 1: Predicates.** In `QueryBuilder`, build the white-space character class once (from the existing `WhitespacePattern` ranges) and pass it as a parameter
+- [x] **Step 1: Predicates.** In `QueryBuilder`, build the white-space character class once (from the existing `WhitespacePattern` ranges) and pass it as a parameter
   (`NVarChar`, as `ReadPathsAsync` adds them; move that loop into a shared private helper in `IndexTableReader`). Compute the trimmed value once per row with `CROSS APPLY`,
   every comparison under `COLLATE Latin1_General_100_BIN2`. The shape (`<c>` is the quoted path column, `@ws` the class body without brackets, e.g. `\t-\r …`):
 
@@ -92,16 +92,16 @@ Before Task 1 the controller creates branch `feat/milestone-1-row-accounting` fr
   ```
 
   The builder may restructure (one `CROSS APPLY`, a `CASE` column for the kind) provided the classification is exactly the Global Constraints rule.
-- [ ] **Step 2: Statements.** `CountsSql` returns one row, four `bigint` columns in the order of `RowCounts`: `COUNT_BIG(*)`, the empty count, the skip count, and
+- [x] **Step 2: Statements.** `CountsSql` returns one row, four `bigint` columns in the order of `RowCounts`: `COUNT_BIG(*)`, the empty count, the skip count, and
   `COUNT_BIG(*)` over the distinct stream. `SelectSql` is `SELECT DISTINCT <c> AS [Path][, <id> AS [Id]] … WHERE <not empty> AND <not skip>;`. `EmptyIdsSql` is
   `SELECT <id> AS [Id] … WHERE <empty>;` (not distinct). `CountRowsAsync` and `ReadEmptyIdsAsync` follow `CountAsync`/`ReadAsync` (no command timeout, cancellation registered,
   `SqlException` mapped the same way); all three reader methods add `query.Parameters` to their command. Update the XML docs of everything touched.
-- [ ] **Step 3: Verify.** Clean build. In `FileAuditorE2M1Scratch`, table `dbo.Idx (Id int, P nvarchar(400))` with: `C:\s\a.txt` ×3 and `c:\S\A.TXT`, all `Id` 1; `C:\s\b.txt`
+- [x] **Step 3: Verify.** Clean build. In `FileAuditorE2M1Scratch`, table `dbo.Idx (Id int, P nvarchar(400))` with: `C:\s\a.txt` ×3 and `c:\S\A.TXT`, all `Id` 1; `C:\s\b.txt`
   with `Id` 2 and 3; empty `NULL`, `''`, `'   '`, `NCHAR(9)`, `N' ' + NCHAR(0x3000)` (`Id` 10–14); skip `SKIP` ×2, `' skipped: preflight '`, `Skip`, `SKIPPED:`,
   `NCHAR(9) + 'SKIP'`, `'SKIP' + NCHAR(9)`; real `SKIP preflight`, `SKIPPEDX`, `C:\SKIPPED\a.txt`, `C:\s\missing.txt`. Run the built statements (print them from a scratchpad
   harness referencing the built `FileAuditor.dll`, or copy them from a debugger, then `sqlcmd`/`Invoke-Sqlcmd`). Expected with ID column `Id`: T 22, E 5, S 7, D 7, Dup 3;
   without: D 6, Dup 4. `SelectSql` returns exactly the D real rows; `EmptyIdsSql` returns 10–14. Keep the database for Task 2.
-- [ ] **Step 4: Commit** — `feat(✨): count empty paths and skip markers in SQL and stream only distinct real paths`.
+- [x] **Step 4: Commit** — `feat(✨): count empty paths and skip markers in SQL and stream only distinct real paths`.
 
 ### Task 2: Runner, progress and report
 

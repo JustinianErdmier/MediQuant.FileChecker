@@ -9,10 +9,12 @@ public static class QueryBuilder
     /// <summary>The most folders the prefix filter is built for; more than this loads every row.</summary>
     public const int MaxFilterFolders = 20;
 
-    /// <summary>Builds the count and select statements, quoting every identifier part.</summary>
+    /// <summary>Builds the counts, select and empty-ID statements, quoting every identifier part.</summary>
     /// <remarks>
-    ///     Both statements are <c>DISTINCT</c>, so a path listed on several rows (an index built around patients rather than files) is checked once. With an ID column the
-    ///     distinct unit is the path and ID pair: the ID is expected to be unique to its path, and the app does not check that.
+    ///     Each row is classified in SQL: empty (<c>NULL</c> or only white space), skip marker (the rule of <see cref="SkipMarker" />) or real path. The select statement is
+    ///     <c>DISTINCT</c> over the real paths only, so a path listed on several rows (an index built around patients rather than files) is checked once. With an ID column the
+    ///     distinct unit is the path and ID pair: the ID is expected to be unique to its path, and the app does not check that. The white-space characters are passed as the
+    ///     <c>@ws</c> parameter, listed in <see cref="AuditQuery.Parameters" />.
     /// </remarks>
     /// <param name="table">The table name, either <c>table</c> or <c>schema.table</c>.</param>
     /// <param name="pathColumn">The name of the column holding file paths.</param>
@@ -35,10 +37,11 @@ public static class QueryBuilder
         }
 
         string tableSql   = string.Join(separator: '.', tableParts.Value.Select(SqlIdentifier.Quote));
-        string selectList = $"{SqlIdentifier.Quote(pathParts.Value[index: 0])} AS [Path]";
-        bool   hasId      = !string.IsNullOrWhiteSpace(idColumn);
+        string pathSql    = SqlIdentifier.Quote(pathParts.Value[index: 0]);
+        string selectList = $"{pathSql} AS [Path]";
+        string? idSql     = null;
 
-        if (hasId)
+        if (!string.IsNullOrWhiteSpace(idColumn))
         {
             ErrorOr<IReadOnlyList<string>> idParts = SqlIdentifier.ParseMultipart(idColumn, maxParts: 1);
 
@@ -47,14 +50,45 @@ public static class QueryBuilder
                 return idParts.Errors;
             }
 
-            selectList += $", {SqlIdentifier.Quote(idParts.Value[index: 0])} AS [Id]";
+            idSql      =  SqlIdentifier.Quote(idParts.Value[index: 0]);
+            selectList += $", {idSql} AS [Id]";
         }
 
-        string distinctSql = $"SELECT DISTINCT {selectList} FROM {tableSql}";
+        // The trimmed value is computed once per row: [n] finds the first and last non-white-space characters, [k] decides empty and trims, [s] decides skip marker.
+        // Every comparison is binary so that the rule matches SkipMarker and char.IsWhiteSpace exactly, whatever the column's collation.
+        string source = $"""
+                         FROM {tableSql}
+                         CROSS APPLY (SELECT CAST({pathSql} AS nvarchar(max)) AS [V]) AS [p]
+                         CROSS APPLY (SELECT PATINDEX(N'%[^' + @ws + N']%', [p].[V] COLLATE Latin1_General_100_BIN2)          AS [Lead],
+                                             PATINDEX(N'%[^' + @ws + N']%', REVERSE([p].[V]) COLLATE Latin1_General_100_BIN2) AS [Trail],
+                                             LEN([p].[V] + N'x') - 1                                                           AS [Length]) AS [n]
+                         CROSS APPLY (SELECT CASE WHEN [p].[V] IS NULL OR [n].[Lead] = 0 THEN 1 ELSE 0 END AS [IsEmpty],
+                                             SUBSTRING([p].[V], [n].[Lead], [n].[Length] - [n].[Lead] - [n].[Trail] + 2) AS [Trimmed]) AS [k]
+                         CROSS APPLY (SELECT CASE WHEN [k].[IsEmpty] = 0
+                                                       AND ([k].[Trimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp]'
+                                                            OR [k].[Trimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp][Pp][Ee][Dd]'
+                                                            OR [k].[Trimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp]:%'
+                                                            OR [k].[Trimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp][Pp][Ee][Dd]:%')
+                                                  THEN 1 ELSE 0 END AS [IsSkip]) AS [s]
+                         """;
 
-        return new AuditQuery($"SELECT COUNT_BIG(*) FROM ({distinctSql}) AS [Rows];",
-                              $"{distinctSql};",
-                              hasId);
+        string realSql   = $"SELECT DISTINCT {selectList} {source} WHERE [k].[IsEmpty] = 0 AND [s].[IsSkip] = 0";
+        string countsSql = $"""
+                            SELECT [c].[Total], [c].[Empty], [c].[Skipped], [d].[Distinct]
+                            FROM (SELECT COUNT_BIG(*)                                  AS [Total],
+                                         COALESCE(SUM(CAST([k].[IsEmpty] AS bigint)), 0) AS [Empty],
+                                         COALESCE(SUM(CAST([s].[IsSkip] AS bigint)), 0)  AS [Skipped]
+                                  {source}) AS [c]
+                            CROSS JOIN (SELECT COUNT_BIG(*) AS [Distinct] FROM ({realSql}) AS [r]) AS [d];
+                            """;
+
+        string? emptyIdsSql = idSql is null ? null : $"SELECT {idSql} AS [Id] {source} WHERE [k].[IsEmpty] = 1;";
+
+        return new AuditQuery(countsSql,
+                              $"{realSql};",
+                              emptyIdsSql,
+                              [new KeyValuePair<string, string>(key: "@ws", WhitespaceClass())],
+                              idSql is not null);
     }
 
     /// <summary>Builds the statement that selects the distinct values of the path column, restricted to the rows under the given folders where that is possible.</summary>
@@ -119,7 +153,11 @@ public static class QueryBuilder
 
     /// <summary>Builds a pattern matching a first character that <see cref="char.IsWhiteSpace(char)" /> accepts, from its code point ranges.</summary>
     /// <returns>The <c>LIKE</c> pattern that matches any value starting with a white-space character.</returns>
-    private static string WhitespacePattern()
+    private static string WhitespacePattern() => $"[{WhitespaceClass()}]%";
+
+    /// <summary>Builds the body of a <c>LIKE</c> character class (without the brackets) holding the characters <see cref="char.IsWhiteSpace(char)" /> accepts.</summary>
+    /// <returns>The class body, as code point ranges.</returns>
+    private static string WhitespaceClass()
     {
         (int First, int Last)[] ranges =
         [
@@ -135,7 +173,7 @@ public static class QueryBuilder
             (0x3000, 0x3000)
         ];
 
-        StringBuilder builder = new(value: "[");
+        StringBuilder builder = new();
 
         foreach ((int first, int last) in ranges)
         {
@@ -148,8 +186,7 @@ public static class QueryBuilder
             }
         }
 
-        return builder.Append(value: "]%")
-                      .ToString();
+        return builder.ToString();
     }
 
     /// <summary>Builds the <c>LIKE</c> pattern for the paths under a folder: the folder with its wildcards escaped, a trailing backslash if it has none, and <c>%</c>.</summary>
