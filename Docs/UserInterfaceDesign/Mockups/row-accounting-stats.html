@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Row Accounting Stats</title>
+<style>
+  :root { --face:#c0c0c0; --hi:#ffffff; --sh:#808080; --dk:#000000; --text:#000000; --bg:#008080; --note:#ffffe1; }
+  body { margin:0; padding:24px 16px; background:var(--bg); font:12px "MS Sans Serif", Tahoma, Verdana, sans-serif; color:var(--text); }
+  h1 { color:#fff; font-size:16px; margin:0 0 4px; }
+  p.sub { color:#e0ffff; margin:0 0 20px; max-width:900px; }
+  .wrap { display:flex; flex-wrap:wrap; gap:24px; }
+  .win { background:var(--face); border:2px solid; border-color:var(--hi) var(--dk) var(--dk) var(--hi); box-shadow:inset -1px -1px var(--sh), inset 1px 1px #dfdfdf; padding:3px; width:560px; max-width:100%; }
+  .title { background:linear-gradient(90deg,#000080,#1084d0); color:#fff; font-weight:bold; padding:3px 6px; }
+  .body { padding:10px; }
+  fieldset { border:1px solid var(--sh); box-shadow:1px 1px var(--hi), inset 1px 1px var(--hi); padding:8px 10px 10px; margin:0; }
+  legend { padding:0 3px; }
+  .stats { display:grid; grid-template-columns:repeat(3, 1fr); column-gap:14px; row-gap:3px; }
+  .cell { display:grid; grid-template-columns:76px 1fr; }
+  .cell .v { text-align:right; font-variant-numeric:tabular-nums; }
+  .new { background:var(--note); outline:1px dotted #806000; }
+  .bar { height:16px; margin:10px 0; border:1px solid; border-color:var(--sh) var(--hi) var(--hi) var(--sh); background:#fff; position:relative; }
+  .bar i { position:absolute; inset:2px auto 2px 2px; background:repeating-linear-gradient(90deg,#000080 0 9px,transparent 9px 11px); }
+  .row { display:flex; gap:6px; }
+  .btn { border:2px solid; border-color:var(--hi) var(--dk) var(--dk) var(--hi); box-shadow:inset -1px -1px var(--sh); padding:3px 12px; min-width:60px; text-align:center; }
+  .dis { color:var(--sh); text-shadow:1px 1px var(--hi); }
+  .sums { margin-top:10px; background:#fff; border:1px solid var(--sh); padding:8px 10px; line-height:1.6; }
+  .sums b { font-weight:bold; }
+  .legend { color:#fff; margin-top:20px; max-width:900px; line-height:1.6; }
+  .legend span { background:var(--note); color:#000; padding:0 4px; outline:1px dotted #806000; }
+</style>
+</head>
+<body>
+<h1>Missing Files tab: Audit group</h1>
+<p class="sub">Four rows instead of three. Left: Total files, Duplicates, Checked. Middle: Found, Missing, Unverified, Skipped. Right: Elapsed, Remaining, Files/second.</p>
+
+<div class="wrap">
+  <div class="win">
+    <div class="title">A. Patient-centred table, mid-run</div>
+    <div class="body">
+      <fieldset>
+        <legend>Audit</legend>
+        <div class="stats">
+          <div class="cell new"><span>Total files:</span><span class="v">98,200 (124,500)</span></div>
+          <div class="cell new"><span>Found:</span><span class="v">41,500</span></div>
+          <div class="cell"><span>Elapsed:</span><span class="v">00:01:12</span></div>
+
+          <div class="cell new"><span>Duplicates:</span><span class="v">24,750</span></div>
+          <div class="cell"><span>Missing:</span><span class="v">260</span></div>
+          <div class="cell"><span>Remaining:</span><span class="v">00:01:38</span></div>
+
+          <div class="cell"><span>Checked:</span><span class="v">41,880</span></div>
+          <div class="cell new"><span>Unverified:</span><span class="v">120 (310)</span></div>
+          <div class="cell"><span>Files/second:</span><span class="v">582 (610)</span></div>
+
+          <div class="cell"></div>
+          <div class="cell new"><span>Skipped:</span><span class="v">1,240</span></div>
+          <div class="cell"></div>
+        </div>
+        <div class="bar"><i style="width:43%"></i></div>
+        <div class="row"><span class="btn dis">View Report</span><span style="flex:1"></span><span class="btn dis">Start</span><span class="btn">Stop</span></div>
+      </fieldset>
+      <div class="sums">
+        Found + Missing + Unverified = Checked: 41,500 + 260 + 120 = <b>41,880</b> of 98,200<br>
+        Total rows: 98,200 + 24,750 duplicates + 310 empty + 1,240 skipped = <b>124,500</b><br>
+        Duplicates, empty (310) and Skipped are known the moment counting ends.
+      </div>
+    </div>
+  </div>
+
+  <div class="win">
+    <div class="title">B. One row per file, no empty paths, finished</div>
+    <div class="body">
+      <fieldset>
+        <legend>Audit</legend>
+        <div class="stats">
+          <div class="cell new"><span>Total files:</span><span class="v">48,207</span></div>
+          <div class="cell new"><span>Found:</span><span class="v">48,190</span></div>
+          <div class="cell"><span>Elapsed:</span><span class="v">00:01:29</span></div>
+
+          <div class="cell new"><span>Duplicates:</span><span class="v">0</span></div>
+          <div class="cell"><span>Missing:</span><span class="v">12</span></div>
+          <div class="cell"><span>Remaining:</span><span class="v">00:00:00</span></div>
+
+          <div class="cell"><span>Checked:</span><span class="v">48,207</span></div>
+          <div class="cell new"><span>Unverified:</span><span class="v">5</span></div>
+          <div class="cell"><span>Files/second:</span><span class="v">541 (560)</span></div>
+
+          <div class="cell"></div>
+          <div class="cell new"><span>Skipped:</span><span class="v">0</span></div>
+          <div class="cell"></div>
+        </div>
+        <div class="bar"><i style="width:99%"></i></div>
+        <div class="row"><span class="btn">View Report</span><span style="flex:1"></span><span class="btn">Start</span><span class="btn dis">Stop</span></div>
+      </fieldset>
+      <div class="sums">
+        Total files has no parentheses because the table total equals the distinct total.<br>
+        Unverified has no parentheses because there are no empty paths.
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="legend"><span>Yellow</span> = new or changed. At the end, Checked equals Total files, since the empty and skipped rows are no longer part of it.</p>
+</body>
+</html>

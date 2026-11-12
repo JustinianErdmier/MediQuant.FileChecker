@@ -13,6 +13,9 @@
         <File Path="Docs/Ledgers/Epic-1-MVP/milestone-5-ledger.md" />
         <File Path="Docs/Ledgers/Epic-1-MVP/milestone-6-ledger.md" />
     </Folder>
+    <Folder Name="/Docs/Ledgers/Epic-2-Audit-Optimisation/">
+        <File Path="Docs/Ledgers/Epic-2-Audit-Optimisation/milestone-1-ledger.md" />
+    </Folder>
     <Folder Name="/Docs/Plans/" />
     <Folder Name="/Docs/Plans/Epic-1-MVP/">
         <File Path="Docs/Plans/Epic-1-MVP/milestone-1-rewrite.md" />
@@ -23,6 +26,9 @@
         <File Path="Docs/Plans/Epic-1-MVP/milestone-5-skipped-rows-and-run-stats.md" />
         <File Path="Docs/Plans/Epic-1-MVP/milestone-6-code-review-clean-up.md" />
     </Folder>
+    <Folder Name="/Docs/Plans/Epic-2-Audit-Optimisation/">
+        <File Path="Docs/Plans/Epic-2-Audit-Optimisation/milestone-1-row-accounting.md" />
+    </Folder>
     <Folder Name="/Docs/Specs/">
         <File Path="Docs/Specs/1-file-auditor-master-design.md" />
     </Folder>
@@ -31,11 +37,15 @@
         <File Path="Docs/Specs/Epic-1-MVP/milestone-3-direction-tabs-design.md" />
         <File Path="Docs/Specs/Epic-1-MVP/milestone-4-unindexed-audit-design.md" />
     </Folder>
+    <Folder Name="/Docs/Specs/Epic-2-Audit-Optimisation/">
+        <File Path="Docs/Specs/Epic-2-Audit-Optimisation/milestone-1-row-accounting-design.md" />
+    </Folder>
     <Folder Name="/Docs/UserInterfaceDesign/" />
     <Folder Name="/Docs/UserInterfaceDesign/Mockups/">
         <File Path="Docs/UserInterfaceDesign/Mockups/direction-tabs-layout.html" />
         <File Path="Docs/UserInterfaceDesign/Mockups/main-window-layout.html" />
         <File Path="Docs/UserInterfaceDesign/Mockups/report-section-states.html" />
+        <File Path="Docs/UserInterfaceDesign/Mockups/row-accounting-stats.html" />
         <File Path="Docs/UserInterfaceDesign/Mockups/unindexed-report-layout.html" />
     </Folder>
     <Folder Name="/SolutionItems/">
