@@ -691,8 +691,8 @@ This section briefly explains how each audit stays fast on large projects and tr
 - **Unreachable folders are found once.** When a file cannot be reached, the app walks its path one folder at a time to find the first folder that cannot be reached, and
   remembers that folder. Every later file under it gets the same answer straight away, whilst files elsewhere are still checked normally. A single blocked folder therefore costs
   one slow lookup, not one per file, and its files are still listed one by one in the report.
-- **Skip markers and empty paths never leave the database.** The database recognises them whilst counting, so they are counted but never sent to the app or checked, and cost nothing
-  during the check.
+- **Skip markers and empty paths never leave the database.** The database recognises them whilst counting, so they are counted but never sent to the app or checked, and cost
+  nothing during the check.
 - **An honest Remaining.** The estimate follows a speed weighted to the last 30 seconds, ignores the first few seconds of start-up, counts down smoothly, and holds still during a
   stall, so it is useful on long audits over a variable network.
 
