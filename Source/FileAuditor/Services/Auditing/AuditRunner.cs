@@ -198,6 +198,11 @@ public static class AuditRunner
                 {
                     emptyPathNote = "Missing filepaths not listed because the audit was stopped";
                 }
+                catch (Exception exception)
+                {
+                    // Anything but a user stop or a SQL error: the audit is done, so keep its report and say why the IDs are missing.
+                    emptyPathNote = $"Missing filepaths not listed because they could not be read: {exception.Message}";
+                }
             }
         }
 
