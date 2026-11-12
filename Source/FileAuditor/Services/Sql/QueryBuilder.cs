@@ -11,8 +11,8 @@ public static class QueryBuilder
 
     /// <summary>Builds the counts, select and empty-ID statements, quoting every identifier part.</summary>
     /// <remarks>
-    ///     The path column must be <c>nvarchar</c> (checked by <see cref="PathColumnType" /> before these statements run), so the classification works on the column itself, with
-    ///     no cast. Each row is classified in SQL: empty (<c>NULL</c> or only white space), skip marker (the rule of <see cref="SkipMarker" />) or real path. The select statement is
+    ///     The path column must be <c>nvarchar</c> (checked by <see cref="PathColumnType" /> before these statements run), so the classification works on the column itself
+    ///     (the only cast left is inside a length, see the comment in the method). Each row is classified in SQL: empty (<c>NULL</c> or only white space), skip marker (the rule of <see cref="SkipMarker" />) or real path. The select statement is
     ///     <c>DISTINCT</c> over the real paths only, so a path listed on several rows (an index built around patients rather than files) is checked once. With an ID column the
     ///     distinct unit is the path and ID pair: the ID is expected to be unique to its path, and the app does not check that. The white-space characters are passed as the
     ///     <c>@ws</c> parameter, listed in <see cref="AuditQuery.Parameters" />.
@@ -57,12 +57,15 @@ public static class QueryBuilder
         // exactly, whatever the column's collation. Empty is a single LIKE (no non-white-space character). The trim and the four skip LIKEs are guarded by a cheap
         // test for "skip" anywhere in the value (a WHEN of the CASE, ahead of them), so they run only for the few rows that could be markers. SQL Server inlines the apply
         // scalars: [fa_n] is not computed once per row, it is recomputed in each LIKE that uses it, which is cheap only because of that guard.
+        // The one remaining cast, inside the length in [fa_n]: LEN ignores trailing spaces, so N'x' is appended to count them, and on an nvarchar(4000) column that concatenation
+        // would be silently truncated to 4,000 characters, giving a wrong length for a 4,000-character value. It sits in [fa_n], which runs only for rows past the "skip" test.
+        // SUBSTRING, REVERSE and PATINDEX do not concatenate, so they are exact on the column itself.
         // The aliases are deliberately unlikely names and the table's columns are always qualified, so a table or column named like an alias cannot collide.
         string source = $"""
                          FROM {tableSql} AS [fa_t]
                          CROSS APPLY (SELECT SUBSTRING([fa_t].{pathSql},
                                                        PATINDEX(N'%[^' + @ws + N']%', [fa_t].{pathSql} COLLATE Latin1_General_100_BIN2),
-                                                       LEN([fa_t].{pathSql} + N'x') - 1
+                                                       LEN(CAST([fa_t].{pathSql} AS nvarchar(max)) + N'x') - 1
                                                        - PATINDEX(N'%[^' + @ws + N']%', [fa_t].{pathSql} COLLATE Latin1_General_100_BIN2)
                                                        - PATINDEX(N'%[^' + @ws + N']%', REVERSE([fa_t].{pathSql}) COLLATE Latin1_General_100_BIN2) + 2) AS [FaTrimmed]) AS [fa_n]
                          CROSS APPLY (SELECT CASE WHEN [fa_t].{pathSql} IS NULL
