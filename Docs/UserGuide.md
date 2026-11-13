@@ -912,6 +912,30 @@ January 2000'.
 
 To see what version of the app you’re using, navigate to `Help > About File Auditor`.
 
+## Version 2.0.0
+
+**Release Date:** 13 November 2026
+
+Audit optimisation: the audits read the index table differently, report more about what they read, and tell you when they finish.
+
+**Changes that may affect existing projects:**
+
+- **The path column must be `nvarchar`.** Both audits now refuse any other column type, naming the type, before reading a row (section 3.1). A project whose path column
+  is `varchar`, `nchar` or anything else stops working; convert the column or point the app at a view that casts it (section 9).
+- **Each path is checked once.** A path listed on several rows (an index built around patients rather than files) is checked once, so *Total files* counts distinct paths, not
+  rows. With an ID column, each ID is expected to belong to one path.
+- **The reports' Summary has changed.** The Missing Files report adds *Duplicates*, *Found*, the table's rows beside *Total files* and the empty paths beside *Unverified*; the
+  Unindexed Files report adds *Excluded* and *Index paths*. Anything that reads the reports by line should be checked.
+
+**New:**
+
+- Missing Files tab: *Found* and *Duplicates* statistics; *Total files* shows the table's rows in brackets when they differ, and *Unverified* the empty paths. Empty and skipped
+  rows are counted up front, and the IDs of empty-path rows are listed at the end of the report (or a note says why they are not).
+- Unindexed Files tab: *Excluded* (files the type filters skipped) and *Index paths* (the paths loaded to compare against, counted live while the index loads); *Indexed* moves
+  to the top of the second column.
+- A *finished* dialogue when an audit completes, with its key figures, the report's location and *View Report*. If you are in another program, the taskbar button flashes and
+  Windows plays a sound; a failed audit gets the error sound and the flash too.
+
 ## Version 1.0.0
 
 **Release Date:** 16 October 2026
