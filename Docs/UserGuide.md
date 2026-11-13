@@ -473,19 +473,25 @@ Press **Start**. After the pre-flight checks and the save rule, the app:
 | Statistic    | Meaning                                                                                                                         |
 |--------------|---------------------------------------------------------------------------------------------------------------------------------|
 | Total files  | Matching files found so far. Every one is checked at once, so Total files = Indexed + Unindexed.                                |
+| Excluded     | Files found that the file types skip: no File types entry matches them, or an Exclude entry does. Not part of Total files.      |
+| Index paths  | The distinct paths loaded from the index to compare against. Counts up whilst the index loads.                                  |
 | Indexed      | Files whose path is in the index table.                                                                                         |
 | Unindexed    | Files whose path is not in the index table.                                                                                     |
 | Unverified   | Folders that could not be listed, links not followed, and entries whose link status could not be read. Not part of Total files. |
 | Elapsed      | Time since you pressed Start.                                                                                                   |
 | Files/second | The run's average, then, once the walk has run for 5 seconds, the recent speed in brackets.                                     |
 
+*Index paths* is the paths the app loaded to compare against, not the rows of the whole table: it is the rows under your folders, plus any whose path starts with a space or
+tab, or the whole table when you have more than 20 folders (section 8). A file without an extension (such as `README`) matches no file type, so it counts as *Excluded*;
+hidden and system files are skipped before that and are in no count.
+
 There is **no Remaining** and **no percentage**: the app cannot know how many files there are until it has walked every folder. Instead, the progress bar shows a marquee from left
 to right whilst the audit runs, and fills up when it ends.
 
-**Stopping.** Press **Stop** (or Esc). If the index is still loading, no report is written. Otherwise, the app stops listing folders and writes the report with
-`Result: Stopped by user`, listing what it found and checked so far.
+**Stopping.** Press **Stop** (or Esc). If the index is still loading, no report is written (the screen keeps the Index paths count it had reached). Otherwise, the app stops
+listing folders and writes the report with `Result: Stopped by user`, listing what it found and checked so far.
 
-**If the database fails** whilst the index is loading, an error is shown and no report is written, since nothing was walked.
+**If the database fails** whilst the index is loading, an error is shown and no report is written, since nothing was walked; the screen keeps the Index paths count it had reached.
 
 ## 5.5 The Audit Report
 
@@ -516,6 +522,8 @@ Result:          Completed
 Summary
 -------
 Total files:     48,207
+Excluded:        1,113
+Index paths:     48,190
 Indexed:         48,187
 Unindexed:       20
 Unverified:      3
@@ -800,6 +808,11 @@ the IDs, the group has one line saying why instead (section 4.4).
 
 **Why does Total files not equal Checked when I stop an audit?**
 The report adds a *Not checked* line for the distinct files it did not reach, so Found + Missing + Unverified + Not checked = Total files.
+
+**Why is Total files on the Unindexed Files tab smaller than the files Explorer shows in my folders?**
+Total files counts only the files the audit checks: those that match your File types and are not in Exclude. Files that do not match are counted as *Excluded*. Hidden and
+system files are skipped without being counted at all, and a symbolic link to a file of a checked type is listed under *Unverified* instead. So Total files + Excluded can
+still be fewer than Explorer's count when hidden or system files are shown in Explorer, or when you have such links.
 
 **Why is there no Remaining time on the Unindexed Files tab?**
 The app cannot know how many files the folders hold until it has walked them all, so it cannot estimate the time left.

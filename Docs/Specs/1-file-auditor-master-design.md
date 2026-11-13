@@ -217,8 +217,9 @@ The diagram shows the Missing Files tab with the Report group in its built state
 │ │ │ Group file types by: (•) Listed type  ( ) Found extension  │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
 │ │ ┌ Audit ─────────────────────────────────────────────────────┐ │ │
-│ │ │ Total files: 4,820  Unindexed:  20  Elapsed:      00:01:29 │ │ │
-│ │ │ Indexed:     4,800  Unverified: 3   Files/second: 54 (55)  │ │ │
+│ │ │ Total files: 500   Indexed:    480  Elapsed:      00:00:50 │ │ │
+│ │ │ Excluded:    31    Unindexed:  20   Files/second: 10 (11)  │ │ │
+│ │ │ Index paths: 484   Unverified: 3                           │ │ │
 │ │ │ [            ██████████                        ]           │ │ │
 │ │ │ [View Report]                      [Start]  [Stop]         │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
@@ -363,13 +364,16 @@ The Audit group sits at the bottom of its tab, below the Report group; each dire
 
 The Unindexed Files tab has its own group (headed *Audit*, `UnindexedAuditView`) at the bottom of the tab. It holds:
 
-- Read-only statistics in three columns: **Total files** and **Indexed** on the left; **Unindexed** and **Unverified** in the centre; **Elapsed** and **Files/second** on the right.
-  There is **no Remaining**, neither label nor value, because the walk has no up-front count and so the total is not known until it ends. *Total files* is the files found so far,
-  each of which is checked the moment it is found, so Total files = Indexed + Unindexed; *Unverified* counts folders that could not be listed, links not followed and entries that
-  could not be classified (§6.5.3), and is never part of Total files. Counts, times and the rate are formatted as in §5.4; Files/second is Total files over Elapsed and stays blank
-  until a full second has elapsed, and once the run has scanned for 5 seconds it shows the recent rate in parentheses as well (§5.4). The Unindexed recent rate is files found per
-  second of **scan** time, timed by a scan clock on `UnindexedProgress` that starts when the folder walk begins, so loading the index (which can take minutes) does not use up the
-  warm-up. The whole-run figure stays on wall time. All are blank before the first run.
+- Read-only statistics in three columns and three rows: **Total files**, **Excluded** and **Index paths** on the left; **Indexed**, **Unindexed** and **Unverified** in the centre;
+  **Elapsed** and **Files/second** on the right (its third row is empty). There is **no Remaining**, neither label nor value, because the walk has no up-front count and so the
+  total is not known until it ends. *Total files* is the files found so far, each of which is checked the moment it is found, so Total files = Indexed + Unindexed; *Unverified*
+  counts folders that could not be listed, links not followed and entries that could not be classified (§6.5.3), and is never part of Total files. *Excluded* is the files the
+  walk met and skipped because no *File types* entry matches them or an *Exclude* entry does (§6.5.3); it is never part of Total files, and counts up live during the walk.
+  *Index paths* is the number of distinct paths loaded from the index to compare against (§6.5.2); it counts up live during `Loading the index...` and is final once the walk
+  begins. Counts, times and the rate are formatted as in §5.4; Files/second is Total files over Elapsed and stays blank until a full second has elapsed, and once the run has
+  scanned for 5 seconds it shows the recent rate in parentheses as well (§5.4). The Unindexed recent rate is files found per second of **scan** time, timed by a scan clock on
+  `UnindexedProgress` that starts when the folder walk begins, so loading the index (which can take minutes) does not use up the warm-up. The whole-run figure stays on wall time.
+  All are blank before the first run.
 - A progress bar. While a run is under way it shows a **moving block** a fifth of the track wide that crosses a sunken track from left to right and starts again, moved by the 250
   ms refresh timer, instead of a fill that would read as a percentage of an unknown total. When the run ends the bar is full (and the status bar's percentage pane reads `100%`);
   before the first run it is empty. Classic.Avalonia's own indeterminate marquee was not used: it is blank for about 2.4 seconds of every 5-second cycle and its animation cannot
@@ -644,8 +648,10 @@ SELECT DISTINCT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filte
   letter case, a trailing separator). So the filter never changes the result. There is one index set only: links are never followed (§6.5.3), so no file is matched by any path
   but its own.
 - **Hashes.** Each path is trimmed, upper-cased (invariant culture) and hashed to **128 bits** (MD5 of its UTF-16 bytes: an in-box algorithm chosen for speed and even spread, not
-  security); only the hashes are kept, in a set. `NULL` values are skipped. A 128-bit hash makes a false match, which would hide an unindexed file (anti-goal), practically
-  impossible. Memory is about **48 MB per million rows**, measured (one million rows loaded in 1.6 seconds on a local SQL Server), so three million rows take roughly 150 MB.
+  security); only the hashes are kept, in a set. `NULL` values are skipped. **Index paths** (§5.4a) counts the distinct keys in that set, each counted when it is added, so a
+  repeat of a path (another letter case, or surrounding white space) adds nothing and the figure grows while the load runs. A 128-bit hash makes a false match, which would hide an
+  unindexed file (anti-goal), practically impossible. Memory is about **48 MB per million rows**, measured (one million rows loaded in 1.6 seconds on a local SQL Server), so
+  three million rows take roughly 150 MB.
 - A path is **indexed** when its full path equals a value in the column ignoring letter case and nothing else; leading and trailing whitespace in the value is ignored.
 
 #### 6.5.3 Walking the folders
@@ -661,6 +667,11 @@ Status `Checking files...`.
   `zip.*` matches `Backup.zip.01` and `Backup.zip.001`; and with File types `.gz` and Exclude `.tar.gz`, `x.gz` is checked and `x.tar.gz` is not (the blacklist wins). A file that
   matches several File types entries belongs to the **most specific**: the most parts, then the fewest wildcard characters, then the first alphabetically. A file is checked
   only when a File types entry matches it and no Exclude entry does.
+- **Excluded files.** A file the walk meets that is not checked, because no File types entry matches it or an Exclude entry does, is counted as **Excluded** (§5.4a). A name with no
+  extension counts, and so does a symbolic-link file of an excluded type (the filter runs before the link probe). Hidden and system files are skipped before the filter and are
+  not counted. A folder that cannot be listed reports none of its files, so none of them is counted as Excluded. Excluded files are never part of *Total files*, so Total files +
+  Excluded is every file met that is neither hidden nor system, except a symbolic-link file of a checked type and a file whose link status cannot be read, which are reported
+  under *Unverified* (below) and are in neither count.
 - **Nested inputs.** A file reached through two input folders (one inside another) is checked and reported **once**, under the deepest input folder whose scope covers its
   folder. With inputs `A` (with subfolders) and `A\B` (without), `A\B\x.pdf` is reported under `A\B` and `A\B\C\y.pdf` under `A`.
 - **Links are not followed** (the user's decision, after three rounds of review found edge cases in following them). Every junction or symbolic link met is skipped, reported and
@@ -679,11 +690,12 @@ Status `Checking files...`.
 #### 6.5.4 Progress, stop and failure
 
 - **Counting.** Every file found is checked at once, so *Total files* = *Indexed* + *Unindexed*; the audit never opens a file, so no single file can fail. The UI refreshes four
-  times a second. There is no up-front count, no percentage and no *Remaining* (§5.4a).
-- **Stop** while the index is loading (which includes the path column's type check, §6.2): no report is written and the status bar reads `Stopped`. After that, Stop (button,
-  menu and Esc) stops starting new listings, abandons the ones in progress (their files are not reported) and writes the report with `Result: Stopped by user`; the counts are what
-  was found and checked, and there is no *Not checked* line, since the total is unknown. A Stop that arrives after the walk has finished but before the run reads its stop request
-  produces a *Stopped by user* report for a complete walk; this is cosmetic.
+  times a second. There is no up-front count, no percentage and no *Remaining* (§5.4a). *Index paths* counts up while the index loads and *Excluded* while the walk runs.
+- **Stop** while the index is loading (which includes the path column's type check, §6.2): no report is written and the status bar reads `Stopped`; the screen keeps the *Index
+  paths* count reached. A failure while the index loads likewise writes no report and leaves the partial count on screen. After that, Stop (button, menu and Esc) stops
+  starting new listings, abandons the ones in progress (their files are not reported) and writes the report with `Result: Stopped by user`; the counts are what was found and
+  checked, and there is no *Not checked* line, since the total is unknown. A Stop that arrives after the walk has finished but before the run reads its stop request produces a
+  *Stopped by user* report for a complete walk; this is cosmetic.
 - **SQL failure** while loading the index (connection, timeout; a bad table or path column, or a path column that is not `nvarchar`, gets the errors of §6.2): an error
   dialogue, and no report, since nothing has been walked. **Report write failure:** an error dialogue.
 - **Closing the window mid-run** asks the question of §6.4; *Yes* stops the run as above (no report if the index was still loading) and exits.
@@ -802,6 +814,8 @@ Result:          Completed
 Summary
 -------
 Total files:     48,207
+Excluded:        1,113
+Index paths:     48,190
 Indexed:         48,187
 Unindexed:       20
 Unverified:      3
@@ -845,7 +859,9 @@ U:\Projects\D12345\Images\2020\   I/O error   The semaphore timeout period has e
 - **Header.** `Folders:` lists each input folder on its own line, `(with subfolders)` where ticked (`(none)` when the list is empty). `File types:` and `Exclude:` are each sorted
   and space-separated, and `Exclude:` reads `(none)` when empty. `Grouped by:` reads `Listed type` or `Found extension`. The Project folder and stage lines are omitted when a
   custom location is used. There is no ID column line.
-- **Summary.** `Total files:` is the files found and checked, so Total files = Indexed + Unindexed. `Unverified:` counts the folders that could not be listed plus the links
+- **Summary.** The lines come in this order: `Total files:`, `Excluded:`, `Index paths:`, `Indexed:`, `Unindexed:`, `Unverified:`, mirroring the screen column by column (§5.4a).
+  `Total files:` is the files found and checked, so Total files = Indexed + Unindexed. `Excluded:` is the files skipped by the file type filters and is not part of Total files
+  (§6.5.3). `Index paths:` is the distinct index paths loaded to compare against (§6.5.2). `Unverified:` counts the folders that could not be listed plus the links
   that were not followed, not files checked. A *Stopped by user* report has `Result: Stopped by user`. A run that fails while loading the index at the start writes no report
   (§6.5.4).
 - **Unverified** lists the folders that could not be listed and the links that were not followed, in groups ordered as in §6.3 with *Link not followed* before *Other errors*:
@@ -1097,7 +1113,18 @@ so ordinary builds and `dotnet run` are unchanged.
   over checking time, the rate behind Remaining) and the Unindexed recent rate runs on a scan clock that starts with the walk, so the index load does not use up its warm-up. `N
   (0)` after a stall is shown as it is. The statistics became three columns on both tabs, which took the Audit group from four rows to three and the window from 668 to 651 pixels
   high (it is 668 again since Epic 2's milestone 1, which added a fourth row). The Unindexed columns (Total files and Indexed; Unindexed and Unverified; Elapsed and Files/second)
-  follow the user's Missing layout by analogy. `Esc` was not changed.
+  followed the user's Missing layout by analogy (regrouped in Epic 2's milestone 2, below). `Esc` was not changed.
+
+- Unindexed audit statistics (Epic 2, milestone 2, design `Docs/Specs/Epic-2-Audit-Optimisation/milestone-2-unindexed-stats-design.md`), settled with the user: the Unindexed
+  Audit group gains *Excluded* and *Index paths*, in the user's layout of three columns and three rows (Total files, Excluded, Index paths; Indexed, Unindexed, Unverified;
+  Elapsed, Files/second). *Excluded* is every file the walk met that no File types entry matches or an Exclude entry does: never part of Total files (so Total files = Indexed +
+  Unindexed stays exact), not hidden or system files, a name with no extension and an excluded symbolic-link file included, none from a folder that cannot be listed. *Index
+  paths* is the distinct trimmed, case-folded keys of the path set, counted as they are added, so it is live during the load; with the folder filter on it includes the rows
+  that start with white space, and with it off the whole table. Both were built by approach A (the walk's third callback; `IndexPathSet.Add` reporting a new path), chosen over a
+  private tally returned at the end and over reading the set's size after the load, because both keep the figures live. *Found*, *Duplicates* and a *Not on disk* statistic were
+  considered and left out. *Indexed* moved from the first column to the top of the centre one at the user's request; its old place was Claude's own call by analogy (ruling R6
+  of Epic 1's milestone 5), not the user's. The design's section 6 records four possible optimisations of the index load and walk, none measured and
+  none built.
 
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
 that failed, found by walking the path (§6.3); the close-mid-run prompt.

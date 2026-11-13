@@ -81,6 +81,8 @@ public static class UnindexedReportBuilder
         lines.Add(item: "Summary");
         lines.Add(item: "-------");
         lines.Add(ReportFormat.Labelled(label: "Total files:", ReportFormat.Count(report.TotalFiles)));
+        lines.Add(ReportFormat.Labelled(label: "Excluded:", ReportFormat.Count(report.Excluded)));
+        lines.Add(ReportFormat.Labelled(label: "Index paths:", ReportFormat.Count(report.IndexPaths)));
         lines.Add(ReportFormat.Labelled(label: "Indexed:", ReportFormat.Count(report.Indexed)));
         lines.Add(ReportFormat.Labelled(label: "Unindexed:", ReportFormat.Count(report.Unindexed.Count)));
         lines.Add(ReportFormat.Labelled(label: "Unverified:", ReportFormat.Count(report.Unverified.Count)));

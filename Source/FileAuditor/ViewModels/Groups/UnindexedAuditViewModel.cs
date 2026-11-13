@@ -19,12 +19,20 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
     [ ObservableProperty ]
     public partial string Elapsed { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the number of files skipped by the file type filters, formatted with thousands separators; never part of the total.</summary>
+    [ ObservableProperty ]
+    public partial string Excluded { get; set; } = string.Empty;
+
     /// <summary>
     ///     Gets or sets the files found per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up has passed by
     ///     the recent figure in parentheses; blank until a full second has elapsed. The recent figure is timed from the start of the scan.
     /// </summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the number of distinct index paths loaded to compare against, formatted with thousands separators; counts up while the index loads.</summary>
+    [ ObservableProperty ]
+    public partial string IndexPaths { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the number of files found that are in the index, formatted with thousands separators.</summary>
     [ ObservableProperty ]
@@ -67,6 +75,8 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
         _recentRate.Reset();
 
         TotalFiles     = string.Empty;
+        Excluded       = string.Empty;
+        IndexPaths     = string.Empty;
         Indexed        = string.Empty;
         Unindexed      = string.Empty;
         Unverified     = string.Empty;
@@ -98,6 +108,8 @@ public sealed partial class UnindexedAuditViewModel : AuditStatusBase
         double? recent = _recentRate.Next(total, progress.ScanElapsed);
 
         TotalFiles     = total.ToString(format: "N0", CultureInfo.CurrentCulture);
+        Excluded       = progress.Excluded.ToString(format: "N0", CultureInfo.CurrentCulture);
+        IndexPaths     = progress.IndexPaths.ToString(format: "N0", CultureInfo.CurrentCulture);
         Indexed        = progress.Indexed.ToString(format: "N0", CultureInfo.CurrentCulture);
         Unindexed      = progress.Unindexed.ToString(format: "N0", CultureInfo.CurrentCulture);
         Unverified     = progress.Unverified.ToString(format: "N0", CultureInfo.CurrentCulture);

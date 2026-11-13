@@ -51,14 +51,19 @@ public static class FolderWalker
     ///     Called for each folder that could not be listed, each link that was not followed (a folder or a file) and each entry whose link status could not be
     ///     read; may be called concurrently from several threads.
     /// </param>
+    /// <param name="onExcluded">
+    ///     Called once for each file the filter does not match (no file type matches it, or an exclude entry does), after its folder has been listed in full, so a folder that
+    ///     cannot be listed reports none; hidden and system files are never listed and so never reported. May be called concurrently from several threads.
+    /// </param>
     /// <param name="cancellationToken">Stops the walk promptly; see the cancellation note on the type.</param>
     /// <returns>A task that completes when no folder is queued or being listed, or the walk was stopped.</returns>
     public static Task WalkAsync(IReadOnlyList<ScanFolder> folders,
                                  FileTypeFilter            filter,
                                  Action<ScannedFile>       onFile,
                                  Action<UnverifiedFolder>  onUnverified,
+                                 Action                    onExcluded,
                                  CancellationToken         cancellationToken)
-        => Task.Run(() => WalkAsyncCore(folders, filter, onFile, onUnverified, cancellationToken), CancellationToken.None);
+        => Task.Run(() => WalkAsyncCore(folders, filter, onFile, onUnverified, onExcluded, cancellationToken), CancellationToken.None);
 
     /// <summary>Makes an input folder's path canonical: a full path with exactly one trailing separator, as the walk and the index query both use it.</summary>
     /// <param name="path">The folder's path as entered.</param>
@@ -75,12 +80,14 @@ public static class FolderWalker
     /// <param name="filter">Decides which files are reported, and under which file type.</param>
     /// <param name="onFile">Called for each file found.</param>
     /// <param name="onUnverified">Called for each folder or link that could not be checked.</param>
+    /// <param name="onExcluded">Called for each file the filter does not match.</param>
     /// <param name="cancellationToken">Stops the walk.</param>
     /// <returns>A task that completes when every worker has finished.</returns>
     private static async Task WalkAsyncCore(IReadOnlyList<ScanFolder> folders,
                                             FileTypeFilter            filter,
                                             Action<ScannedFile>       onFile,
                                             Action<UnverifiedFolder>  onUnverified,
+                                            Action                    onExcluded,
                                             CancellationToken         cancellationToken)
     {
         InputRoot[] allPathRoots = BuildRoots(folders);
@@ -126,6 +133,7 @@ public static class FolderWalker
                         filter,
                         onFile,
                         onUnverified,
+                        onExcluded,
                         linkedSource.Token);
 
         foreach (InputRoot root in pathRoots)
@@ -343,6 +351,9 @@ public static class FolderWalker
         /// <summary>The normalised paths of every input folder, so a subfolder that is itself an input is not queued a second time.</summary>
         private readonly HashSet<string> _inputPaths;
 
+        /// <summary>Called for each file the filter does not match.</summary>
+        private readonly Action _onExcluded;
+
         /// <summary>Called for each file found.</summary>
         private readonly Action<ScannedFile> _onFile;
 
@@ -361,12 +372,14 @@ public static class FolderWalker
         /// <param name="filter">Decides which files are reported, and under which file type.</param>
         /// <param name="onFile">Called for each file found.</param>
         /// <param name="onUnverified">Called for each folder that could not be listed and each link that was not followed.</param>
+        /// <param name="onExcluded">Called for each file the filter does not match.</param>
         /// <param name="cancellationToken">Stops the walk.</param>
         public Walk(InputRoot[]              roots,
                     HashSet<string>          inputPaths,
                     FileTypeFilter           filter,
                     Action<ScannedFile>      onFile,
                     Action<UnverifiedFolder> onUnverified,
+                    Action                   onExcluded,
                     CancellationToken        cancellationToken)
         {
             _roots            = roots;
@@ -374,6 +387,7 @@ public static class FolderWalker
             _filter           = filter;
             _onFile           = onFile;
             _onUnverified     = onUnverified;
+            _onExcluded       = onExcluded;
             CancellationToken = cancellationToken;
         }
 
@@ -481,6 +495,8 @@ public static class FolderWalker
 
                 if (type is null)
                 {
+                    _onExcluded();
+
                     continue;
                 }
 
