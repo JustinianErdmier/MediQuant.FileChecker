@@ -650,8 +650,8 @@ SELECT DISTINCT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filte
 - **Hashes.** Each path is trimmed, upper-cased (invariant culture) and hashed to **128 bits** (MD5 of its UTF-16 bytes: an in-box algorithm chosen for speed and even spread, not
   security); only the hashes are kept, in a set. `NULL` values are skipped. **Index paths** (§5.4a) counts the distinct keys in that set, each counted when it is added, so a
   repeat of a path (another letter case, or surrounding white space) adds nothing and the figure grows while the load runs. A 128-bit hash makes a false match, which would hide an
-  unindexed file (anti-goal), practically impossible. Memory is about **48 MB per million rows**, measured (one million rows loaded in 1.6 seconds on a local SQL Server), so three million rows take
-  roughly 150 MB.
+  unindexed file (anti-goal), practically impossible. Memory is about **48 MB per million rows**, measured (one
+  million rows loaded in 1.6 seconds on a local SQL Server), so three million rows take roughly 150 MB.
 - A path is **indexed** when its full path equals a value in the column ignoring letter case and nothing else; leading and trailing whitespace in the value is ignored.
 
 #### 6.5.3 Walking the folders
