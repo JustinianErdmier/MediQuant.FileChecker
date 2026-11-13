@@ -488,21 +488,25 @@ why the column must be `nvarchar` (below). The one cast left is inside the trim'
 `nvarchar(4000)` column would truncate a 4,000-character value, so the length is taken over `nvarchar(max)`. It is evaluated only for rows past the cheap `skip` test, so it costs
 nothing for the rest.
 
-**The path column must be `nvarchar`.** Before counting (or, for the unindexed audit, before loading the index) the app reads the path column's type from `sys.columns`, matching
-the table with `OBJECT_ID` on the same bracket-quoted name the statements use (so a schema, spaces or `]` in a name are found) and the column by the name as typed. It is the
-column's *system* type, `TYPE_NAME(system_type_id)`, that must be `nvarchar`, of any length including `max`; so an alias type built on `nvarchar` passes, and a view whose column is
-`nvarchar` passes. `nchar` and every other type (`varchar`, `char`, `text`, `int`, `uniqueidentifier`, `varbinary`, …) are refused. The rule is the same for both audits: the
-unindexed audit does not need it today, and applies it for consistency, since the Epic 2 milestone that follows builds on it. The ID column is unrestricted and is still read as
-text. Two errors, both shown in the ordinary error dialogue, no report written, no row read (`PathColumnType.Check`):
+**The path column must be `nvarchar`.** Before counting (or, for the unindexed audit, before loading the index) the app reads the path column's type with
+`sp_describe_first_result_set` on the statements' own SELECT shape, `SELECT TOP (0) [fa_t].<column> FROM <table> AS [fa_t];`, built from the same bracket-quoted names the
+statements use (so a schema, spaces or `]` in a name are found). The type is therefore read as the statements see it: permissions, synonyms (also to a table in another database)
+and views behave as they do for the statements. It is the column's *system* type (`system_type_name`; the user type name only for a CLR type such as `geography`, which is
+refused with its name) that must be `nvarchar`, of any length including `max`; so an alias type built on `nvarchar` passes, and a view whose column is `nvarchar` passes. `nchar`
+and every other type (`varchar`, `char`, `text`, `int`, `uniqueidentifier`, `varbinary`, …) are refused. The rule is the same for both audits: the unindexed audit does not need
+it today, and applies it for consistency, since the Epic 2 milestone that follows builds on it. The ID column is unrestricted and is still read as text. Two errors, both shown in the ordinary error dialogue, no report written, no row read (`PathColumnType.Check`):
 
 - `The path column '<column>' is <type>. The File Auditor expects an nvarchar column.` (`Sql.PathColumnNotNvarchar`). `<type>` is the system type in lower case, with `(<n>)` for
   `char`, `varchar`, `binary` and `varbinary` (`n` is `max_length`) and for `nchar` (`n` is `max_length / 2`), `(max)` when `max_length` is -1, and the bare name for any other type
   (`int`).
-- `The path column '<column>' was not found in the table '<table>'.` (`Sql.PathColumnNotFound`), with `<column>` and `<table>` as typed. A table that cannot be found gives the same
-  error. Current limitation: a synonym is reported this way too, because `sys.columns` has no rows for a synonym (before this milestone the statements ran against one).
+- `The path column '<column>' was not found in the table '<table>'.` (`Sql.PathColumnNotFound`), with `<column>` and `<table>` as typed. It is given when the first error SQL
+  Server raises is 207 (invalid column name) or 208 (invalid object name); a table that cannot be found gives the same error.
 
 The lookup runs under each audit's existing first status (`Counting files...`, `Loading the index...`), with no status text of its own. Stop during it behaves as Stop while
-counting or loading does (§6.4, §6.5.4): nothing is checked, so no report. A SQL error reading the type is `Sql.QueryFailed`, as for any other statement.
+counting or loading does (§6.4, §6.5.4): nothing is checked, so no report. Any other first error is `Sql.QueryFailed` with that error's message, as for any other statement: a
+missing permission on the table shows SQL Server's own error 229, not a "not found" message. (`sp_describe_first_result_set` raises the real error first and then a wrapper, 11501
+or 11529, which is ignored.) A wrong table or path column is thus covered by the two errors above; only a bad ID column, which the lookup does not touch, fails later as a plain
+SQL error.
 
 The stream is `DISTINCT` because many index tables are built around patients rather than files, so one path can sit on many rows; each path is read and checked once. With an ID
 column the distinct unit is the path and ID pair, so the ID column is expected to be **unique to its path** (one ID per file). The app does not check that: an ID that varies
@@ -576,9 +580,9 @@ This section describes the missing-files audit; §6.5.4 gives the unindexed audi
   *Skipped* and the empty-path count are from the up-front counts and so are complete. Each tab's *Stop* button is enabled only on the running audit's tab; the menu item and Esc
   stop it from either tab (§5.8). If Stop is pressed while the rows are still being counted (before the count query returns), no report is written and the status bar reads
   `Stopped`: nothing has been checked, so there is nothing to report.
-- **SQL failure** (connection, bad table/column, timeout, a path column that is not `nvarchar` — §6.2): error dialog with the message. If no rows were checked, no report is
-  written, even though the up-front counts are known. If it fails mid-run, the report is written with `Result: Failed — <message>` and the counts so far. A failure of the
-  empty-path ID read alone is not a failure of the audit: the report is still written and the group says why the IDs are missing (§7).
+- **SQL failure** (connection, a bad ID column, timeout; a bad table or path column, or a path column that is not `nvarchar`, gets the errors of §6.2): error dialog with the
+  message. If no rows were checked, no report is written, even though the up-front counts are known. If it fails mid-run, the report is written with
+  `Result: Failed — <message>` and the counts so far. A failure of the empty-path ID read alone is not a failure of the audit: the report is still written and the group says why the IDs are missing (§7).
 - **Report write failure**: error dialog.
 - **Closing the window mid-run**: a prompt, *"An audit is in progress. Stop it and exit?"*, with **Yes** and **No**. Yes stops the run, writes the report as
   `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same. If Yes is chosen before the count query returns, no report is written (as for
@@ -678,8 +682,8 @@ Status `Checking files...`.
   menu and Esc) stops starting new listings, abandons the ones in progress (their files are not reported) and writes the report with `Result: Stopped by user`; the counts are what
   was found and checked, and there is no *Not checked* line, since the total is unknown. A Stop that arrives after the walk has finished but before the run reads its stop request
   produces a *Stopped by user* report for a complete walk; this is cosmetic.
-- **SQL failure** while loading the index (connection, bad table or column, a path column that is not `nvarchar`): an error dialogue, and no report, since nothing has been
-  walked. **Report write failure:** an error dialogue.
+- **SQL failure** while loading the index (connection, timeout; a bad table or path column, or a path column that is not `nvarchar`, gets the errors of §6.2): an error
+  dialogue, and no report, since nothing has been walked. **Report write failure:** an error dialogue.
 - **Closing the window mid-run** asks the question of §6.4; *Yes* stops the run as above (no report if the index was still loading) and exits.
 
 ## 7. The report
@@ -1053,8 +1057,16 @@ so ordinary builds and `dotnet run` are unchanged.
   since the user said `nvarchar` (a one-line change if wrong); the type is read under each audit's existing first status with no new status text, and Stop during it is the
   stop-before-checking of §6.4 and §6.5.4. One cast remains, inside the trim's length and only for rows past the `skip` prefilter, because without it a 4,000-character value in an
   `nvarchar(4000)` column is truncated by the added character (a skip marker padded to 4,000 characters was misclassified, and one with 3,996 trailing spaces failed the whole audit
-  with error 537). A synonym is reported as not found, since `sys.columns` has no rows for one; that is a current limitation, accepted. Measured on 200,000 rows in LocalDB, with
-  the cast and without it: the counts statement 1,154 to 589 ms (about 620 to 850 ms on a later, noisier run), the stream 1,654 to 1,385 ms, the empty-ID read 498 to 238 ms.
+  with error 537). Measured on 200,000 rows in LocalDB, with the cast and without it: the counts statement 1,154 to 589 ms (about 620 to 850 ms on a later, noisier run), the
+  stream 1,654 to 1,385 ms, the empty-ID read 498 to 238 ms; these headline figures were taken on the fully cast-free statements, before the narrow `LEN` cast was restored. The
+  final statements, re-timed on a 200,000-row `nvarchar(400)` table (140,000 real paths, 40,000 empty, 20,000 `SKIP`), three runs each in LocalDB:
+  the counts statement 2,211, 1,796 and 1,490 ms (the first run is cold) and the stream (distinct real rows, with an ID column) 1,530, 1,243 and 1,232 ms. The type lookup is a
+  single metadata call and is not measurable against these.
+- The path column's type lookup (Epic 2, milestone 1.1, final review), decided by Claude (for the user to check): the type is read from the result-set metadata of the statements'
+  own SELECT shape (`sp_describe_first_result_set`, §6.2) rather than from the catalogue views, so permissions, synonyms (also to another database) and views behave as the
+  statements do. A first error of 207 or 208 is "not found"; any other error, such as 229 for a table the account cannot read, is `Sql.QueryFailed` with SQL Server's message, so
+  a missing permission is not reported as a missing column. The first catalogue-view implementation (`sys.columns` with `OBJECT_ID`) reported a table with no SELECT permission,
+  and a synonym, as not found, and crashed on a CLR-typed column.
 - Project settings (milestone 2, §8): *Open project...* runs the save rule first and forgets the *No* answer, since the new file is a different project; a cancelled picker or
   an unreadable file leaves the current project untouched; "nothing has changed" compares the current inputs with the settings last loaded or saved; an opened project
   whose report location is incomplete saves back to its own file without asking; every close, including an operating-system logoff close, goes through the save rule.

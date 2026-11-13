@@ -734,15 +734,16 @@ report location and file name*.
 
 **The report file is read-only, or the folder cannot be written to.** Check the file's properties and your permissions on the folder, or choose another location.
 
-**A SQL error when the audit starts** (login failed, cannot open database, invalid object or column name). Check the server, database, table and column names, including the
-schema if the table is not in the default one. The app signs in with your Windows account, so your account needs permission to read the table; request access through IT if not.
+**A SQL error when the audit starts** (login failed, cannot open database, invalid column name for the ID column). Check the server, database and ID column names. The app signs in
+with your Windows account, so your account needs permission to read the table; request access through IT if not. (A wrong table or path column gets its own message, below.)
 
 **"The path column '...' is varchar(400). The File Auditor expects an nvarchar column."** The path column is not a Unicode `nvarchar` column (the message names its actual type, for
 example `varchar(400)`, `nchar(10)` or `int`). Nothing was read and no report was written. Ask for the column to be converted to `nvarchar`, or point the audit at a view of the
 table that casts the column to `nvarchar`, and type the view's name as the Table. The ID column can be of any type.
 
 **"The path column '...' was not found in the table '...'."** The table has no column with that name, or the table itself was not found. Check the spelling of both, and the schema
-if the table is not in the default one. A synonym is not found either: use the name of the table or view the synonym points to.
+if the table is not in the default one. If your account has no permission to read the table, SQL Server's own permission error is shown instead (for example
+"The SELECT permission was denied on the object ..."), and the permission advice above applies. A synonym, also one that points to a table in another database, works like the table it stands for.
 
 **Lots of "Drive or share not found".** The drive letter or share in the paths does not exist on your computer. Map the drive (for example `U:`) as the index expects, or check
 that the server and share in the paths still exist. The files have not been marked missing.
