@@ -11,10 +11,11 @@ public static class QueryBuilder
 
     /// <summary>Builds the counts, select and empty-ID statements, quoting every identifier part.</summary>
     /// <remarks>
-    ///     Each row is classified in SQL: empty (<c>NULL</c> or only white space), skip marker (the rule of <see cref="SkipMarker" />) or real path. The select statement is
-    ///     <c>DISTINCT</c> over the real paths only, so a path listed on several rows (an index built around patients rather than files) is checked once. With an ID column the
-    ///     distinct unit is the path and ID pair: the ID is expected to be unique to its path, and the app does not check that. The white-space characters are passed as the
-    ///     <c>@ws</c> parameter, listed in <see cref="AuditQuery.Parameters" />.
+    ///     The path column must be <c>nvarchar</c> (checked by <see cref="PathColumnType" /> before these statements run), so the classification works on the column itself
+    ///     (the only cast left is inside a length, see the comment in the method). Each row is classified in SQL: empty (<c>NULL</c> or only white space), skip marker (the
+    ///     rule of <see cref="SkipMarker" />) or real path. The select statement is <c>DISTINCT</c> over the real paths only, so a path listed on several rows (an index built
+    ///     around patients rather than files) is checked once. With an ID column the distinct unit is the path and ID pair: the ID is expected to be unique to its path, and the
+    ///     app does not check that. The white-space characters are passed as the <c>@ws</c> parameter, listed in <see cref="AuditQuery.Parameters" />.
     /// </remarks>
     /// <param name="table">The table name, either <c>table</c> or <c>schema.table</c>.</param>
     /// <param name="pathColumn">The name of the column holding file paths.</param>
@@ -52,23 +53,26 @@ public static class QueryBuilder
             idSql = SqlIdentifier.Quote(idParts.Value[index: 0]);
         }
 
-        // Every row gets one kind in one pass: 0 real path, 1 empty, 2^32 skip marker (a weight, see the counts). Every comparison is binary so that the rule matches SkipMarker and char.IsWhiteSpace
-        // exactly, whatever the column's collation. Empty is a single LIKE (no non-white-space character). The trim and the four skip LIKEs are guarded by a cheap
-        // test for "skip" anywhere in the value (a WHEN of the CASE, ahead of them), so they run only for the few rows that could be markers. SQL Server inlines the apply
-        // scalars: [fa_n] is not computed once per row, it is recomputed in each LIKE that uses it, which is cheap only because of that guard.
+        // Every row gets one kind in one pass: 0 real path, 1 empty, 2^32 skip marker (a weight, see the counts). Every comparison is binary so that the rule matches
+        // SkipMarker and char.IsWhiteSpace exactly, whatever the column's collation. Empty is a single LIKE (no non-white-space character). The trim and the four skip
+        // LIKEs are guarded by a cheap test for "skip" anywhere in the value (a WHEN of the CASE, ahead of them), so they run only for the few rows that could be markers.
+        // SQL Server inlines the apply scalars: [fa_n] is not computed once per row, it is recomputed in each LIKE that uses it, which is cheap only because of that guard.
+        // The one remaining cast, inside the length in [fa_n]: LEN ignores trailing spaces, so N'x' is appended to count them, and on an nvarchar(4000) column that
+        // concatenation would be silently truncated to 4,000 characters, giving a wrong length for a 4,000-character value. It sits in [fa_n], which runs only for rows
+        // past the "skip" test.
+        // SUBSTRING, REVERSE and PATINDEX do not concatenate, so they are exact on the column itself.
         // The aliases are deliberately unlikely names and the table's columns are always qualified, so a table or column named like an alias cannot collide.
         string source = $"""
                          FROM {tableSql} AS [fa_t]
-                         CROSS APPLY (SELECT CAST([fa_t].{pathSql} AS nvarchar(max)) AS [FaValue]) AS [fa_v]
-                         CROSS APPLY (SELECT SUBSTRING([fa_v].[FaValue],
-                                                       PATINDEX(N'%[^' + @ws + N']%', [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2),
-                                                       LEN([fa_v].[FaValue] + N'x') - 1
-                                                       - PATINDEX(N'%[^' + @ws + N']%', [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2)
-                                                       - PATINDEX(N'%[^' + @ws + N']%', REVERSE([fa_v].[FaValue]) COLLATE Latin1_General_100_BIN2) + 2) AS [FaTrimmed]) AS [fa_n]
-                         CROSS APPLY (SELECT CASE WHEN [fa_v].[FaValue] IS NULL
-                                                       OR [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^' + @ws + N']%'
+                         CROSS APPLY (SELECT SUBSTRING([fa_t].{pathSql},
+                                                       PATINDEX(N'%[^' + @ws + N']%', [fa_t].{pathSql} COLLATE Latin1_General_100_BIN2),
+                                                       LEN(CAST([fa_t].{pathSql} AS nvarchar(max)) + N'x') - 1
+                                                       - PATINDEX(N'%[^' + @ws + N']%', [fa_t].{pathSql} COLLATE Latin1_General_100_BIN2)
+                                                       - PATINDEX(N'%[^' + @ws + N']%', REVERSE([fa_t].{pathSql}) COLLATE Latin1_General_100_BIN2) + 2) AS [FaTrimmed]) AS [fa_n]
+                         CROSS APPLY (SELECT CASE WHEN [fa_t].{pathSql} IS NULL
+                                                       OR [fa_t].{pathSql} COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[^' + @ws + N']%'
                                                   THEN 1
-                                                  WHEN [fa_v].[FaValue] COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[Ss][Kk][Ii][Pp]%'
+                                                  WHEN [fa_t].{pathSql} COLLATE Latin1_General_100_BIN2 NOT LIKE N'%[Ss][Kk][Ii][Pp]%'
                                                   THEN 0
                                                   WHEN [fa_n].[FaTrimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp]'
                                                        OR [fa_n].[FaTrimmed] COLLATE Latin1_General_100_BIN2 LIKE N'[Ss][Kk][Ii][Pp][Pp][Ee][Dd]'
@@ -103,7 +107,9 @@ public static class QueryBuilder
                               $"{realSql};",
                               emptyIdsSql,
                               [new KeyValuePair<string, string>(key: "@ws", WhitespaceClass())],
-                              idSql is not null);
+                              idSql is not null,
+                              tableSql,
+                              pathSql);
     }
 
     /// <summary>Builds the statement that selects the distinct values of the path column, restricted to the rows under the given folders where that is possible.</summary>
@@ -111,8 +117,8 @@ public static class QueryBuilder
     /// <param name="pathColumn">The name of the column holding file paths.</param>
     /// <param name="folders">
     ///     The folders to check. For 1 to <see cref="MaxFilterFolders" /> folders the statement filters on a case-insensitive <c>LIKE</c> prefix per folder; for none,
-    ///     for more, or when any folder is empty (which has no prefix to match), the filter is dropped and every row is selected. The filter also selects every row that starts with a
-    ///     whitespace character, so that <see cref="IndexPathSet" />, which ignores surrounding whitespace, can still match it.
+    ///     for more, or when any folder is empty (which has no prefix to match), the filter is dropped and every row is selected. The filter also selects every row that starts
+    ///     with a whitespace character, so that <see cref="IndexPathSet" />, which ignores surrounding whitespace, can still match it.
     /// </param>
     /// <returns>The query, or <c>Query.InvalidIdentifier</c> when a name is malformed.</returns>
     public static ErrorOr<PathQuery> BuildPaths(string table, string pathColumn, IReadOnlyList<string> folders)
@@ -140,7 +146,7 @@ public static class QueryBuilder
 
         if (!canFilter)
         {
-            return new PathQuery($"{sql};", []);
+            return new PathQuery($"{sql};", [], tableSql, columnSql);
         }
 
         List<KeyValuePair<string, string>> parameters = new(folders.Count);
@@ -158,7 +164,7 @@ public static class QueryBuilder
         clauses.Add($"{columnSql} COLLATE Latin1_General_100_BIN2 LIKE @pw");
         parameters.Add(new KeyValuePair<string, string>(key: "@pw", WhitespacePattern()));
 
-        return new PathQuery($"{sql} WHERE {string.Join(separator: " OR ", clauses)};", parameters);
+        return new PathQuery($"{sql} WHERE {string.Join(separator: " OR ", clauses)};", parameters, tableSql, columnSql);
     }
 
     /// <summary>Determines whether a folder can be turned into a <c>LIKE</c> prefix: an empty folder has no prefix to match.</summary>

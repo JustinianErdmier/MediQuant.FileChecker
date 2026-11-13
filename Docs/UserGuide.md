@@ -122,7 +122,10 @@ The **Database** group holds the **Server** and **Database** names. Both are req
 The **File Index Table** group holds:
 
 - **Table:** required. Type the table's name, or `schema.table` if it is not in the default schema.
-- **Path column:** required. The column holding each document's full path.
+- **Path column:** required. The column holding each document's full path. It must be an **`nvarchar`** (Unicode text) column, of any length, including `nvarchar(max)`. The app has
+  to read each path exactly as Windows sees it, character for character, and only a Unicode column guarantees that. Any other type, such as `varchar` or `nchar`, is refused when
+  you press Start, with a message that names the column and its type (see section 9). Both audits apply this rule. If your path column is of another type, ask for it to be
+  converted to `nvarchar`, or use a view of the table that casts it.
 - **ID column:** optional. When it is filled in, the Missing Files report shows each row's ID beside its path. The Unindexed Files audit does not use it (a file that is not in
   the table has no ID), but it is still saved with the project. The ID must be **unique to its file**: one ID per path, such as a document ID. Do not use a patient or account
   ID that several files share or that repeats across a file's rows (see §4.1); the app does not check this.
@@ -731,8 +734,17 @@ report location and file name*.
 
 **The report file is read-only, or the folder cannot be written to.** Check the file's properties and your permissions on the folder, or choose another location.
 
-**A SQL error when the audit starts** (login failed, cannot open database, invalid object or column name). Check the server, database, table and column names, including the
-schema if the table is not in the default one. The app signs in with your Windows account, so your account needs permission to read the table; request access through IT if not.
+**A SQL error when the audit starts** (login failed, cannot open database, invalid column name for the ID column). Check the server, database and ID column names. The app signs in
+with your Windows account, so your account needs permission to read the table; request access through IT if not. (A wrong table or path column gets its own message, below.)
+
+**"The path column '...' is varchar(400). The File Auditor expects an nvarchar column."** The path column is not a Unicode `nvarchar` column (the message names its actual type, for
+example `varchar(400)`, `nchar(10)` or `int`). Nothing was read and no report was written. Ask for the column to be converted to `nvarchar`, or point the audit at a view of the
+table that casts the column to `nvarchar`, and type the view's name as the Table. The ID column can be of any type.
+
+**"The path column '...' was not found in the table '...'."** The table has no column with that name, or the table itself was not found. Check the spelling of both, and the schema
+if the table is not in the default one. If your account has no permission to read the table, SQL Server's own permission error is shown instead (for example
+"The SELECT permission was denied on the object ..."), and the permission advice above applies. A synonym, also one that points to a table in another database,
+works like the table it stands for.
 
 **Lots of "Drive or share not found".** The drive letter or share in the paths does not exist on your computer. Map the drive (for example `U:`) as the index expects, or check
 that the server and share in the paths still exist. The files have not been marked missing.

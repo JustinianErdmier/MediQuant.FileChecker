@@ -14,7 +14,8 @@ public static class AuditRunner
     /// <param name="progress">Receives the live statistics.</param>
     /// <param name="cancellationToken">Stops the run; whatever was checked is reported.</param>
     /// <returns>
-    ///     The report that was written for a completed, stopped or mid-run failed audit; a <c>Sql.QueryFailed</c> error when SQL Server failed before any row was processed;
+    ///     The report that was written for a completed, stopped or mid-run failed audit; <c>Sql.PathColumnNotFound</c> or <c>Sql.PathColumnNotNvarchar</c> when the path column is
+    ///     missing or is not <c>nvarchar</c> (checked before any row is read); a <c>Sql.QueryFailed</c> error when SQL Server failed before any row was processed;
     ///     <c>Audit.ReadFailed</c> when the row stream failed for another reason before any row was processed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while
     ///     counting; or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
@@ -39,6 +40,23 @@ public static class AuditRunner
 
         try
         {
+            ErrorOr<(string TypeName, short MaxLength)?> columnType = await IndexTableReader.ReadPathColumnTypeAsync(connectionString,
+                                                                                                                      query.QuotedTable,
+                                                                                                                      query.QuotedPathColumn,
+                                                                                                                      cancellationToken);
+
+            if (columnType.IsError)
+            {
+                return columnType.Errors;
+            }
+
+            ErrorOr<Success> typeChecked = PathColumnType.Check(settings.Table, settings.PathColumn, columnType.Value);
+
+            if (typeChecked.IsError)
+            {
+                return typeChecked.Errors;
+            }
+
             counted = await IndexTableReader.CountRowsAsync(connectionString, query, cancellationToken);
         }
         catch (OperationCanceledException)

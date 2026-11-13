@@ -3,6 +3,88 @@ namespace FileAuditor.Services.Sql;
 /// <summary>Counts and streams the rows of the file index table.</summary>
 public static class IndexTableReader
 {
+    /// <summary>The SQL Server error numbers for an invalid column name and an invalid object name.</summary>
+    private static readonly int[] NotFoundErrorNumbers = [207, 208];
+
+    /// <summary>The SQL Server error number for a view or function that could not be bound because of earlier binding errors.</summary>
+    private const int ViewBindingErrorNumber = 4413;
+
+    /// <summary>Reads the system type and length of the path column as the audit statements see it.</summary>
+    /// <remarks>
+    ///     The type is read from the result-set metadata of <c>SELECT TOP (0) [fa_t].&lt;column&gt; FROM &lt;table&gt; AS [fa_t]</c> (<c>sp_describe_first_result_set</c>),
+    ///     the shape the audit statements use, so permissions, synonyms (also to another database) and views behave exactly as they do for the statements: no permission is
+    ///     reported as SQL Server reports it (error 229), not as a missing column.
+    /// </remarks>
+    /// <param name="connectionString">The connection string.</param>
+    /// <param name="tableSql">The quoted table name, as the audit statements use it.</param>
+    /// <param name="columnSql">The quoted column name, as the audit statements use it.</param>
+    /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
+    /// <returns>
+    ///     The system type name (an alias type reports the type it is built on) and <c>max_length</c> in bytes (-1 for <c>max</c>); <see langword="null" /> when SQL Server reports
+    ///     an invalid column or object name (errors 207 and 208); or <c>Sql.QueryFailed</c> for any other SQL Server error.
+    /// </returns>
+    public static async Task<ErrorOr<(string TypeName, short MaxLength)?>> ReadPathColumnTypeAsync(string            connectionString,
+                                                                                                    string            tableSql,
+                                                                                                    string            columnSql,
+                                                                                                    CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using SqlConnection connection = new(connectionString);
+
+            await connection.OpenAsync(cancellationToken);
+
+            await using SqlCommand command = new("EXEC sp_describe_first_result_set @tsql = @tsql;", connection);
+
+            command.CommandTimeout = 0;
+
+            command.Parameters.Add(new SqlParameter("@tsql", SqlDbType.NVarChar, -1)
+            {
+                Value = $"SELECT TOP (0) [fa_t].{columnSql} FROM {tableSql} AS [fa_t];"
+            });
+
+            await using CancellationTokenRegistration registration = cancellationToken.Register(command.Cancel);
+            await using SqlDataReader                 reader       = await command.ExecuteReaderAsync(cancellationToken);
+
+            if (!await reader.ReadAsync(cancellationToken))
+            {
+                (string TypeName, short MaxLength)? none = null;
+
+                return none;
+            }
+
+            // system_type_name is the system type with its length ("nvarchar(300)" for an alias over it) and is NULL for a user-defined CLR type, which only has a user type
+            // name (the built-in CLR types such as geography have a system type name).
+            string? systemType = reader.IsDBNull(reader.GetOrdinal("system_type_name")) ? null : reader.GetString(reader.GetOrdinal("system_type_name"));
+            string  typeName   = systemType ?? reader.GetString(reader.GetOrdinal("user_type_name"));
+            int     paren      = typeName.IndexOf(value: '(');
+
+            (string TypeName, short MaxLength)? found = (paren < 0 ? typeName : typeName[..paren], reader.GetInt16(reader.GetOrdinal("max_length")));
+
+            return found;
+        }
+        catch (SqlException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // An invalid name is reported with its own error first, then wrapped (11501, 11529): the first error decides, so 229 and everything else stay a plain failure.
+            // A view that no longer binds (error 4413 follows) also starts with 207 or 208, about a name inside the view, so it stays a plain failure with that message.
+            if (NotFoundErrorNumbers.Contains(exception.Errors[index: 0].Number)
+                && !exception.Errors.Cast<SqlError>().Any(error => error.Number == ViewBindingErrorNumber))
+            {
+                (string TypeName, short MaxLength)? none = null;
+
+                return none;
+            }
+
+            // The first error is the real one; the wrapper SQL Server adds after it (for example 11529) only repeats that the metadata could not be determined.
+            return SqlErrors.QueryFailed(exception.Errors[index: 0].Message);
+        }
+        catch (SqlException)
+        {
+            // SqlClient may fault a cancelled command with a SqlException; report it as the cancellation it is.
+            throw new OperationCanceledException(cancellationToken);
+        }
+    }
+
     /// <summary>Counts how the rows of the table divide into empty paths, skip markers, distinct real paths and duplicates.</summary>
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The audit query.</param>
