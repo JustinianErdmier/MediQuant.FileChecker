@@ -494,7 +494,8 @@ statements use (so a schema, spaces or `]` in a name are found). The type is the
 and views behave as they do for the statements. It is the column's *system* type (`system_type_name`; the user type name only for a CLR type such as `geography`, which is
 refused with its name) that must be `nvarchar`, of any length including `max`; so an alias type built on `nvarchar` passes, and a view whose column is `nvarchar` passes. `nchar`
 and every other type (`varchar`, `char`, `text`, `int`, `uniqueidentifier`, `varbinary`, …) are refused. The rule is the same for both audits: the unindexed audit does not need
-it today, and applies it for consistency, since the Epic 2 milestone that follows builds on it. The ID column is unrestricted and is still read as text. Two errors, both shown in the ordinary error dialogue, no report written, no row read (`PathColumnType.Check`):
+it today, and applies it for consistency, since the Epic 2 milestone that follows builds on it. The ID column is unrestricted and is still read as text. Two errors, both shown in
+the ordinary error dialogue, no report written, no row read (`PathColumnType.Check`):
 
 - `The path column '<column>' is <type>. The File Auditor expects an nvarchar column.` (`Sql.PathColumnNotNvarchar`). `<type>` is the system type in lower case, with `(<n>)` for
   `char`, `varchar`, `binary` and `varbinary` (`n` is `max_length`) and for `nchar` (`n` is `max_length / 2`), `(max)` when `max_length` is -1, and the bare name for any other type
@@ -582,7 +583,8 @@ This section describes the missing-files audit; §6.5.4 gives the unindexed audi
   `Stopped`: nothing has been checked, so there is nothing to report.
 - **SQL failure** (connection, a bad ID column, timeout; a bad table or path column, or a path column that is not `nvarchar`, gets the errors of §6.2): error dialog with the
   message. If no rows were checked, no report is written, even though the up-front counts are known. If it fails mid-run, the report is written with
-  `Result: Failed — <message>` and the counts so far. A failure of the empty-path ID read alone is not a failure of the audit: the report is still written and the group says why the IDs are missing (§7).
+  `Result: Failed — <message>` and the counts so far. A failure of the empty-path ID read alone is not a failure of the audit: the report is still written and the group says why
+  the IDs are missing (§7).
 - **Report write failure**: error dialog.
 - **Closing the window mid-run**: a prompt, *"An audit is in progress. Stop it and exit?"*, with **Yes** and **No**. Yes stops the run, writes the report as
   `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same. If Yes is chosen before the count query returns, no report is written (as for

@@ -743,7 +743,8 @@ table that casts the column to `nvarchar`, and type the view's name as the Table
 
 **"The path column '...' was not found in the table '...'."** The table has no column with that name, or the table itself was not found. Check the spelling of both, and the schema
 if the table is not in the default one. If your account has no permission to read the table, SQL Server's own permission error is shown instead (for example
-"The SELECT permission was denied on the object ..."), and the permission advice above applies. A synonym, also one that points to a table in another database, works like the table it stands for.
+"The SELECT permission was denied on the object ..."), and the permission advice above applies. A synonym, also one that points to a table in another database,
+works like the table it stands for.
 
 **Lots of "Drive or share not found".** The drive letter or share in the paths does not exist on your computer. Map the drive (for example `U:`) as the index expects, or check
 that the server and share in the paths still exist. The files have not been marked missing.
