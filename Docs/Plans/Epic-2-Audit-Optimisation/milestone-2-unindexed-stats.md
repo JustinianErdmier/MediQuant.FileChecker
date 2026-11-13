@@ -64,13 +64,13 @@ Before Task 1 the controller creates branch `feat/milestone-2-unindexed-stats` f
 - Produces: `UnindexedReport(…, long TotalFiles, long Indexed, long Excluded, long IndexPaths, string? FailureMessage = null)`.
 - Produces: `UnindexedAuditViewModel.Excluded`, `UnindexedAuditViewModel.IndexPaths` (`string` observable properties).
 
-- [ ] **Step 1: Count.** Add the walker callback and the `Add` result; the runner passes `progress.RecordExcluded` to the walk and, for the load,
+- [x] **Step 1: Count.** Add the walker callback and the `Add` result; the runner passes `progress.RecordExcluded` to the walk and, for the load,
   `path => { if (paths.Add(path)) progress.RecordIndexPath(); }`. Update the XML docs (including `TotalFiles`'s, which stays Indexed + Unindexed).
-- [ ] **Step 2: Report.** `UnindexedReport` gets the two counts from the runner (`progress.Excluded`, `progress.IndexPaths`); `UnindexedReportBuilder.AddSummary` writes the
+- [x] **Step 2: Report.** `UnindexedReport` gets the two counts from the runner (`progress.Excluded`, `progress.IndexPaths`); `UnindexedReportBuilder.AddSummary` writes the
   Summary in the Global Constraints order.
-- [ ] **Step 3: Screen.** The view model sets and resets the two values; the view's grid becomes three rows in the Global Constraints layout. Keep the column widths unless
+- [x] **Step 3: Screen.** The view model sets and resets the two values; the view's grid becomes three rows in the Global Constraints layout. Keep the column widths unless
   `Index paths:` does not fit its column at the default font, in which case widen column 0 only.
-- [ ] **Step 4: Verify.** Clean build. Then, with a local folder `Root` in the scratchpad and `FileAuditorE2M2Scratch`:
+- [x] **Step 4: Verify.** Clean build. Then, with a local folder `Root` in the scratchpad and `FileAuditorE2M2Scratch`:
     - `Root` holds `a.pdf`, `b.pdf`, `c.pdf`, `d.pdf`, `notes.txt`, `log.txt`, `README` (no extension) and a hidden `h.pdf`. File types `.pdf`, Exclude empty, no subfolders.
     - Table `dbo.Idx (Id int, P nvarchar(400))` with rows `<Root>\a.pdf`, `<ROOT>\A.PDF` (upper case), `' <Root>\b.pdf'` (leading space), `<Root>\c.pdf` twice, `<Root>\gone.pdf`,
       `X:\Elsewhere\z.pdf`, and `NULL`.
@@ -80,7 +80,7 @@ Before Task 1 the controller creates branch `feat/milestone-2-unindexed-stats` f
       the screen values start from zero, not from the first run's.
     - If the account can create a symbolic link, add `link.txt` → `notes.txt` and expect Excluded 4 and no *Link not followed* entry; otherwise say so in the report.
     - Close the app; drop the database.
-- [ ] **Step 5: Commit** — `feat(✨): show excluded files and index paths in the unindexed audit`.
+- [x] **Step 5: Commit** — `feat(✨): show excluded files and index paths in the unindexed audit`.
 
 ### Task 2: SDD, user guide and mock-ups
 

@@ -21,7 +21,8 @@ public sealed class IndexPathSet
 
     /// <summary>Adds a path; not thread-safe.</summary>
     /// <param name="path">The path as stored in the index; surrounding whitespace and letter case are ignored.</param>
-    public void Add(string path) => _keys.Add(Hash(path));
+    /// <returns><see langword="true" /> when the path's key was not already in the set.</returns>
+    public bool Add(string path) => _keys.Add(Hash(path));
 
     /// <summary>Tests whether a path is in the set, ignoring letter case and surrounding whitespace; safe from many threads once loading has finished.</summary>
     /// <param name="path">The full path of a file on disk.</param>

@@ -69,7 +69,15 @@ public static class UnindexedAuditRunner
                 return typeChecked.Errors;
             }
 
-            loaded = await IndexTableReader.ReadPathsAsync(connectionString, built.Value, paths.Add, cancellationToken);
+            loaded = await IndexTableReader.ReadPathsAsync(connectionString, built.Value,
+                                                          path =>
+                                                          {
+                                                              if (paths.Add(path))
+                                                              {
+                                                                  progress.RecordIndexPath();
+                                                              }
+                                                          },
+                                                          cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -121,6 +129,7 @@ public static class UnindexedAuditRunner
                                          unverified.Add(folder);
                                          progress.RecordUnverified();
                                      },
+                                     progress.RecordExcluded,
                                      cancellationToken);
 
         progress.StopScan();
@@ -138,7 +147,9 @@ public static class UnindexedAuditRunner
                                      [.. unindexed],
                                      [.. unverified],
                                      progress.TotalFiles,
-                                     progress.Indexed);
+                                     progress.Indexed,
+                                     progress.Excluded,
+                                     progress.IndexPaths);
 
         ErrorOr<Success> written = ReportWriter.Write(request.ReportPath.FullPath, UnindexedReportBuilder.Build(report));
 

@@ -6,6 +6,12 @@ namespace FileAuditor.Services.Auditing;
 /// </summary>
 public sealed class UnindexedProgress
 {
+    /// <summary>The number of files skipped because no file type matches them or an exclude entry does. Read and written with <see cref="Interlocked" />.</summary>
+    private long _excluded;
+
+    /// <summary>The number of distinct index paths loaded. Read and written with <see cref="Interlocked" />.</summary>
+    private long _indexPaths;
+
     /// <summary>The number of files found that are in the index. Read and written with <see cref="Interlocked" />.</summary>
     private long _indexed;
 
@@ -20,6 +26,12 @@ public sealed class UnindexedProgress
 
     /// <summary>The number of folders that could not be listed plus links not followed and entries whose link status could not be read. Read and written with <see cref="Interlocked" />.</summary>
     private long _unverified;
+
+    /// <summary>Gets the number of files skipped because no file type matches them or an exclude entry does; never part of <see cref="TotalFiles" />.</summary>
+    public long Excluded => Interlocked.Read(ref _excluded);
+
+    /// <summary>Gets the number of distinct index paths loaded to compare against (trimmed, letter case ignored); live while the index loads.</summary>
+    public long IndexPaths => Interlocked.Read(ref _indexPaths);
 
     /// <summary>Gets the number of files found that are in the index.</summary>
     public long Indexed => Interlocked.Read(ref _indexed);
@@ -63,6 +75,12 @@ public sealed class UnindexedProgress
             Interlocked.Increment(ref _unindexed);
         }
     }
+
+    /// <summary>Records one file skipped by the file type filters.</summary>
+    public void RecordExcluded() => Interlocked.Increment(ref _excluded);
+
+    /// <summary>Records one index path that was not already loaded.</summary>
+    public void RecordIndexPath() => Interlocked.Increment(ref _indexPaths);
 
     /// <summary>Records one folder that could not be listed, or one link that was not followed.</summary>
     public void RecordUnverified() => Interlocked.Increment(ref _unverified);
