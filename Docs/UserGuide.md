@@ -951,9 +951,9 @@ Audit optimisation: the audits read the index table differently, report more abo
 
 **Changes that may affect existing projects:**
 
-- **The path column must be `nvarchar` or `varchar`.** A `varchar` or `nvarchar` path column works on both audits (the app converts a `varchar` column itself, after a warning that you can continue or cancel, section 8.4). Only
-  another type (`char`, `nchar`, `text`, `ntext`, a number, …) is refused, naming the type, before a row is read (section 3.1). A project with such a column stops working;
-  convert the column or point the app at a view that casts it (section 9).
+- **The path column must be `nvarchar` or `varchar`.** A `varchar` or `nvarchar` path column works on both audits (the app converts a `varchar` column itself, after a warning
+  that you can continue or cancel, section 8.4). Only another type (`char`, `nchar`, `text`, `ntext`, a number, …) is refused, naming the type, before a row is read (section 3.1).
+  A project with such a column stops working; convert the column or point the app at a view that casts it (section 9).
 - **Each path is checked once.** A path listed on several rows (an index built around patients rather than files) is checked once, so *Total files* counts distinct paths, not
   rows. With an ID column, each ID is expected to belong to one path.
 - **The reports' Summary has changed.** The Missing Files report adds *Duplicates*, *Found*, the table's rows beside *Total files* and the empty paths beside *Unverified*; the
