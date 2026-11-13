@@ -61,6 +61,8 @@
                    IsVisible="{Binding IsWarning}" />
             <Image Source="avares://FileAuditor/Assets/Win95Icons/question32.png"
                    IsVisible="{Binding IsQuestion}" />
+            <Image Source="avares://FileAuditor/Assets/Win95Icons/information32.png"
+                   IsVisible="{Binding IsInformation}" />
         </Panel>
         <TextBlock Text="{Binding Message}"
                    TextWrapping="Wrap"

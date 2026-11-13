@@ -69,7 +69,8 @@ trustworthy, for readers who want to know what happens under the hood.
 5. In **Report**, type the **Project folder** (for example `D12345`) and choose the **Project stage** and **Audit stage**. Check that the **Location** shown is the project's
    folder. If you want the report somewhere else, tick **Use a custom report location and file name** and fill in the location and name instead.
 6. Press **Start** (or F5). Answer any questions the app asks before it begins.
-7. Watch the **Audit** group. When the status bar reads `Completed`, press **View Report** (or Ctrl+R) to open the report.
+7. Watch the **Audit** group. When the audit finishes, a dialogue tells you so; press **View Report** in it (or Ctrl+R later, once the status bar reads `Completed`) to open the
+   report.
 
 ## 2.2 Check for Unindexed Files
 
@@ -80,7 +81,7 @@ trustworthy, for readers who want to know what happens under the hood.
 4. Check the **File types** list. The built-in list covers 15 common document and image formats (sourced from the Document MIME Types for the Documents Module wiki article). Press
    **Edit...** to change it, and use **Exclude** for types you never want checked.
 5. Fill in **Report** as above (its values are shared with the Missing Files tab).
-6. Press **Start**, then **View Report** when the status bar reads `Completed`.
+6. Press **Start**. When the audit finishes, a dialogue tells you so; press **View Report** in it to open the report.
 
 **Your settings are saved for you.** With **Save project settings** ticked (it is, by default), the app saves the project's inputs as `FileAuditorSettings.json` in the report's
 folder when you start an audit. Next time, use **File > Open project...** to load them again.
@@ -299,6 +300,12 @@ was stopped.
 were counted). If it fails part-way, the report is written with `Result: Failed —` and the message, and the counts so far. If only the last step, reading the empty paths, fails,
 the audit itself is fine: the report is still written, and its empty-path group says why the IDs are not listed.
 
+**When the audit ends.** A completed audit opens a dialogue that says *The Missing Files audit has finished.*, gives the final *Missing* and *Unverified* figures as the Audit group
+shows them, and gives the full path of the report. Press **View Report** (or Alt+V) to open the report, or **OK** to close the dialogue. Windows plays its information sound,
+and if you are working in another program the app's taskbar button also flashes until you switch back to it; the app never jumps in front of what you are doing. A failed audit
+shows its error in the same way, with the error sound instead. If you stopped the audit yourself, nothing new appears, even when the run had already finished checking: you are
+already at the window.
+
 **Closing the window during an audit** asks *"An audit is in progress. Stop it and exit?"*. *Yes* stops the audit, writes the report, and closes the app; *No* carries on.
 
 ## 4.4 The Audit Report
@@ -492,6 +499,11 @@ to right whilst the audit runs, and fills up when it ends.
 listing folders and writes the report with `Result: Stopped by user`, listing what it found and checked so far.
 
 **If the database fails** whilst the index is loading, an error is shown and no report is written, since nothing was walked; the screen keeps the Index paths count it had reached.
+
+**When the audit ends.** A completed audit opens a dialogue that says *The Unindexed Files audit has finished.*, gives the final *Unindexed* and *Unverified* figures as the Audit
+group shows them, and gives the full path of the report. Press **View Report** (or Alt+V) to open the report, or **OK** to close the dialogue. Windows plays its information
+sound, and if you are working in another program the app's taskbar button also flashes until you switch back to it; the app never jumps in front of what you are doing. A failed
+audit shows its error in the same way, with the error sound instead. If you stopped the audit yourself, nothing new appears: you are already at the window.
 
 ## 5.5 The Audit Report
 
