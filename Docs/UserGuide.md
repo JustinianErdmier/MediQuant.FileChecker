@@ -488,8 +488,8 @@ files are skipped before that and are in no count.
 There is **no Remaining** and **no percentage**: the app cannot know how many files there are until it has walked every folder. Instead, the progress bar shows a marquee from left
 to right whilst the audit runs, and fills up when it ends.
 
-**Stopping.** Press **Stop** (or Esc). If the index is still loading, no report is written (the screen keeps the Index paths count it had reached).
-Otherwise, the app stops listing folders and writes the report with `Result: Stopped by user`, listing what it found and checked so far.
+**Stopping.** Press **Stop** (or Esc). If the index is still loading, no report is written (the screen keeps the Index paths count it had reached). Otherwise, the app stops
+listing folders and writes the report with `Result: Stopped by user`, listing what it found and checked so far.
 
 **If the database fails** whilst the index is loading, an error is shown and no report is written, since nothing was walked; the screen keeps the Index paths count it had reached.
 
@@ -811,8 +811,8 @@ The report adds a *Not checked* line for the distinct files it did not reach, so
 
 **Why is Total files on the Unindexed Files tab smaller than the files Explorer shows in my folders?**
 Total files counts only the files the audit checks: those that match your File types and are not in Exclude. Files that do not match are counted as *Excluded*. Hidden and
-system files are skipped without being counted at all, and a symbolic link to a file is listed under *Unverified* instead. So Total files + Excluded can still be fewer than
-Explorer's count when hidden or system files are shown in Explorer, or when you have such links.
+system files are skipped without being counted at all, and a symbolic link to a file of a checked type is listed under *Unverified* instead. So Total files + Excluded can
+still be fewer than Explorer's count when hidden or system files are shown in Explorer, or when you have such links.
 
 **Why is there no Remaining time on the Unindexed Files tab?**
 The app cannot know how many files the folders hold until it has walked them all, so it cannot estimate the time left.
