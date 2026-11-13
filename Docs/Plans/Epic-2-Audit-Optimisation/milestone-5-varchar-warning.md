@@ -29,7 +29,7 @@ master SDD [`Docs/Specs/1-file-auditor-master-design.md`](../../Specs/1-file-aud
 - **When:** the last pre-flight step, after the existing-report check (and its *Overwrite* question), on both tabs, only when the answer is not remembered for the current column.
   *Cancel* → `RunAsync` returns `null` (no run, nothing saved).
 - **Silent cases:** `nvarchar`, a refused type, a missing column or table, any SQL error or exception from the lookup → no dialogue, the Start goes on, and the run's own check
-  reports it as today.
+  reports it as today. (Refined during execution, ledger R1–R2: out-of-memory is not swallowed, the lookup runs under `Task.Run`, and it is cancelled after 30 seconds.)
 - **Remembered:** the confirmed column key is server, database, table and path column, each trimmed and compared ignoring case; any difference asks again. Forgotten in
   `ProjectSettingsService.Reset` (with the other remembered answers); never saved in the project file. While remembered for the current column, no lookup is made.
 - The runs, the conversion and the version (2.0.0) do not change.

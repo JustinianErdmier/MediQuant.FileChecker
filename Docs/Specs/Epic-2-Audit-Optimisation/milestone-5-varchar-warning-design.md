@@ -2,9 +2,9 @@
 
 **Date:** 2026-11-13
 
-A short design: a small change, agreed in conversation on 2026-11-13. The master SDD
-([`1-file-auditor-master-design.md`](../1-file-auditor-master-design.md)) stays the contract; this document records what milestone 5 changes and why. It builds on milestone
-4 ([`milestone-4-varchar-path-column-design.md`](milestone-4-varchar-path-column-design.md)), which made both audits accept a `varchar` path column and convert it.
+A short design: a small change, agreed in conversation on 2026-11-13. The master SDD ([`1-file-auditor-master-design.md`](../1-file-auditor-master-design.md)) stays the
+contract; this document records what milestone 5 changes and why. It builds on milestone 4
+([`milestone-4-varchar-path-column-design.md`](milestone-4-varchar-path-column-design.md)), which made both audits accept a `varchar` path column and convert it.
 
 ## 1. Intent
 
@@ -57,7 +57,8 @@ is done and what its effects can be.
 - When the warning has not been answered for the current column, pre-flight reads the path column's type with the lookup the runs use (`IndexTableReader.ReadPathColumnTypeAsync`
   on the quoted names, then `PathColumnType.Check`) and shows the warning when the column is `varchar`.
 - For `nvarchar` it shows nothing. For a refused type, a missing column or a SQL error, pre-flight shows nothing either and lets the run start: the run's own type check reports
-  those exactly as today, so their errors, attention signal and report behaviour do not change.
+  those exactly as today, so their errors, attention signal and report behaviour do not change. (Added during execution, ledger ruling R1–R2: the same holds for any exception
+  except out-of-memory, and for a lookup cancelled after 30 seconds.)
 - The run is unchanged: it still reads and checks the type itself. The second read is one metadata call.
 - **What changes in a principle:** SDD §6.1 says pre-flight runs *before touching the database*. That becomes "before touching the database, except for this one type lookup,
   made only while the warning is unanswered". A slow or unreachable server now delays the step after Start by the lookup's connection time, with no status text, before the
