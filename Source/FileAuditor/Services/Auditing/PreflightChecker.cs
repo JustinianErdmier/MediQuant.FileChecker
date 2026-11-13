@@ -158,10 +158,12 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
                 return true;
             }
 
-            ErrorOr<(string TypeName, short MaxLength)?> read = await IndexTableReader.ReadPathColumnTypeAsync(ConnectionStrings.Build(settings.Server, settings.Database),
-                                                                                                                quoted.Value.QuotedTable,
-                                                                                                                quoted.Value.QuotedPathColumn,
-                                                                                                                CancellationToken.None);
+            // Off the UI thread: opening a connection does some work synchronously (name resolution, authentication) before its first await, as the runs also allow for.
+            ErrorOr<(string TypeName, short MaxLength)?> read =
+                await Task.Run(() => IndexTableReader.ReadPathColumnTypeAsync(ConnectionStrings.Build(settings.Server, settings.Database),
+                                                                              quoted.Value.QuotedTable,
+                                                                              quoted.Value.QuotedPathColumn,
+                                                                              CancellationToken.None));
 
             if (read.IsError
                 || read.Value is null)
@@ -182,9 +184,9 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
             target = convertTo.Value;
         }
-        catch (Exception)
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            // The run repeats the lookup and reports the failure.
+            // The run repeats the lookup and reports the failure. A bug in this block is hidden here too, by design: the warning is a courtesy and must never stop a Start.
             return true;
         }
 
