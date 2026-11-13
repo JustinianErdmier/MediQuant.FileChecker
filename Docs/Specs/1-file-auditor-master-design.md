@@ -518,9 +518,10 @@ audits then work on:
 
 A `varchar(n)` holds at most *n* characters, so `nvarchar(n)` holds every value (UTF-8 collations included); `nvarchar(n)` stops at 4,000, hence `max` above it
 (`PathColumnType.Check` yields that type, or `null` for `nvarchar`, and the statements are built from it afterwards). A `varchar` column stores only the characters of its
-collation's code page, and anything else was stored as `?` when the row was written; `?` cannot appear in a Windows file name, so such a row can never match a real file, and the
-audits report it as they report any path that does not exist. The rule is the same for both audits. The ID column is unrestricted and is still read as text. Two errors, both
-shown in the ordinary error dialogue, no report written, no row read (`PathColumnType.Check`):
+collation's code page: anything else was changed when the row was written, to a near equivalent where SQL Server has one (`Ł` → `L`) and to `?` otherwise. The conversion cannot
+undo that, so such a path may name a different file, which may exist, or none. A path holding `?` is reported by the Missing Files audit under *Unverified — Invalid characters
+in path* (§6.3), and never matches a file in the Unindexed Files audit. The rule is the same for both audits. The ID column is unrestricted and is still read as text. Two
+errors, both shown in the ordinary error dialogue, no report written, no row read (`PathColumnType.Check`):
 
 - `The path column '<column>' is <type>. The File Auditor expects an nvarchar or varchar column.` (`Sql.PathColumnUnsupported`). `<type>` is the system type in lower case, with
   `(<n>)` for `char`, `binary` and `varbinary` (`n` is `max_length`) and for `nchar` (`n` is `max_length / 2`), `(max)` when `max_length` is -1, and the bare name for any other
@@ -1172,12 +1173,12 @@ so ordinary builds and `dotnet run` are unchanged.
   effort, so a failure is ignored and the dialogue still shows; the dialogue's *View Report* opens the report of the run that finished (captured at Start), not the selected
   tab's; any stop request skips the finished dialogue, including a Stop during `Reading empty paths...` whose result stays *Completed*;
   `Assets\Win95Icons\information32.png`, already in the project folder, gained its `AvaloniaResource` entry in the `.csproj`, as every image the app uses must have (§9).
-
 - The varchar path column (Epic 2, milestone 4, design `Docs/Specs/Epic-2-Audit-Optimisation/milestone-4-varchar-path-column-design.md`), settled with the user: `varchar(n)` and
   `varchar(max)` path columns are accepted on both tabs and converted to `nvarchar` where the statements need it, which supersedes milestone 1.1's requirement of an `nvarchar`
   column; only `varchar` is added (`char`, `nchar`, `text`, `ntext`, numbers and the rest stay refused); approach A, an explicit conversion once per statement, chosen over letting
   SQL Server convert implicitly and over converting in the app (impossible for the counts); the reasoning behind converting inside the Unindexed folder filter (§6.5.2) is
-  recorded in the design but was not measured, by the user's decision; the version stays 2.0.0, since the app is not published (the `v2.0.0` tag's position is the user's
+  recorded in the design and was not measured, by the user's decision (the final review's spot check in LocalDB agreed: a `Greek_CI_AS` path matched its folder only with the
+  conversion); the version stays 2.0.0, since the app is not published (the `v2.0.0` tag's position is the user's
   call). Decided by Claude (for the user to check): the refusal's wording is `... expects an nvarchar or varchar column.`; its code is renamed `Sql.PathColumnUnsupported`
   (from `Sql.PathColumnNotNvarchar`) to match the rule; on the Missing tab the conversion is computed in one apply (`[fa_p]`, column `[FaPath]`) and everything else uses it, and
   on the Unindexed tab it appears only in the folder filter, so the selected value stays the raw column and with no filter nothing is converted.

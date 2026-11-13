@@ -125,10 +125,10 @@ The **File Index Table** group holds:
 - **Table:** required. Type the table's name, or `schema.table` if it is not in the default schema.
 - **Path column:** required. The column holding each document's full path. It may be an **`nvarchar`** (Unicode text) or a **`varchar`** column, of any length, including the `max`
   forms. The app converts a `varchar` column to `nvarchar` itself, so you need do nothing. `nvarchar` is still the better choice: a `varchar` column cannot store characters outside
-  its collation's code page, and a path containing one was stored with a `?` in its place when the row was written. A `?` cannot appear in a Windows file name, so such a row never
-  matches a real file, and the audits report it as they report any path that does not exist. Any other type, such as `char`, `nchar` or `text`, is refused when you press Start,
-  with a message that names the column and its type (see section 9). Both audits apply this rule. If your path column is of another type, ask for it to be converted to
-  `nvarchar`, or use a view of the table that casts it.
+  its collation's code page, and a path containing one was changed when the row was written, to a look-alike letter (`Ł` became `L`) or to `?`. Such a path may point at a
+  different file, or at none. A path with a `?` is listed by the Missing Files audit under *Unverified — Invalid characters in path*, and never matches a file in the Unindexed
+  Files audit. Any other type, such as `char`, `nchar` or `text`, is refused when you press Start, with a message that names the column and its type (see section 9). Both audits
+  apply this rule. If your path column is of another type, ask for it to be converted to `nvarchar`, or use a view of the table that casts it.
 - **ID column:** optional. When it is filled in, the Missing Files report shows each row's ID beside its path. The Unindexed Files audit does not use it (a file that is not in
   the table has no ID), but it is still saved with the project. The ID must be **unique to its file**: one ID per path, such as a document ID. Do not use a patient or account
   ID that several files share or that repeats across a file's rows (see §4.1); the app does not check this.

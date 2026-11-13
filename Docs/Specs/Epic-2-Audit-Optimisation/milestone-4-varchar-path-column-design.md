@@ -33,9 +33,10 @@ The app is not yet published, so the version stays 2.0.0; the user guide and the
 - A `varchar(n)` holds at most *n* characters, so `nvarchar(n)` holds every value, UTF-8 collations included. `nvarchar(n)` stops at 4,000, hence `max` above it.
 - The refusal error changes its second sentence (Claude's call): `The path column '<column>' is <type>. The File Auditor expects an nvarchar or varchar column.` The type
   formatting, the not-found error and everything else about the check are unchanged.
-- **What the conversion cannot do:** a `varchar` column stores only the characters of its collation's code page; anything else was stored as `?` when the row was written. `?`
-  cannot appear in a Windows file name, so such a row can never match a real file, and the audits report it as they report any path that does not exist. The user guide says so
-  where it explains the path column.
+- **What the conversion cannot do:** a `varchar` column stores only the characters of its collation's code page; anything else was changed when the row was written, to a near
+  equivalent where SQL Server has one (`Ł` → `L`) and to `?` otherwise (corrected after the final review, which found the best-fit mapping). Such a path may name a different
+  file, which may exist, or none; a `?` path is *Unverified — Invalid characters in path* on the Missing Files tab and never matches on the Unindexed Files tab. The user
+  guide says so where it explains the path column.
 
 ## 4. Approach A (chosen with the user): an explicit conversion, once per statement
 

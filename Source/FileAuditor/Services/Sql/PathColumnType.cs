@@ -31,7 +31,7 @@ public static class PathColumnType
 
         if (string.Equals(typeName, "varchar", StringComparison.OrdinalIgnoreCase))
         {
-            // max_length is in bytes, which for varchar is characters; -1 is max.
+            // max_length is in bytes, at least the number of characters (UTF-8 collations included); -1 is max.
             return maxLength is >= 1 and <= MaxNvarcharLength ? $"nvarchar({maxLength})" : "nvarchar(max)";
         }
 
