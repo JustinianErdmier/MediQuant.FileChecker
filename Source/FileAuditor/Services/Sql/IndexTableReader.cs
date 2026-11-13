@@ -6,6 +6,9 @@ public static class IndexTableReader
     /// <summary>The SQL Server error numbers for an invalid column name and an invalid object name.</summary>
     private static readonly int[] NotFoundErrorNumbers = [207, 208];
 
+    /// <summary>The SQL Server error number for a view or function that could not be bound because of earlier binding errors.</summary>
+    private const int ViewBindingErrorNumber = 4413;
+
     /// <summary>Reads the system type and length of the path column as the audit statements see it.</summary>
     /// <remarks>
     ///     The type is read from the result-set metadata of <c>SELECT TOP (0) [fa_t].&lt;column&gt; FROM &lt;table&gt; AS [fa_t]</c> (<c>sp_describe_first_result_set</c>),
@@ -50,7 +53,8 @@ public static class IndexTableReader
                 return none;
             }
 
-            // system_type_name is the system type with its length ("nvarchar(300)" for an alias over it) and is NULL for a CLR type, which only has a user type name.
+            // system_type_name is the system type with its length ("nvarchar(300)" for an alias over it) and is NULL for a user-defined CLR type, which only has a user type
+            // name (the built-in CLR types such as geography have a system type name).
             string? systemType = reader.IsDBNull(reader.GetOrdinal("system_type_name")) ? null : reader.GetString(reader.GetOrdinal("system_type_name"));
             string  typeName   = systemType ?? reader.GetString(reader.GetOrdinal("user_type_name"));
             int     paren      = typeName.IndexOf(value: '(');
@@ -62,7 +66,9 @@ public static class IndexTableReader
         catch (SqlException exception) when (!cancellationToken.IsCancellationRequested)
         {
             // An invalid name is reported with its own error first, then wrapped (11501, 11529): the first error decides, so 229 and everything else stay a plain failure.
-            if (NotFoundErrorNumbers.Contains(exception.Errors[index: 0].Number))
+            // A view that no longer binds (error 4413 follows) also starts with 207 or 208, about a name inside the view, so it stays a plain failure with that message.
+            if (NotFoundErrorNumbers.Contains(exception.Errors[index: 0].Number)
+                && !exception.Errors.Cast<SqlError>().Any(error => error.Number == ViewBindingErrorNumber))
             {
                 (string TypeName, short MaxLength)? none = null;
 

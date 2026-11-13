@@ -491,8 +491,8 @@ nothing for the rest.
 **The path column must be `nvarchar`.** Before counting (or, for the unindexed audit, before loading the index) the app reads the path column's type with
 `sp_describe_first_result_set` on the statements' own SELECT shape, `SELECT TOP (0) [fa_t].<column> FROM <table> AS [fa_t];`, built from the same bracket-quoted names the
 statements use (so a schema, spaces or `]` in a name are found). The type is therefore read as the statements see it: permissions, synonyms (also to a table in another database)
-and views behave as they do for the statements. It is the column's *system* type (`system_type_name`; the user type name only for a CLR type such as `geography`, which is
-refused with its name) that must be `nvarchar`, of any length including `max`; so an alias type built on `nvarchar` passes, and a view whose column is `nvarchar` passes. `nchar`
+and views behave as they do for the statements. It is the column's *system* type (`system_type_name`; the user type name only for a user-defined CLR type, which is refused
+with its name) that must be `nvarchar`, of any length including `max`; so an alias type built on `nvarchar` passes, and a view whose column is `nvarchar` passes. `nchar`
 and every other type (`varchar`, `char`, `text`, `int`, `uniqueidentifier`, `varbinary`, …) are refused. The rule is the same for both audits: the unindexed audit does not need
 it today, and applies it for consistency, since the Epic 2 milestone that follows builds on it. The ID column is unrestricted and is still read as text. Two errors, both shown in
 the ordinary error dialogue, no report written, no row read (`PathColumnType.Check`):
@@ -1061,14 +1061,14 @@ so ordinary builds and `dotnet run` are unchanged.
   `nvarchar(4000)` column is truncated by the added character (a skip marker padded to 4,000 characters was misclassified, and one with 3,996 trailing spaces failed the whole audit
   with error 537). Measured on 200,000 rows in LocalDB, with the cast and without it: the counts statement 1,154 to 589 ms (about 620 to 850 ms on a later, noisier run), the
   stream 1,654 to 1,385 ms, the empty-ID read 498 to 238 ms; these headline figures were taken on the fully cast-free statements, before the narrow `LEN` cast was restored. The
-  final statements, re-timed on a 200,000-row `nvarchar(400)` table (140,000 real paths, 40,000 empty, 20,000 `SKIP`), three runs each in LocalDB:
-  the counts statement 2,211, 1,796 and 1,490 ms (the first run is cold) and the stream (distinct real rows, with an ID column) 1,530, 1,243 and 1,232 ms. The type lookup is a
-  single metadata call and is not measurable against these.
+  final statements, re-timed on a separately generated 200,000-row `nvarchar(400)` table (140,000 real paths, 40,000 empty, 20,000 `SKIP`), three runs each in LocalDB on a
+  different day: the counts statement 2,211, 1,796 and 1,490 ms (the first run is cold) and the stream (distinct real rows, with an ID column) 1,530, 1,243 and 1,232 ms. These
+  are not comparable with the figures above (different data and machine load), and say nothing about the cast; the type lookup was not timed.
 - The path column's type lookup (Epic 2, milestone 1.1, final review), decided by Claude (for the user to check): the type is read from the result-set metadata of the statements'
   own SELECT shape (`sp_describe_first_result_set`, §6.2) rather than from the catalogue views, so permissions, synonyms (also to another database) and views behave as the
-  statements do. A first error of 207 or 208 is "not found"; any other error, such as 229 for a table the account cannot read, is `Sql.QueryFailed` with SQL Server's message, so
-  a missing permission is not reported as a missing column. The first catalogue-view implementation (`sys.columns` with `OBJECT_ID`) reported a table with no SELECT permission,
-  and a synonym, as not found, and crashed on a CLR-typed column.
+  statements do. A first error of 207 or 208 is "not found", unless a 4413 follows (a view that no longer binds, whose message is shown as it is); any other error, such as
+  229 for a table the account cannot read, is `Sql.QueryFailed` with SQL Server's message, so a missing permission is not reported as a missing column. The first
+  catalogue-view implementation (`sys.columns` with `OBJECT_ID`) reported a table with no SELECT permission, and a synonym, as not found, and crashed on a CLR-typed column.
 - Project settings (milestone 2, §8): *Open project...* runs the save rule first and forgets the *No* answer, since the new file is a different project; a cancelled picker or
   an unreadable file leaves the current project untouched; "nothing has changed" compares the current inputs with the settings last loaded or saved; an opened project
   whose report location is incomplete saves back to its own file without asking; every close, including an operating-system logoff close, goes through the save rule.
