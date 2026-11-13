@@ -6,8 +6,8 @@ public static class SqlErrors
     /// <summary>The code of the error returned by <see cref="QueryFailed" />.</summary>
     public const string QueryFailedCode = "Sql.QueryFailed";
 
-    /// <summary>The code of the error returned by <see cref="PathColumnNotNvarchar" />.</summary>
-    public const string PathColumnNotNvarcharCode = "Sql.PathColumnNotNvarchar";
+    /// <summary>The code of the error returned by <see cref="PathColumnUnsupported" />.</summary>
+    public const string PathColumnUnsupportedCode = "Sql.PathColumnUnsupported";
 
     /// <summary>The code of the error returned by <see cref="PathColumnNotFound" />.</summary>
     public const string PathColumnNotFoundCode = "Sql.PathColumnNotFound";
@@ -17,12 +17,12 @@ public static class SqlErrors
     /// <returns>A failure error with code <c>Sql.QueryFailed</c>.</returns>
     public static Error QueryFailed(string message) => Error.Failure(QueryFailedCode, message);
 
-    /// <summary>Creates the error for a path column whose type is not <c>nvarchar</c>.</summary>
+    /// <summary>Creates the error for a path column whose type is neither <c>nvarchar</c> nor <c>varchar</c>.</summary>
     /// <param name="column">The path column, as the user typed it.</param>
-    /// <param name="type">The column's type, formatted for display (for example <c>varchar(400)</c>).</param>
-    /// <returns>A validation error with code <c>Sql.PathColumnNotNvarchar</c>.</returns>
-    public static Error PathColumnNotNvarchar(string column, string type)
-        => Error.Validation(PathColumnNotNvarcharCode, $"The path column '{column}' is {type}. The File Auditor expects an nvarchar column.");
+    /// <param name="type">The column's type, formatted for display (for example <c>char(10)</c>).</param>
+    /// <returns>A validation error with code <c>Sql.PathColumnUnsupported</c>.</returns>
+    public static Error PathColumnUnsupported(string column, string type)
+        => Error.Validation(PathColumnUnsupportedCode, $"The path column '{column}' is {type}. The File Auditor expects an nvarchar or varchar column.");
 
     /// <summary>Creates the error for a path column that cannot be found in the table (or a table that cannot be found).</summary>
     /// <param name="column">The path column, as the user typed it.</param>

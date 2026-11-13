@@ -14,35 +14,35 @@ public static class AuditRunner
     /// <param name="progress">Receives the live statistics.</param>
     /// <param name="cancellationToken">Stops the run; whatever was checked is reported.</param>
     /// <returns>
-    ///     The report that was written for a completed, stopped or mid-run failed audit; <c>Sql.PathColumnNotFound</c> or <c>Sql.PathColumnNotNvarchar</c> when the path column is
-    ///     missing or is not <c>nvarchar</c> (checked before any row is read); a <c>Sql.QueryFailed</c> error when SQL Server failed before any row was processed;
-    ///     <c>Audit.ReadFailed</c> when the row stream failed for another reason before any row was processed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while
-    ///     counting; or <c>Report.Unwritable</c> when the report could not be written.
+    ///     The report that was written for a completed, stopped or mid-run failed audit; <c>Sql.PathColumnNotFound</c> or <c>Sql.PathColumnUnsupported</c> when the path column is
+    ///     missing or is neither <c>nvarchar</c> nor <c>varchar</c> (checked before any row is read); a <c>Sql.QueryFailed</c> error when SQL Server failed before any row
+    ///     was processed; <c>Audit.ReadFailed</c> when the row stream failed for another reason before any row was processed; <see cref="AuditErrors.StoppedBeforeChecking" />
+    ///     when stopped while counting; or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
     public static async Task<ErrorOr<AuditReport>> RunAsync(AuditRequest request, AuditProgress progress, CancellationToken cancellationToken)
     {
         AppSettings settings   = request.Settings;
         DateTime    startedUtc = DateTime.UtcNow;
 
-        ErrorOr<AuditQuery> built = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn);
+        ErrorOr<(string QuotedTable, string QuotedPathColumn)> target = QueryBuilder.QuoteTarget(settings.Table, settings.PathColumn);
 
-        if (built.IsError)
+        if (target.IsError)
         {
-            return built.Errors;
+            return target.Errors;
         }
 
-        AuditQuery query            = built.Value;
-        string     connectionString = ConnectionStrings.Build(settings.Server, settings.Database);
+        string connectionString = ConnectionStrings.Build(settings.Server, settings.Database);
 
         progress.Phase = "Counting files...";
 
+        AuditQuery         query;
         ErrorOr<RowCounts> counted;
 
         try
         {
             ErrorOr<(string TypeName, short MaxLength)?> columnType = await IndexTableReader.ReadPathColumnTypeAsync(connectionString,
-                                                                                                                      query.QuotedTable,
-                                                                                                                      query.QuotedPathColumn,
+                                                                                                                      target.Value.QuotedTable,
+                                                                                                                      target.Value.QuotedPathColumn,
                                                                                                                       cancellationToken);
 
             if (columnType.IsError)
@@ -50,12 +50,21 @@ public static class AuditRunner
                 return columnType.Errors;
             }
 
-            ErrorOr<Success> typeChecked = PathColumnType.Check(settings.Table, settings.PathColumn, columnType.Value);
+            ErrorOr<string?> convertTo = PathColumnType.Check(settings.Table, settings.PathColumn, columnType.Value);
 
-            if (typeChecked.IsError)
+            if (convertTo.IsError)
             {
-                return typeChecked.Errors;
+                return convertTo.Errors;
             }
+
+            ErrorOr<AuditQuery> built = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn, convertTo.Value);
+
+            if (built.IsError)
+            {
+                return built.Errors;
+            }
+
+            query = built.Value;
 
             counted = await IndexTableReader.CountRowsAsync(connectionString, query, cancellationToken);
         }
