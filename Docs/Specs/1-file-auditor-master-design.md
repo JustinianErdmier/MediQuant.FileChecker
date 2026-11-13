@@ -126,8 +126,13 @@ Files**, where every file on disk is in the index table. The inputs both directi
   another program, like *View Report* — has none.
 - **Menus:** *File* ends with *Exit*; *Help* ends with *About File Auditor*. Menu items mirror the buttons and enable and disable with them (except *Stop*, which stays enabled on
   either tab while an audit runs, §5.8).
-- **Dialogues** are modal, fixed-size, with an icon (error, warning or question) and buttons along the bottom right. A path in dialogue text sits on its own line and
+- **Dialogues** are modal, fixed-size, with an icon (error, warning, question or information) and buttons along the bottom right. A path in dialogue text sits on its own line and
   wraps only after a `\` or `/` separator, never at a space or hyphen inside a folder name (`PathText.Breakable`).
+- **The end of a run** draws attention to the window without taking the keyboard. A completed run shows the *finished* dialogue (§6.4, §6.5.4): the information icon, the audit's
+  name, its final figures, the report's full path, and *View Report* (primary; Enter; access key `V`) and *OK* (Esc and the close box). A run that fails shows its error dialogue
+  as before. Both play a Windows sound (information for the finished dialogue, error for a failure), and when File Auditor is not the active application they also flash the
+  caption and the taskbar button until the window comes to the foreground (`WindowAttention`, §9). The window is never activated or brought forward. Both Win32 calls are best
+  effort: a failure is ignored and the dialogue still shows. A run the user stopped, a pre-flight error and a close mid-run show and sound nothing new.
 - **No modern affordances** that Win9x lacked: no rounded corners, no flyouts, no toast notifications, no accent colours, no hamburger menus.
 
 Layout, top to bottom. The approved mock-ups are [`direction-tabs-layout.html`](../UserInterfaceDesign/Mockups/direction-tabs-layout.html), which shows the target layout with the
@@ -590,6 +595,12 @@ This section describes the missing-files audit; §6.5.4 gives the unindexed audi
   `Result: Failed — <message>` and the counts so far. A failure of the empty-path ID read alone is not a failure of the audit: the report is still written and the group says why
   the IDs are missing (§7).
 - **Report write failure**: error dialog.
+- **What follows the run.** A run that **completes** shows the finished dialogue, with *The Missing Files audit has finished.*, a figures line `Missing: <m>    Unverified: <u>`
+  (four spaces between the two, each value as the Audit group shows it at the end of the run, so *Unverified* keeps its bracket when the group shows one), then `The report was
+  saved to:` and the report's full path. *View Report* opens the report the run wrote (the one captured at Start, not the selected tab's) through the same code as the Audit group's
+  *View Report*, including its error dialogue; *OK* closes the dialogue. A run that **fails** (a SQL failure or a report write failure; also a path column that is not `nvarchar`,
+  or not found, which the run refuses, §6.2) shows its error dialogue, now with the error sound and the flash. A run the user **stops**, before or after checking began, shows
+  nothing new, since they are at the window. Pre-flight errors, found before the run starts, get neither the sound nor the flash.
 - **Closing the window mid-run**: a prompt, *"An audit is in progress. Stop it and exit?"*, with **Yes** and **No**. Yes stops the run, writes the report as
   `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same. If Yes is chosen before the count query returns, no report is written (as for
   Stop) and the application simply exits.
@@ -698,6 +709,8 @@ Status `Checking files...`.
   *Stopped by user* report for a complete walk; this is cosmetic.
 - **SQL failure** while loading the index (connection, timeout; a bad table or path column, or a path column that is not `nvarchar`, gets the errors of §6.2): an error
   dialogue, and no report, since nothing has been walked. **Report write failure:** an error dialogue.
+- **What follows the run** is as in §6.4, with the first line `The Unindexed Files audit has finished.` and the figures line `Unindexed: <n>    Unverified: <u>` (four spaces
+  between the two, each as the Audit group shows it at the end of the run). Stop, before or after the walk, shows nothing new; a failure gets the error sound and the flash.
 - **Closing the window mid-run** asks the question of §6.4; *Yes* stops the run as above (no report if the index was still loading) and exits.
 
 ## 7. The report
@@ -956,8 +969,8 @@ So the three states read: *ticked* — always save; *unticked* — ask at the ne
 ## 9. Code shape
 
 One project, `Source/FileAuditor/`, organised by folder (namespaces mirror folders). Only the `.csproj` and `app.manifest` sit at the project root; `Assets/` holds the
-app icon, and `Assets/Win95Icons/` the Windows 95 icon set. Dialogue icons are taken from that set (`error32.gif`, `warning32.png`, `question32.png`), never drawn in
-XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj`. The code folders are:
+app icon, and `Assets/Win95Icons/` the Windows 95 icon set. Dialogue icons are taken from that set (`error32.gif`, `warning32.png`, `question32.png`,
+`information32.png`), never drawn in XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj`. The code folders are:
 
 - `Startup/` — `App`, `Program` and `UnexpectedErrorHandler`, the global exception handler (see *Errors* below).
 - `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`, `FileTypesDialogueWindow`), `Groups/` (a `UserControl` per group box:
@@ -973,8 +986,9 @@ XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj
   button); and `ScanFolderItem`, a row of the folder list. `Groups/` also holds the Audit group's statistics helpers, each deliberately not a view model: `RecentRate`, the
   30-second exponentially weighted rate with its 5-second warm-up and the formatter of the *Files/second* text; `RemainingEstimator`, which owns a `RecentRate` and turns progress
   samples into the Remaining text (§5.4); and `TimeText`, the one overflow-safe `hh:mm:ss` formatter that Elapsed and Remaining share. `Main/` also holds `AuditRun` and its two
-  subclasses `MissingAuditRun` and `UnindexedAuditRun`, which carry one direction's run (progress object, phase text, refresh, result text) for `MainWindowViewModel`.
-  `MainWindowViewModel` routes Start and View Report to the selected tab's direction and Stop and the status bar to the running one.
+  subclasses `MissingAuditRun` and `UnindexedAuditRun`, which carry one direction's run (progress object, phase text, refresh, result text, and the finished dialogue's first
+  line and figures line) for `MainWindowViewModel`. `MainWindowViewModel` routes Start and View Report to the selected tab's direction and Stop and the status bar to the
+  running one.
 - `Services/` — `Settings/` (`SettingsStore`, a static class that maps a settings file to and from `AppSettings` through `ProjectFile`, at a path it is given, and never creates a
   folder; `ProjectSettingsService`, which holds the open project's file path and baseline settings and runs the save rule of §8.2 with its prompts, returning a `SavePointResult`
   that says whether the triggering operation may proceed and whether the checkbox is to be ticked; it also remembers the three file-type warning answers of §6.5.1), `Sql/`
@@ -983,8 +997,9 @@ XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj
   direction's `FileTypeList`, `FileTypePattern` and `FileTypeFilter`, the 128-bit-hash `IndexPathSet`, and the concurrent, static `FolderWalker`; `FileTypeList`, `FileTypePattern`
   and `IndexPathSet` stay here, not in `Models/`, because they carry logic), `Auditing/` (the static `AuditRunner` and `UnindexedAuditRunner`, pre-flight checker,
   and the progress types including `UnindexedProgress`, which also keeps the scan clock of §5.4a), `Reporting/` (the two report builders, `ReportFormat` with the formatting
-  they share, writer and path resolver) and `Dialogues/` (dialogue service, which also offers a three-button choice returning a `DialogueChoices`, the *Open Project* file
-  picker and the File Types dialogue). Stateless services are static classes (§12). Return `ErrorOr<T>` for expected failures.
+  they share, writer and path resolver) and `Dialogues/` (dialogue service, which also offers a three-button choice returning a `DialogueChoices`, the finished dialogue and the
+  failed-run error dialogue, the *Open Project* file picker, the File Types dialogue and `WindowAttention`, the static class that plays the end-of-run sound and flashes the main
+  window's taskbar button through `MessageBeep` and `FlashWindowEx`, §5). Stateless services are static classes (§12). Return `ErrorOr<T>` for expected failures.
 - `Models/` — plain data, with no behaviour worth a service. `Settings/` (`AppSettings`, the settings record with no nullable members; `ProjectFile` and `ProjectFileFolder`, the
   nullable JSON shape of §8; `ScanFolder`; and `SavePointResult`), `Auditing/` (`AuditQuery`, `PathQuery`, `IndexRow`, `CheckResult`, `MappedOutcome`, `AuditRequest`, `ScannedFile`
   and `UnverifiedFolder`), `Dialogues/` (`ProjectFilePick`, the *Open Project* picker's result) and `Reporting/` (`AuditReport`, `UnindexedReport` and `ReportPath`).
@@ -1125,6 +1140,15 @@ so ordinary builds and `dotnet run` are unchanged.
   considered and left out. *Indexed* moved from the first column to the top of the centre one at the user's request; its old place was Claude's own call by analogy (ruling R6
   of Epic 1's milestone 5), not the user's. The design's section 6 records four possible optimisations of the index load and walk, none measured and
   none built.
+
+- The finished dialogue (Epic 2, milestone 3, design `Docs/Specs/Epic-2-Audit-Optimisation/milestone-3-finished-dialogue-design.md`), settled with the user: approach A (the
+  dialogue, a taskbar flash and a sound), chosen over bringing the window to the front (which could take the keyboard while the user types elsewhere) and over the dialogue alone
+  (which opens behind other windows and goes unseen); the dialogue appears for a completed run only, a failed run keeps its error dialogue and gains the attention, and a stopped
+  run, a pre-flight error and a close mid-run show nothing new; the dialogue's content is the audit's name, the final figures, the report's full path and *View Report* beside *OK*
+  (§5, §6.4, §6.5.4). Decided by Claude (for the user to check): *View Report* carries the access key `V`, since the other dialogues' action buttons have one (*Create Folder*,
+  *Yes*) and *OK* has none; the flash happens only when the main window is not active, and never activates it; both Win32 calls (`MessageBeep`, `FlashWindowEx`) are best effort,
+  so a failure is ignored and the dialogue still shows; the dialogue's *View Report* opens the report of the run that finished (captured at Start), not the selected tab's;
+  `Assets\Win95Icons\information32.png`, already in the project folder, gained its `AvaloniaResource` entry in the `.csproj`, as every image the app uses must have (§9).
 
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
 that failed, found by walking the path (§6.3); the close-mid-run prompt.

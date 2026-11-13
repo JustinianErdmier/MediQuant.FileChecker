@@ -84,9 +84,9 @@ Before Task 1 the controller creates branch `feat/milestone-3-finished-dialogue`
 
 **Files:** Modify `Docs/Specs/1-file-auditor-master-design.md`, `Docs/UserGuide.md`
 
-- [ ] **Step 1: SDD.** §5's Win9x conventions (dialogue icons gain *information*; the finished dialogue and the attention signal), §6.4 and §6.5.4 (what follows a completed,
+- [x] **Step 1: SDD.** §5's Win9x conventions (dialogue icons gain *information*; the finished dialogue and the attention signal), §6.4 and §6.5.4 (what follows a completed,
   stopped and failed run), §9 (`WindowAttention` in `Services/Dialogues/`), §10 (this milestone's calls, from the design's §3–§6 and the ledger). Remove anything this makes
   false.
-- [ ] **Step 2: User guide.** Where a run's end is described for each tab: the finished dialogue with its figures and *View Report*, the flashing taskbar button and the sound when
+- [x] **Step 2: User guide.** Where a run's end is described for each tab: the finished dialogue with its figures and *View Report*, the flashing taskbar button and the sound when
   you are in another program, and that a run you stopped shows nothing new. Hard-wrap at 180 characters.
-- [ ] **Step 3: Commit** — `docs(📝): document the finished dialogue`.
+- [x] **Step 3: Commit** — `docs(📝): document the finished dialogue`.
