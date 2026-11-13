@@ -91,11 +91,11 @@ Before Task 1 the controller creates branch `feat/milestone-4-varchar-path-colum
 
 **Files:** Modify `Docs/Specs/1-file-auditor-master-design.md`, `Docs/UserGuide.md`
 
-- [ ] **Step 1: SDD.** §6.2 (the rule, the conversion, the error copy, the type check before the statements are built), §6.5.2 (the conversion inside the filter only), §9 if
+- [x] **Step 1: SDD.** §6.2 (the rule, the conversion, the error copy, the type check before the statements are built), §6.5.2 (the conversion inside the filter only), §9 if
   member names changed, §10 (this milestone's calls, from the design and the ledger, and that milestone 1.1's "requires `nvarchar`" is superseded). Remove everything this makes
   false (search for `nvarchar`, `expects an nvarchar`, `PathColumnNotNvarchar`).
-- [ ] **Step 2: User guide.** Section 3.1 (the path column may be `nvarchar` or `varchar`; why `nvarchar` is still preferred: a `varchar` column cannot store characters outside
+- [x] **Step 2: User guide.** Section 3.1 (the path column may be `nvarchar` or `varchar`; why `nvarchar` is still preferred: a `varchar` column cannot store characters outside
   its code page, and those rows can never match a file), section 9's refusal entry (new message; only types other than `nvarchar` and `varchar`), sections 8 and 10 where they
   mention the rule, and the **2.0.0 changelog entry**: a `varchar` path column no longer stops a project working; only other types (`char`, `nchar`, `text`, numbers, …) do.
   Hard-wrap at 180 characters, reflowing whole paragraphs.
-- [ ] **Step 3: Commit** — `docs(📝): document the varchar path column`.
+- [x] **Step 3: Commit** — `docs(📝): document the varchar path column`.

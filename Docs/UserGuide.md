@@ -123,10 +123,12 @@ The **Database** group holds the **Server** and **Database** names. Both are req
 The **File Index Table** group holds:
 
 - **Table:** required. Type the table's name, or `schema.table` if it is not in the default schema.
-- **Path column:** required. The column holding each document's full path. It must be an **`nvarchar`** (Unicode text) column, of any length, including `nvarchar(max)`. The app has
-  to read each path exactly as Windows sees it, character for character, and only a Unicode column guarantees that. Any other type, such as `varchar` or `nchar`, is refused when
-  you press Start, with a message that names the column and its type (see section 9). Both audits apply this rule. If your path column is of another type, ask for it to be
-  converted to `nvarchar`, or use a view of the table that casts it.
+- **Path column:** required. The column holding each document's full path. It may be an **`nvarchar`** (Unicode text) or a **`varchar`** column, of any length, including the `max`
+  forms. The app converts a `varchar` column to `nvarchar` itself, so you need do nothing. `nvarchar` is still the better choice: a `varchar` column cannot store characters outside
+  its collation's code page, and a path containing one was stored with a `?` in its place when the row was written. A `?` cannot appear in a Windows file name, so such a row never
+  matches a real file, and the audits report it as they report any path that does not exist. Any other type, such as `char`, `nchar` or `text`, is refused when you press Start,
+  with a message that names the column and its type (see section 9). Both audits apply this rule. If your path column is of another type, ask for it to be converted to
+  `nvarchar`, or use a view of the table that casts it.
 - **ID column:** optional. When it is filled in, the Missing Files report shows each row's ID beside its path. The Unindexed Files audit does not use it (a file that is not in
   the table has no ID), but it is still saved with the project. The ID must be **unique to its file**: one ID per path, such as a document ID. Do not use a patient or account
   ID that several files share or that repeats across a file's rows (see §4.1); the app does not check this.
@@ -757,9 +759,9 @@ report location and file name*.
 **A SQL error when the audit starts** (login failed, cannot open database, invalid column name for the ID column). Check the server, database and ID column names. The app signs in
 with your Windows account, so your account needs permission to read the table; request access through IT if not. (A wrong table or path column gets its own message, below.)
 
-**"The path column '...' is varchar(400). The File Auditor expects an nvarchar column."** The path column is not a Unicode `nvarchar` column (the message names its actual type, for
-example `varchar(400)`, `nchar(10)` or `int`). Nothing was read and no report was written. Ask for the column to be converted to `nvarchar`, or point the audit at a view of the
-table that casts the column to `nvarchar`, and type the view's name as the Table. The ID column can be of any type.
+**"The path column '...' is char(400). The File Auditor expects an nvarchar or varchar column."** The path column is neither an `nvarchar` nor a `varchar` column (the message names
+its actual type, for example `char(400)`, `nchar(10)` or `int`). Nothing was read and no report was written. Ask for the column to be converted to `nvarchar`, or point the audit at
+a view of the table that casts the column to `nvarchar`, and type the view's name as the Table. The ID column can be of any type.
 
 **"The path column '...' was not found in the table '...'."** The table has no column with that name, or the table itself was not found. Check the spelling of both, and the schema
 if the table is not in the default one. If your account has no permission to read the table, SQL Server's own permission error is shown instead (for example
@@ -920,8 +922,9 @@ Audit optimisation: the audits read the index table differently, report more abo
 
 **Changes that may affect existing projects:**
 
-- **The path column must be `nvarchar`.** Both audits now refuse any other column type, naming the type, before reading a row (section 3.1). A project whose path column
-  is `varchar`, `nchar` or anything else stops working; convert the column or point the app at a view that casts it (section 9).
+- **The path column must be `nvarchar` or `varchar`.** A `varchar` or `nvarchar` path column works on both audits (the app converts a `varchar` column itself). Only another
+  type (`char`, `nchar`, `text`, `ntext`, a number, …) is refused, naming the type, before a row is read (section 3.1). A project with such a column stops working; convert the
+  column or point the app at a view that casts it (section 9).
 - **Each path is checked once.** A path listed on several rows (an index built around patients rather than files) is checked once, so *Total files* counts distinct paths, not
   rows. With an ID column, each ID is expected to belong to one path.
 - **The reports' Summary has changed.** The Missing Files report adds *Duplicates*, *Found*, the table's rows beside *Total files* and the empty paths beside *Unverified*; the

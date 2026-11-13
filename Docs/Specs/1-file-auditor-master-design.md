@@ -246,7 +246,8 @@ The Unindexed Files tab's content scrolls vertically when it is taller than the 
 ### 5.2 File Index Table group
 
 - **Table**: required. Accepts `table` or `schema.table`.
-- **Path column**: required. The column must be `nvarchar` (§6.2); on Start any other type is refused for both directions.
+- **Path column**: required. The column must be `nvarchar` or `varchar` (§6.2; a `varchar` column is converted to `nvarchar` by the audits); on Start any other type is refused
+  for both directions.
 - **ID column**: optional, with a muted "(Optional)" note beside it. It is shared by both directions, but only the missing-files direction uses it: an unindexed file has no
   row, so no ID. On the Unindexed Files tab it stays editable and is still saved with the project.
 
@@ -459,7 +460,8 @@ stop-and-exit question (§6.4).
 ### 6.2 Query
 
 Built from the inputs; each identifier part is bracket-quoted with `]` escaped as `]]` (never string-concatenated raw). Three statements are used (`QueryBuilder.Build`), all
-built over the same classification of each row, written here in outline (`<path>` and `<id>` stand for the quoted columns; `<empty>` and `<skip>` for the predicates below):
+built over the same classification of each row, written here in outline (`<path>` and `<id>` stand for the quoted columns, `<path>` being the converted value for a `varchar`
+column, see below; `<empty>` and `<skip>` for the predicates below):
 
 ```sql
 -- 1. Counts (one round trip): the table's rows T, its empty-path rows E, its skip-marker rows S, and the distinct real paths D.
@@ -493,27 +495,41 @@ with `[^<white space>]` classes to find the first and last non-white-space chara
 cannot collide. Each row's kind is one `CASE`: empty is a single binary `LIKE` with no non-white-space character (or `NULL`); a cheap binary test for `skip` anywhere in the value
 comes next and yields a real path, so the trim (`PATINDEX`, `REVERSE`, `SUBSTRING`) and the four skip `LIKE`s run only for the few rows that contain the word. SQL Server inlines
 the `CROSS APPLY` scalars, so a value is recomputed at every reference: the counts therefore reference the kind once, as a weight (empty 1, skip marker 2^32) in a single `SUM`,
-and take the distinct count over the select statement, which is the only second pass. The statements do not cast the path column: the classification runs on it directly, which is
-why the column must be `nvarchar` (below). The one cast left is inside the trim's length, `LEN(CAST(<path> AS nvarchar(max)) + N'x') - 1`: adding a character to a value held in an
-`nvarchar(4000)` column would truncate a 4,000-character value, so the length is taken over `nvarchar(max)`. It is evaluated only for rows past the cheap `skip` test, so it costs
-nothing for the rest.
+and take the distinct count over the select statement, which is the only second pass. For an `nvarchar` column the statements do not cast the path column: the classification runs
+on it directly. For a `varchar` column the statements convert it once per row, in one `CROSS APPLY (SELECT CAST([fa_t].<column> AS <nvarchar type>) AS [FaPath]) AS [fa_p]` right
+after `FROM <table> AS [fa_t]`, and the classification, the `DISTINCT` select (`AS [Path]`), the empty-ID read and the counts all use `[fa_p].[FaPath]` wherever they would use the
+column (an `nvarchar` column has no `[fa_p]`, and its statements are the ones described above). `<nvarchar type>` comes from the type check, below. The narrow cast inside the
+trim's length stays for both: `LEN(CAST(<path> AS nvarchar(max)) + N'x') - 1`, because adding a character to a value held in an `nvarchar(4000)` column would truncate a
+4,000-character value, so the length is taken over `nvarchar(max)`. It is evaluated only for rows past the cheap `skip` test, so it costs nothing for the rest.
 
-**The path column must be `nvarchar`.** Before counting (or, for the unindexed audit, before loading the index) the app reads the path column's type with
+**The path column must be `nvarchar` or `varchar`.** Before counting (or, for the unindexed audit, before loading the index) the app reads the path column's type with
 `sp_describe_first_result_set` on the statements' own SELECT shape, `SELECT TOP (0) [fa_t].<column> FROM <table> AS [fa_t];`, built from the same bracket-quoted names the
 statements use (so a schema, spaces or `]` in a name are found). The type is therefore read as the statements see it: permissions, synonyms (also to a table in another database)
 and views behave as they do for the statements. It is the column's *system* type (`system_type_name`; the user type name only for a user-defined CLR type, which is refused
-with its name) that must be `nvarchar`, of any length including `max`; so an alias type built on `nvarchar` passes, and a view whose column is `nvarchar` passes. `nchar`
-and every other type (`varchar`, `char`, `text`, `int`, `uniqueidentifier`, `varbinary`, …) are refused. The rule is the same for both audits: the unindexed audit does not need
-it today, and applies it for consistency, since the Epic 2 milestone that follows builds on it. The ID column is unrestricted and is still read as text. Two errors, both shown in
-the ordinary error dialogue, no report written, no row read (`PathColumnType.Check`):
+with its name) that must be `nvarchar` or `varchar`, of any length including `max`; so an alias type built on either passes, and a view whose column is either passes. What the
+audits then work on:
 
-- `The path column '<column>' is <type>. The File Auditor expects an nvarchar column.` (`Sql.PathColumnNotNvarchar`). `<type>` is the system type in lower case, with `(<n>)` for
-  `char`, `varchar`, `binary` and `varbinary` (`n` is `max_length`) and for `nchar` (`n` is `max_length / 2`), `(max)` when `max_length` is -1, and the bare name for any other type
-  (`int`).
+| Path column (system type)                                    | The audits work on                |
+|--------------------------------------------------------------|-----------------------------------|
+| `nvarchar(n)`, `nvarchar(max)`                               | the column itself, as it is       |
+| `varchar(n)`, `n` ≤ 4,000                                    | `CAST(<column> AS nvarchar(n))`   |
+| `varchar(n)`, `n` > 4,000, and `varchar(max)`                | `CAST(<column> AS nvarchar(max))` |
+| anything else (`char`, `nchar`, `text`, `ntext`, numbers, …) | refused                           |
+
+A `varchar(n)` holds at most *n* characters, so `nvarchar(n)` holds every value (UTF-8 collations included); `nvarchar(n)` stops at 4,000, hence `max` above it
+(`PathColumnType.Check` yields that type, or `null` for `nvarchar`, and the statements are built from it afterwards). A `varchar` column stores only the characters of its
+collation's code page, and anything else was stored as `?` when the row was written; `?` cannot appear in a Windows file name, so such a row can never match a real file, and the
+audits report it as they report any path that does not exist. The rule is the same for both audits. The ID column is unrestricted and is still read as text. Two errors, both
+shown in the ordinary error dialogue, no report written, no row read (`PathColumnType.Check`):
+
+- `The path column '<column>' is <type>. The File Auditor expects an nvarchar or varchar column.` (`Sql.PathColumnUnsupported`). `<type>` is the system type in lower case, with
+  `(<n>)` for `char`, `binary` and `varbinary` (`n` is `max_length`) and for `nchar` (`n` is `max_length / 2`), `(max)` when `max_length` is -1, and the bare name for any other
+  type (`int`).
 - `The path column '<column>' was not found in the table '<table>'.` (`Sql.PathColumnNotFound`), with `<column>` and `<table>` as typed. It is given when the first error SQL
   Server raises is 207 (invalid column name) or 208 (invalid object name); a table that cannot be found gives the same error.
 
-The lookup runs under each audit's existing first status (`Counting files...`, `Loading the index...`), with no status text of its own. Stop during it behaves as Stop while
+The lookup runs under each audit's existing first status (`Counting files...`, `Loading the index...`), with no status text of its own, and before the statements are built
+(they are built from its result). Stop during it behaves as Stop while
 counting or loading does (§6.4, §6.5.4): nothing is checked, so no report. Any other first error is `Sql.QueryFailed` with that error's message, as for any other statement: a
 missing permission on the table shows SQL Server's own error 229, not a "not found" message. (`sp_describe_first_result_set` raises the real error first and then a wrapper, 11501
 or 11529, which is ignored.) A wrong table or path column is thus covered by the two errors above; only a bad ID column, which the lookup does not touch, fails later as a plain
@@ -591,18 +607,18 @@ This section describes the missing-files audit; §6.5.4 gives the unindexed audi
   *Skipped* and the empty-path count are from the up-front counts and so are complete. Each tab's *Stop* button is enabled only on the running audit's tab; the menu item and Esc
   stop it from either tab (§5.8). If Stop is pressed while the rows are still being counted (before the count query returns), no report is written and the status bar reads
   `Stopped`: nothing has been checked, so there is nothing to report.
-- **SQL failure** (connection, a bad ID column, timeout; a bad table or path column, or a path column that is not `nvarchar`, gets the errors of §6.2): error dialog with the
-  message. If no rows were checked, no report is written, even though the up-front counts are known. If it fails mid-run, the report is written with
+- **SQL failure** (connection, a bad ID column, timeout; a bad table or path column, or a path column that is neither `nvarchar` nor `varchar`, gets the errors of §6.2): error
+  dialog with the message. If no rows were checked, no report is written, even though the up-front counts are known. If it fails mid-run, the report is written with
   `Result: Failed — <message>` and the counts so far. A failure of the empty-path ID read alone is not a failure of the audit: the report is still written and the group says why
   the IDs are missing (§7).
 - **Report write failure**: error dialog.
 - **What follows the run.** A run that **completes** shows the finished dialogue, with *The Missing Files audit has finished.*, a figures line `Missing: <m>    Unverified: <u>`
   (four spaces between the two, each value as the Audit group shows it at the end of the run, so *Unverified* keeps its bracket when the group shows one), then `The report was
   saved to:` and the report's full path. *View Report* opens the report the run wrote (the one captured at Start, not the selected tab's) through the same code as the Audit group's
-  *View Report*, including its error dialogue; *OK* closes the dialogue. A run that **fails** (a SQL failure or a report write failure; also a path column that is not `nvarchar`,
-  or not found, which the run refuses, §6.2) shows its error dialogue, now with the error sound and the flash. A run the user **stops**, before or after checking began, shows
-  nothing new, since they are at the window; that includes a Stop during `Reading empty paths...`, whose result stays *Completed*, and *Stop it and exit?* answered Yes (any
-  stop request skips the finished dialogue). Pre-flight errors, found before the run starts, get neither the sound nor the flash.
+  *View Report*, including its error dialogue; *OK* closes the dialogue. A run that **fails** (a SQL failure or a report write failure; also a path column that is neither
+  `nvarchar` nor `varchar`, or not found, which the run refuses, §6.2) shows its error dialogue, now with the error sound and the flash. A run the user **stops**, before or
+  after checking began, shows nothing new, since they are at the window; that includes a Stop during `Reading empty paths...`, whose result stays *Completed*, and *Stop it and
+  exit?* answered Yes (any stop request skips the finished dialogue). Pre-flight errors, found before the run starts, get neither the sound nor the flash.
 - **Closing the window mid-run**: a prompt, *"An audit is in progress. Stop it and exit?"*, with **Yes** and **No**. Yes stops the run, writes the report as
   `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same. If Yes is chosen before the count query returns, no report is written (as for
   Stop) and the application simply exits.
@@ -645,12 +661,16 @@ A match-every-file entry alone in File types, with an empty Exclude list, is acc
 
 #### 6.5.2 Loading the index
 
-Status `Loading the index...`. First the path column's type is checked, as §6.2 describes (it must be `nvarchar`; a column that is not, or is not found, is an error and nothing is
-loaded). Then only the path column is read (never the ID), forward-only and with no command timeout:
+Status `Loading the index...`. First the path column's type is checked, as §6.2 describes (it must be `nvarchar` or `varchar`; a column that is not, or is not found, is an error
+and nothing is loaded). Then only the path column is read (never the ID), forward-only and with no command timeout:
 
 ```sql
 SELECT DISTINCT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filter>;   -- every part bracket-quoted as in §6.2
 ```
+
+The selected value is always the raw column (the app decodes a `varchar` value into the right string and hashes that). A `varchar` column is converted only inside the filter,
+as `CAST([PathColumn] AS <nvarchar type of §6.2>)`, in every `LIKE` clause below (the prefix clauses and the white-space clause), because those clauses carry a `COLLATE` that
+would otherwise be applied to the `varchar` value before it meets the `nvarchar` parameters. With the filter dropped nothing is converted, and an `nvarchar` column never is.
 
 - **Prefix filter.** For one to 20 folders the statement asks SQL only for rows under those folders: one case-insensitive `LIKE '<folder>\%'` per folder (`COLLATE
   Latin1_General_100_CI_AS`, so a case-sensitive column collation cannot drop rows), with `|`, `%`, `_` and `[` escaped, joined with `OR`. The filter ignores *Include subfolders*
@@ -709,8 +729,8 @@ Status `Checking files...`.
   starting new listings, abandons the ones in progress (their files are not reported) and writes the report with `Result: Stopped by user`; the counts are what was found and
   checked, and there is no *Not checked* line, since the total is unknown. A Stop that arrives after the walk has finished but before the run reads its stop request produces a
   *Stopped by user* report for a complete walk; this is cosmetic.
-- **SQL failure** while loading the index (connection, timeout; a bad table or path column, or a path column that is not `nvarchar`, gets the errors of §6.2): an error
-  dialogue, and no report, since nothing has been walked. **Report write failure:** an error dialogue.
+- **SQL failure** while loading the index (connection, timeout; a bad table or path column, or a path column that is neither `nvarchar` nor `varchar`, gets the errors of §6.2):
+  an error dialogue, and no report, since nothing has been walked. **Report write failure:** an error dialogue.
 - **What follows the run** is as in §6.4, with the first line `The Unindexed Files audit has finished.` and the figures line `Unindexed: <n>    Unverified: <u>` (four spaces
   between the two, each as the Audit group shows it at the end of the run). Stop, before or after the walk, shows nothing new; a failure gets the error sound and the flash.
 - **Closing the window mid-run** asks the question of §6.4; *Yes* stops the run as above (no report if the index was still loading) and exits.
@@ -1086,7 +1106,8 @@ so ordinary builds and `dotnet run` are unchanged.
   Missing); the checker keeps its skip and empty tests as an unreachable safety net, and a stray one is recorded as *Unverified — Other errors* with the reason `Skip marker not
   recognised by the database` (reachable, because the checker's `OrdinalIgnoreCase` folds `ſkip` to `SKIP` where the database does not), so it is counted and listed; a failure of
   the empty-path ID read alone keeps the completed audit's report.
-- The nvarchar path column (Epic 2, milestone 1.1), settled with the user: the cast of the path column to `nvarchar(max)`, which made the classification type-agnostic but is the
+- The nvarchar path column (Epic 2, milestone 1.1; **its requirement that the column be `nvarchar` is superseded by milestone 4**, below, which accepts `varchar` too; the history
+  stays as it was), settled with the user: the cast of the path column to `nvarchar(max)`, which made the classification type-agnostic but is the
   costliest type to work on, is removed; the app expects an `nvarchar` path column, checked before any row is read, for both audits, with the two errors of §6.2; the ID column
   stays unrestricted. Decided by Claude (for the user to check): the check reads the column's system type, so an alias type over `nvarchar` is accepted and `nchar` is refused,
   since the user said `nvarchar` (a one-line change if wrong); the type is read under each audit's existing first status with no new status text, and Stop during it is the
@@ -1152,6 +1173,15 @@ so ordinary builds and `dotnet run` are unchanged.
   effort, so a failure is ignored and the dialogue still shows; the dialogue's *View Report* opens the report of the run that finished (captured at Start), not the selected
   tab's; any stop request skips the finished dialogue, including a Stop during `Reading empty paths...` whose result stays *Completed*;
   `Assets\Win95Icons\information32.png`, already in the project folder, gained its `AvaloniaResource` entry in the `.csproj`, as every image the app uses must have (§9).
+
+- The varchar path column (Epic 2, milestone 4, design `Docs/Specs/Epic-2-Audit-Optimisation/milestone-4-varchar-path-column-design.md`), settled with the user: `varchar(n)` and
+  `varchar(max)` path columns are accepted on both tabs and converted to `nvarchar` where the statements need it, which supersedes milestone 1.1's requirement of an `nvarchar`
+  column; only `varchar` is added (`char`, `nchar`, `text`, `ntext`, numbers and the rest stay refused); approach A, an explicit conversion once per statement, chosen over letting
+  SQL Server convert implicitly and over converting in the app (impossible for the counts); the reasoning behind converting inside the Unindexed folder filter (§6.5.2) is
+  recorded in the design but was not measured, by the user's decision; the version stays 2.0.0, since the app is not published (the `v2.0.0` tag's position is the user's
+  call). Decided by Claude (for the user to check): the refusal's wording is `... expects an nvarchar or varchar column.`; its code is renamed `Sql.PathColumnUnsupported`
+  (from `Sql.PathColumnNotNvarchar`) to match the rule; on the Missing tab the conversion is computed in one apply (`[fa_p]`, column `[FaPath]`) and everything else uses it, and
+  on the Unindexed tab it appears only in the folder filter, so the selected value stays the raw column and with no filter nothing is converted.
 
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
 that failed, found by walking the path (§6.3); the close-mid-run prompt.
