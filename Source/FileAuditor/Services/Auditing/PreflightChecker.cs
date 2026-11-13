@@ -8,6 +8,9 @@ namespace FileAuditor.Services.Auditing;
 /// <param name="projectSettingsService">Remembers which warnings were answered Continue this session.</param>
 public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsService projectSettingsService)
 {
+    /// <summary>The longest the varchar warning's type lookup may take; past it the warning is skipped and the run's own check decides.</summary>
+    private static readonly TimeSpan VarcharLookupTimeout = TimeSpan.FromSeconds(30);
+
     /// <summary>
     ///     Runs the checks in order: identifiers, the two reports' custom names, the Unindexed direction's folders and file types, custom file name, custom location form, report
     ///     folder, existing report, then the varchar path column warning (last, and only while it is unanswered for the current column).
@@ -158,12 +161,15 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
                 return true;
             }
 
-            // Off the UI thread: opening a connection does some work synchronously (name resolution, authentication) before its first await, as the runs also allow for.
+            // Off the UI thread: opening a connection does some work synchronously (name resolution, authentication) before its first await, as the runs also allow for. The
+            // lookup has no command timeout of its own, so a blocked one is cancelled here; the cancellation lands in the catch below, and the run then reports what it finds.
+            using CancellationTokenSource timeout = new(VarcharLookupTimeout);
+
             ErrorOr<(string TypeName, short MaxLength)?> read =
                 await Task.Run(() => IndexTableReader.ReadPathColumnTypeAsync(ConnectionStrings.Build(settings.Server, settings.Database),
                                                                               quoted.Value.QuotedTable,
                                                                               quoted.Value.QuotedPathColumn,
-                                                                              CancellationToken.None));
+                                                                              timeout.Token));
 
             if (read.IsError
                 || read.Value is null)
