@@ -98,7 +98,7 @@ say.
 | Missing report file (custom)        | `FileAuditorMissingReport.txt` (default, editable)   |
 | Unindexed report file (built)       | `FileAuditorUnindexedReport_<Audit Stage>.txt`       |
 | Unindexed report file (custom)      | `FileAuditorUnindexedReport.txt` (default, editable) |
-| Version                             | 1.0.0                                                |
+| Version                             | 2.0.0                                                |
 | Company / copyright                 | MediQuant / Copyright © 2026 MediQuant               |
 
 The existing `Source/FileChecker/` template project and `MediQuant.FileChecker.slnx` are renamed accordingly. The Git repository and its folder keep their current name (renaming
@@ -408,7 +408,7 @@ that tab, the message reads `Ready` only while that tab's **Start** is enabled, 
 
 ### 5.7 About box
 
-A small modal, fixed-size Win9x About dialog: the app icon, **File Auditor**, **Version 1.0.0**, **Copyright © 2026 MediQuant**, and an **OK** button.
+A small modal, fixed-size Win9x About dialog: the app icon, **File Auditor**, **Version 2.0.0**, **Copyright © 2026 MediQuant**, and an **OK** button.
 
 ### 5.8 Command states
 

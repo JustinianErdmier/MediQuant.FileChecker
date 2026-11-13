@@ -7,7 +7,7 @@
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <AssemblyName>FileAuditor</AssemblyName>
         <RootNamespace>FileAuditor</RootNamespace>
-        <Version>1.0.0</Version>
+        <Version>2.0.0</Version>
         <Product>File Auditor</Product>
         <Company>MediQuant</Company>
         <Copyright>Copyright © 2026 MediQuant</Copyright>
