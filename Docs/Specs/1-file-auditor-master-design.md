@@ -529,11 +529,10 @@ shown in the ordinary error dialogue, no report written, no row read (`PathColum
   Server raises is 207 (invalid column name) or 208 (invalid object name); a table that cannot be found gives the same error.
 
 The lookup runs under each audit's existing first status (`Counting files...`, `Loading the index...`), with no status text of its own, and before the statements are built
-(they are built from its result). Stop during it behaves as Stop while
-counting or loading does (§6.4, §6.5.4): nothing is checked, so no report. Any other first error is `Sql.QueryFailed` with that error's message, as for any other statement: a
-missing permission on the table shows SQL Server's own error 229, not a "not found" message. (`sp_describe_first_result_set` raises the real error first and then a wrapper, 11501
-or 11529, which is ignored.) A wrong table or path column is thus covered by the two errors above; only a bad ID column, which the lookup does not touch, fails later as a plain
-SQL error.
+(they are built from its result). Stop during it behaves as Stop while counting or loading does (§6.4, §6.5.4): nothing is checked, so no report. Any other first error is
+`Sql.QueryFailed` with that error's message, as for any other statement: a missing permission on the table shows SQL Server's own error 229, not a "not found" message.
+(`sp_describe_first_result_set` raises the real error first and then a wrapper, 11501 or 11529, which is ignored.) A wrong table or path column is thus covered by the two errors
+above; only a bad ID column, which the lookup does not touch, fails later as a plain SQL error.
 
 The stream is `DISTINCT` because many index tables are built around patients rather than files, so one path can sit on many rows; each path is read and checked once. With an ID
 column the distinct unit is the path and ID pair, so the ID column is expected to be **unique to its path** (one ID per file). The app does not check that: an ID that varies
@@ -1107,17 +1106,17 @@ so ordinary builds and `dotnet run` are unchanged.
   recognised by the database` (reachable, because the checker's `OrdinalIgnoreCase` folds `ſkip` to `SKIP` where the database does not), so it is counted and listed; a failure of
   the empty-path ID read alone keeps the completed audit's report.
 - The nvarchar path column (Epic 2, milestone 1.1; **its requirement that the column be `nvarchar` is superseded by milestone 4**, below, which accepts `varchar` too; the history
-  stays as it was), settled with the user: the cast of the path column to `nvarchar(max)`, which made the classification type-agnostic but is the
-  costliest type to work on, is removed; the app expects an `nvarchar` path column, checked before any row is read, for both audits, with the two errors of §6.2; the ID column
-  stays unrestricted. Decided by Claude (for the user to check): the check reads the column's system type, so an alias type over `nvarchar` is accepted and `nchar` is refused,
-  since the user said `nvarchar` (a one-line change if wrong); the type is read under each audit's existing first status with no new status text, and Stop during it is the
-  stop-before-checking of §6.4 and §6.5.4. One cast remains, inside the trim's length and only for rows past the `skip` prefilter, because without it a 4,000-character value in an
-  `nvarchar(4000)` column is truncated by the added character (a skip marker padded to 4,000 characters was misclassified, and one with 3,996 trailing spaces failed the whole audit
-  with error 537). Measured on 200,000 rows in LocalDB, with the cast and without it: the counts statement 1,154 to 589 ms (about 620 to 850 ms on a later, noisier run), the
-  stream 1,654 to 1,385 ms, the empty-ID read 498 to 238 ms; these headline figures were taken on the fully cast-free statements, before the narrow `LEN` cast was restored. The
-  final statements, re-timed on a separately generated 200,000-row `nvarchar(400)` table (140,000 real paths, 40,000 empty, 20,000 `SKIP`), three runs each in LocalDB on a
-  different day: the counts statement 2,211, 1,796 and 1,490 ms (the first run is cold) and the stream (distinct real rows, with an ID column) 1,530, 1,243 and 1,232 ms. These
-  are not comparable with the figures above (different data and machine load), and say nothing about the cast; the type lookup was not timed.
+  stays as it was), settled with the user: the cast of the path column to `nvarchar(max)`, which made the classification type-agnostic but is the costliest type to work on, is
+  removed; the app expects an `nvarchar` path column, checked before any row is read, for both audits, with the two errors of §6.2; the ID column stays unrestricted. Decided by
+  Claude (for the user to check): the check reads the column's system type, so an alias type over `nvarchar` is accepted and `nchar` is refused, since the user said `nvarchar` (a
+  one-line change if wrong); the type is read under each audit's existing first status with no new status text, and Stop during it is the stop-before-checking of §6.4 and §6.5.4.
+  One cast remains, inside the trim's length and only for rows past the `skip` prefilter, because without it a 4,000-character value in an `nvarchar(4000)` column is truncated by
+  the added character (a skip marker padded to 4,000 characters was misclassified, and one with 3,996 trailing spaces failed the whole audit with error 537). Measured on 200,000
+  rows in LocalDB, with the cast and without it: the counts statement 1,154 to 589 ms (about 620 to 850 ms on a later, noisier run), the stream 1,654 to 1,385 ms, the empty-ID read
+  498 to 238 ms; these headline figures were taken on the fully cast-free statements, before the narrow `LEN` cast was restored. The final statements, re-timed on a separately
+  generated 200,000-row `nvarchar(400)` table (140,000 real paths, 40,000 empty, 20,000 `SKIP`), three runs each in LocalDB on a different day: the counts statement 2,211, 1,796
+  and 1,490 ms (the first run is cold) and the stream (distinct real rows, with an ID column) 1,530, 1,243 and 1,232 ms. These are not comparable with the figures above (different
+  data and machine load), and say nothing about the cast; the type lookup was not timed.
 - The path column's type lookup (Epic 2, milestone 1.1, final review), decided by Claude (for the user to check): the type is read from the result-set metadata of the statements'
   own SELECT shape (`sp_describe_first_result_set`, §6.2) rather than from the catalogue views, so permissions, synonyms (also to another database) and views behave as the
   statements do. A first error of 207 or 208 is "not found", unless a 4413 follows (a view that no longer binds, whose message is shown as it is); any other error, such as
