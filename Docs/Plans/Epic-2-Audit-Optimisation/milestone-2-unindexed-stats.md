@@ -87,12 +87,12 @@ Before Task 1 the controller creates branch `feat/milestone-2-unindexed-stats` f
 **Files:** Modify `Docs/Specs/1-file-auditor-master-design.md`, `Docs/UserGuide.md`, `Docs/UserInterfaceDesign/Mockups/row-accounting-stats.html`,
 `Docs/UserInterfaceDesign/Mockups/unindexed-report-layout.html`
 
-- [ ] **Step 1: SDD.** §5.4a (the layout and the two statistics' meaning), §6.5.2 (Index paths counted as keys are added), §6.5.3 (Excluded counted by the walk), §6.5.4 (Stop
+- [x] **Step 1: SDD.** §5.4a (the layout and the two statistics' meaning), §6.5.2 (Index paths counted as keys are added), §6.5.3 (Excluded counted by the walk), §6.5.4 (Stop
   shows what was reached), §7.1 (the Summary block and its bullet), §10 (this milestone's calls, from the design's §3 and §5). Remove anything this makes false, including the
   "Total files and Indexed on the left" wording.
-- [ ] **Step 2: User guide.** The Unindexed statistics table (~line 475) and the sample Summary (~line 518): add both, in the new order. One line says Index paths is the paths
+- [x] **Step 2: User guide.** The Unindexed statistics table (~line 475) and the sample Summary (~line 518): add both, in the new order. One line says Index paths is the paths
   loaded to compare against: the rows under the folders plus any that start with a space, or the whole table with more than 20 folders. A short FAQ entry: why Total files is
   smaller than the files Explorer shows (Excluded, hidden and system files). Hard-wrap at 180 characters.
-- [ ] **Step 3: Mock-ups.** `unindexed-report-layout.html`: the Summary block. `row-accounting-stats.html`: add a panel for the Unindexed Audit group's statistics, in the
+- [x] **Step 3: Mock-ups.** `unindexed-report-layout.html`: the Summary block. `row-accounting-stats.html`: add a panel for the Unindexed Audit group's statistics, in the
   layout and style of the Missing Files panel already there.
-- [ ] **Step 4: Commit** — `docs(📝): document the unindexed audit's new statistics`.
+- [x] **Step 4: Commit** — `docs(📝): document the unindexed audit's new statistics`.
