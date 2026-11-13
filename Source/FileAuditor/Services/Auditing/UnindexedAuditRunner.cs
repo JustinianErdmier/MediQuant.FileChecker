@@ -8,8 +8,8 @@ public static class UnindexedAuditRunner
     /// <param name="progress">Receives the live statistics.</param>
     /// <param name="cancellationToken">Stops the run; once the walk has started, whatever was found is reported.</param>
     /// <returns>
-    ///     The report that was written for a completed or stopped audit; a <c>Sql.PathColumnNotFound</c> or <c>Sql.PathColumnNotNvarchar</c> error when the path column is
-    ///     missing or is not <c>nvarchar</c>; a SQL error when loading the index failed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while the index was
+    ///     The report that was written for a completed or stopped audit; a <c>Sql.PathColumnNotFound</c> or <c>Sql.PathColumnUnsupported</c> error when the path column is
+    ///     missing or is neither <c>nvarchar</c> nor <c>varchar</c>; a SQL error when loading the index failed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while the index was
     ///     loading; or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
     public static async Task<ErrorOr<UnindexedReport>> RunAsync(AuditRequest request, UnindexedProgress progress, CancellationToken cancellationToken)
@@ -34,13 +34,11 @@ public static class UnindexedAuditRunner
             entered.TryAdd(FolderWalker.NormaliseFolder(folder.Path), folder.Path);
         }
 
-        ErrorOr<PathQuery> built = QueryBuilder.BuildPaths(settings.Table,
-                                                           settings.PathColumn,
-                                                           [.. folders.Select(folder => folder.Path)]);
+        ErrorOr<(string QuotedTable, string QuotedPathColumn)> target = QueryBuilder.QuoteTarget(settings.Table, settings.PathColumn);
 
-        if (built.IsError)
+        if (target.IsError)
         {
-            return built.Errors;
+            return target.Errors;
         }
 
         progress.Phase = "Loading the index...";
@@ -53,8 +51,8 @@ public static class UnindexedAuditRunner
             string connectionString = ConnectionStrings.Build(settings.Server, settings.Database);
 
             ErrorOr<(string TypeName, short MaxLength)?> columnType = await IndexTableReader.ReadPathColumnTypeAsync(connectionString,
-                                                                                                                      built.Value.QuotedTable,
-                                                                                                                      built.Value.QuotedPathColumn,
+                                                                                                                      target.Value.QuotedTable,
+                                                                                                                      target.Value.QuotedPathColumn,
                                                                                                                       cancellationToken);
 
             if (columnType.IsError)
@@ -62,11 +60,21 @@ public static class UnindexedAuditRunner
                 return columnType.Errors;
             }
 
-            ErrorOr<Success> typeChecked = PathColumnType.Check(settings.Table, settings.PathColumn, columnType.Value);
+            ErrorOr<string?> convertTo = PathColumnType.Check(settings.Table, settings.PathColumn, columnType.Value);
 
-            if (typeChecked.IsError)
+            if (convertTo.IsError)
             {
-                return typeChecked.Errors;
+                return convertTo.Errors;
+            }
+
+            ErrorOr<PathQuery> built = QueryBuilder.BuildPaths(settings.Table,
+                                                               settings.PathColumn,
+                                                               [.. folders.Select(folder => folder.Path)],
+                                                               convertTo.Value);
+
+            if (built.IsError)
+            {
+                return built.Errors;
             }
 
             loaded = await IndexTableReader.ReadPathsAsync(connectionString, built.Value,

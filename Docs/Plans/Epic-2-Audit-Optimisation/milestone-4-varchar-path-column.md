@@ -70,13 +70,13 @@ Before Task 1 the controller creates branch `feat/milestone-4-varchar-path-colum
   `QueryBuilder.BuildPaths(string table, string pathColumn, IReadOnlyList<string> folders, string? convertTo)`.
 - Changes: `SqlErrors.PathColumnNotNvarchar` → `SqlErrors.PathColumnUnsupported` (code `Sql.PathColumnUnsupported`), with the new copy.
 
-- [ ] **Step 1: Check first.** Both runners: `QuoteTarget`, read the type, `Check`, then `Build` / `BuildPaths` with the result. Remove `QuotedTable` / `QuotedPathColumn` from
+- [x] **Step 1: Check first.** Both runners: `QuoteTarget`, read the type, `Check`, then `Build` / `BuildPaths` with the result. Remove `QuotedTable` / `QuotedPathColumn` from
   `AuditQuery` and `PathQuery` if nothing else uses them.
-- [ ] **Step 2: Missing Files statements.** The `[fa_p]` apply when `convertTo` is not `null`; every reference to `[fa_t].<column>` in the classification, the select, the
+- [x] **Step 2: Missing Files statements.** The `[fa_p]` apply when `convertTo` is not `null`; every reference to `[fa_t].<column>` in the classification, the select, the
   empty-ID read and the counts becomes the path reference (`[fa_p].[FaPath]` or the column). Update the method's comments and `<remarks>`.
-- [ ] **Step 3: Unindexed statement.** The filter's `LIKE` clauses use `CAST(<column> AS <convertTo>)` when `convertTo` is not `null`; the select is unchanged. Update the XML
+- [x] **Step 3: Unindexed statement.** The filter's `LIKE` clauses use `CAST(<column> AS <convertTo>)` when `convertTo` is not `null`; the select is unchanged. Update the XML
   docs.
-- [ ] **Step 4: Verify.** Clean build. In LocalDB scratch database `FileAuditorE2M4Scratch` (dropped at the end), with a harness in the scratchpad calling the real
+- [x] **Step 4: Verify.** Clean build. In LocalDB scratch database `FileAuditorE2M4Scratch` (dropped at the end), with a harness in the scratchpad calling the real
   `IndexTableReader`, `PathColumnType`, `QueryBuilder` and runners:
     - milestone 1's boundary seed (milestone 1's plan, Task 1 Step 3) in a `varchar(400)` table (`Latin1_General_CI_AS`) and an `nvarchar(400)` copy made with
       `INSERT … SELECT`: counts, selected rows and empty IDs identical, with and without an ID column; and the seed in its original `nvarchar(400)` table still gives T 22, E 5,
@@ -85,7 +85,7 @@ Before Task 1 the controller creates branch `feat/milestone-4-varchar-path-colum
     - for an `nvarchar` column, `Build` and `BuildPaths` return exactly the statements `main` builds (compare strings against `git show main:…` built by the same harness);
     - an Unindexed run (harness or app) on a `varchar(400)` table with a one-folder filter: the same Indexed / Unindexed result as its `nvarchar` copy.
   Run the app once on each tab against the `varchar(400)` table to completion, and once against a `char(10)` column for the refusal dialogue (read by UI Automation). Close the app.
-- [ ] **Step 5: Commit** — `feat(✨): accept a varchar path column and convert it to nvarchar`.
+- [x] **Step 5: Commit** — `feat(✨): accept a varchar path column and convert it to nvarchar`.
 
 ### Task 2: SDD, user guide and changelog
 

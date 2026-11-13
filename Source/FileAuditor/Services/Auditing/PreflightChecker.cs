@@ -14,7 +14,7 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
     /// <returns>The resolved report path when the run may start; <see langword="null" /> when a check failed or the user declined (the user has been told).</returns>
     public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirections direction)
     {
-        ErrorOr<AuditQuery> query = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn);
+        ErrorOr<AuditQuery> query = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn, convertTo: null);
 
         if (query.IsError)
         {
