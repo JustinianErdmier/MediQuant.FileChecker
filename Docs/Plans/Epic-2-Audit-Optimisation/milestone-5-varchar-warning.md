@@ -75,9 +75,9 @@ formatting is made reusable for `<type>`.
 
 **Files:** Modify `Docs/Specs/1-file-auditor-master-design.md`, `Docs/UserGuide.md`
 
-- [ ] **Step 1: SDD.** §6.1 (the warning, its position, the remembered column, the silent cases, and the changed "before touching the database" principle), §6.5.1 if it lists the
+- [x] **Step 1: SDD.** §6.1 (the warning, its position, the remembered column, the silent cases, and the changed "before touching the database" principle), §6.5.1 if it lists the
   warnings, §8.1 (the remembered answers), §10 (this milestone's calls, from the design and the ledger). Remove anything this makes false.
-- [ ] **Step 2: User guide.** New section **8.4 varchar Path Columns** with the four parts of the design's §6 (the warning; how the conversion works; why it is done; possible
+- [x] **Step 2: User guide.** New section **8.4 varchar Path Columns** with the four parts of the design's §6 (the warning; how the conversion works; why it is done; possible
   effects); section 3.1 keeps the accepted types and points to 8.4; section 9 gains an entry for the warning; the **2.0.0 changelog entry** mentions the warning. Keep the
   version 2.0.0. Hard-wrap at 180 characters, reflowing whole paragraphs.
-- [ ] **Step 3: Commit** — `docs(📝): document the varchar warning`.
+- [x] **Step 3: Commit** — `docs(📝): document the varchar warning`.
