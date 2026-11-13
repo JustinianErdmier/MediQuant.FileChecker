@@ -82,7 +82,7 @@ public static class QueryBuilder
         // The one remaining cast, inside the length in [fa_n]: LEN ignores trailing spaces, so N'x' is appended to count them, and on an nvarchar(4000) column that
         // concatenation would be silently truncated to 4,000 characters, giving a wrong length for a 4,000-character value. It sits in [fa_n], which runs only for rows
         // past the "skip" test.
-        // SUBSTRING, REVERSE and PATINDEX do not concatenate, so they are exact on the column itself.
+        // SUBSTRING, REVERSE and PATINDEX do not concatenate, so they are exact on the path value itself (the column, or its converted value).
         // A varchar column is converted once per row, in the apply [fa_p] right after the FROM (its value is [fa_p].[FaPath]); every use of the path below, and in the
         // statements built from the source, goes through pathRef, so the conversion is written once. An nvarchar column has no [fa_p] and is referenced as it is.
         // The aliases are deliberately unlikely names and the table's columns are always qualified, so a table or column named like an alias cannot collide.

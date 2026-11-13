@@ -41,14 +41,14 @@ public static class PathColumnType
     /// <summary>Formats a system type for the error text: lower case, with its length for the types that have one.</summary>
     /// <param name="typeName">The system type name.</param>
     /// <param name="maxLength">The column's <c>max_length</c> in bytes, or -1 for <c>max</c>.</param>
-    /// <returns>For example <c>varchar(400)</c>, <c>nchar(10)</c>, <c>varbinary(max)</c> or <c>int</c>.</returns>
+    /// <returns>For example <c>char(10)</c>, <c>nchar(10)</c>, <c>varbinary(max)</c> or <c>int</c>.</returns>
     private static string Format(string typeName, short maxLength)
     {
         string name = typeName.ToLowerInvariant();
 
         switch (name)
         {
-            case "char" or "varchar" or "binary" or "varbinary":
+            case "char" or "binary" or "varbinary":
                 return maxLength is -1 ? $"{name}(max)" : $"{name}({maxLength})";
 
             case "nchar":

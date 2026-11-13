@@ -9,8 +9,8 @@ public static class UnindexedAuditRunner
     /// <param name="cancellationToken">Stops the run; once the walk has started, whatever was found is reported.</param>
     /// <returns>
     ///     The report that was written for a completed or stopped audit; a <c>Sql.PathColumnNotFound</c> or <c>Sql.PathColumnUnsupported</c> error when the path column is
-    ///     missing or is neither <c>nvarchar</c> nor <c>varchar</c>; a SQL error when loading the index failed; <see cref="AuditErrors.StoppedBeforeChecking" /> when stopped while the index was
-    ///     loading; or <c>Report.Unwritable</c> when the report could not be written.
+    ///     missing or is neither <c>nvarchar</c> nor <c>varchar</c>; a SQL error when loading the index failed; <see cref="AuditErrors.StoppedBeforeChecking" /> when
+    ///     stopped while the index was loading; or <c>Report.Unwritable</c> when the report could not be written.
     /// </returns>
     public static async Task<ErrorOr<UnindexedReport>> RunAsync(AuditRequest request, UnindexedProgress progress, CancellationToken cancellationToken)
     {
