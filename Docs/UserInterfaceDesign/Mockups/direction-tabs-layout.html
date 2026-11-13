@@ -133,7 +133,7 @@
     .w95 .stats {
         display:               grid;
         gap:                   0 10px;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
         margin:                2px 0 3px;
     }
 
@@ -191,15 +191,15 @@
 </style>
 
 <h2>Layout A, revised — the same window on each tab</h2>
-<p class="subtitle">Database and File Index Table (including ID column) are shared above the tabs. Each tab has a complete Report group, its own options and its own Audit
-                    group.</p>
+<p class="subtitle">Database, File Index Table (including ID column) and Project Settings are shared above the tabs. Each tab has a complete Report group, its own options and
+                    its own Audit group. Updated after Epic 2's milestone 2 to the current statistics of both Audit groups.</p>
 <p class="legend"><span class="m">Yellow</span> = the same value on both tabs (change it on one, the other follows). <span class="o">Red dashed</span> = belongs to that tab only.
 </p>
 
 <div class="split">
 
     <div class="mockup">
-        <div class="mockup-header">Missing Files tab (today's audit)</div>
+        <div class="mockup-header">Missing Files tab</div>
         <div class="mockup-body">
             <div class="w95">
                 <div class="title">File Auditor</div>
@@ -214,6 +214,11 @@
                     <div class="row"><span class="lbl">Table:</span><span class="box"></span></div>
                     <div class="row"><span class="lbl">Path column:</span><span class="box"></span></div>
                     <div class="row"><span class="lbl">ID column:</span><span class="box"></span><span class="dim">(Optional)</span></div>
+                </fieldset>
+                <fieldset>
+                    <legend>Project Settings</legend>
+                    <div class="row"><span class="cb on">Save project settings</span></div>
+                    <div class="row dim" style="font-size:10px">Saved as FileAuditorSettings.json in the same folder as the audit reports.</div>
                 </fieldset>
                 <div class="tabs"><span class="tab active">Missing Files</span><span class="tab">Unindexed Files</span></div>
                 <div class="sheet">
@@ -229,11 +234,15 @@
                         <div class="row mirror dim">[Project Stage] [Audit Stage]</div>
                         <div class="row mirror"><span class="lbl">Location:</span><span class="box ro">U:\Projects\D12345\DE\Final\</span></div>
                         <div class="row own"><span class="lbl">File name:</span><span class="box ro">FileAuditorMissingReport_Interim.txt</span></div>
-                        <div class="row mirror"><span class="cb on">Save project settings with the report</span></div>
                     </fieldset>
                     <fieldset class="own">
                         <legend>Audit</legend>
-                        <div class="stats dim"><span>Total files:</span><span>Elapsed:</span><span>Checked:</span><span>Remaining:</span></div>
+                        <div class="stats dim">
+                            <span>Total files:</span><span>Found:</span><span>Elapsed:</span>
+                            <span>Duplicates:</span><span>Missing:</span><span>Remaining:</span>
+                            <span>Checked:</span><span>Unverified:</span><span>Files/second:</span>
+                            <span></span><span>Skipped:</span><span></span>
+                        </div>
                         <div class="bar"></div>
                         <div class="row"><span class="btn dis">View Report</span><span style="flex:1"></span><span class="btn">Start</span><span class="btn dis">Stop</span></div>
                     </fieldset>
@@ -247,7 +256,7 @@
     </div>
 
     <div class="mockup">
-        <div class="mockup-header">Unindexed Files tab (new)</div>
+        <div class="mockup-header">Unindexed Files tab</div>
         <div class="mockup-body">
             <div class="w95">
                 <div class="title">File Auditor</div>
@@ -263,6 +272,11 @@
                     <div class="row"><span class="lbl">Path column:</span><span class="box"></span></div>
                     <div class="row"><span class="lbl">ID column:</span><span class="box"></span><span class="dim">(Optional)</span></div>
                 </fieldset>
+                <fieldset>
+                    <legend>Project Settings</legend>
+                    <div class="row"><span class="cb on">Save project settings</span></div>
+                    <div class="row dim" style="font-size:10px">Saved as FileAuditorSettings.json in the same folder as the audit reports.</div>
+                </fieldset>
                 <div class="tabs"><span class="tab">Missing Files</span><span class="tab active">Unindexed Files</span></div>
                 <div class="sheet">
                     <fieldset class="own">
@@ -274,6 +288,7 @@
                         <div class="row"><span class="btn">Add...</span><span class="btn">Remove</span><span class="dim"
                                                                                                              style="font-size:10px">✓ = include subfolders</span></div>
                         <div class="row"><span class="lbl">File types:</span><span class="box">.pdf .tif .tiff .jpg .png .docx …</span><span class="btn">Edit...</span></div>
+                        <div class="row"><span class="lbl">Exclude:</span><span class="box"></span><span class="btn">Edit...</span></div>
                     </fieldset>
                     <fieldset>
                         <legend>Report</legend>
@@ -283,11 +298,15 @@
                         <div class="row mirror dim">[Project Stage] [Audit Stage]</div>
                         <div class="row mirror"><span class="lbl">Location:</span><span class="box ro">U:\Projects\D12345\DE\Final\</span></div>
                         <div class="row own"><span class="lbl">File name:</span><span class="box ro">FileAuditorUnindexedReport_Interim.txt</span></div>
-                        <div class="row mirror"><span class="cb on">Save project settings with the report</span></div>
+                        <div class="row own">Group file types by: <span class="cb on">Listed type</span> <span class="cb">Found extension</span></div>
                     </fieldset>
                     <fieldset class="own">
                         <legend>Audit</legend>
-                        <div class="stats dim"><span>Total files:</span><span>Elapsed:</span><span>Checked:</span><span>Remaining:</span></div>
+                        <div class="stats dim">
+                            <span>Total files:</span><span>Indexed:</span><span>Elapsed:</span>
+                            <span>Excluded:</span><span>Unindexed:</span><span>Files/second:</span>
+                            <span>Index paths:</span><span>Unverified:</span><span></span>
+                        </div>
                         <div class="bar"></div>
                         <div class="row"><span class="btn dis">View Report</span><span style="flex:1"></span><span class="btn">Start</span><span class="btn dis">Stop</span></div>
                     </fieldset>
@@ -302,5 +321,6 @@
 
 </div>
 
-<p class="note">Questions this raises (answer in the terminal): is the <em>Save project settings</em> checkbox mirrored too, as shown? And with a custom location, does each tab
-                keep its own custom file name (shown), defaulting to <code>FileAuditorMissingReport.txt</code> / <code>FileAuditorUnindexedReport.txt</code>?</p>
+<p class="note">With a custom location, each tab keeps its own custom file name, defaulting to <code>FileAuditorMissingReport.txt</code> /
+                <code>FileAuditorUnindexedReport.txt</code>. <em>Save project settings</em> is one setting for the whole project, in its own group above the tabs. The SDD §5 is the
+                contract for every detail shown here.</p>
