@@ -74,9 +74,10 @@ Decisions taken without the user, each with what it costs if wrong.
 
 ## Outstanding items
 
-- **Candidate follow-up milestone:** `DISTINCT` on the path value follows Unicode comparison rules under a SQL collation. On a `SQL_Latin1_General_CP1_CI_AS` column, `Straße.pdf`
-  and `Strasse.pdf` collapse into one row, so the Missing Files audit checks only one of two different files. `nvarchar` columns already behaved this way before this milestone,
-  so it is not a regression. Fixing it (a binary `DISTINCT`) changes `nvarchar` behaviour and needs its own design.
+- **Parked; brainstorm only if it is met in practice** (the user's decision, 2026-11-13: files with `ß` and similar are expected to be rare). `DISTINCT` on the path value follows
+  Unicode comparison rules under a SQL collation. On a `SQL_Latin1_General_CP1_CI_AS` column, `Straße.pdf` and `Strasse.pdf` collapse into one row, so the Missing Files audit
+  checks only one of two different files. `nvarchar` columns already behaved this way before this milestone, so it is not a regression. Fixing it (a binary `DISTINCT`) changes
+  `nvarchar` behaviour and needs its own design.
 - **Tag:** `v2.0.0` still points at `1836c90`. Moving it to include this milestone is the user's call (design §8).
 
 ## Incidents
