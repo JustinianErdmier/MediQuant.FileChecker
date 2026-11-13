@@ -481,9 +481,9 @@ Press **Start**. After the pre-flight checks and the save rule, the app:
 | Elapsed      | Time since you pressed Start.                                                                                                   |
 | Files/second | The run's average, then, once the walk has run for 5 seconds, the recent speed in brackets.                                     |
 
-*Index paths* is the paths the app loaded to compare against, not the rows of the whole table: it is the rows under your folders, plus any whose path starts with a space, or the
-whole table when you have more than 20 folders (section 8). A file without an extension (such as `README`) matches no file type, so it counts as *Excluded*; hidden and system
-files are skipped before that and are in no count.
+*Index paths* is the paths the app loaded to compare against, not the rows of the whole table: it is the rows under your folders, plus any whose path starts with a space or
+tab, or the whole table when you have more than 20 folders (section 8). A file without an extension (such as `README`) matches no file type, so it counts as *Excluded*;
+hidden and system files are skipped before that and are in no count.
 
 There is **no Remaining** and **no percentage**: the app cannot know how many files there are until it has walked every folder. Instead, the progress bar shows a marquee from left
 to right whilst the audit runs, and fills up when it ends.

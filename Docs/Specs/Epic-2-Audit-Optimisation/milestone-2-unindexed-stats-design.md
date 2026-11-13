@@ -42,7 +42,8 @@ Missing layout"), not the user's, so nothing is lost by moving it. Values are fo
 
 **Excluded.** The files the walk met and skipped because no *File types* entry matches them or an *Exclude* entry does.
 
-- Excluded is **never part of Total files**: an excluded file is not checked. So Total files + Excluded = every file the walk met that is not hidden or system.
+- Excluded is **never part of Total files**: an excluded file is not checked. So Total files + Excluded = every file the walk met that is not hidden or system, except a
+  symbolic-link file of a checked type and an entry whose link status cannot be read, which are *Unverified* and in neither count (corrected after the final review).
 - Hidden and system files are **not** counted: the walk skips them by an older rule, before any filter decision.
 - A file with no extension (`README`, `.gitignore`) matches no entry, so it is Excluded.
 - A symbolic-link file of an excluded type is Excluded, not *Link not followed*: the type filter runs first, as today.

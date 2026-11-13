@@ -217,9 +217,9 @@ The diagram shows the Missing Files tab with the Report group in its built state
 │ │ │ Group file types by: (•) Listed type  ( ) Found extension  │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
 │ │ ┌ Audit ─────────────────────────────────────────────────────┐ │ │
-│ │ │ Total files: 4,820  Indexed:  4,800 Elapsed:      00:01:29 │ │ │
-│ │ │ Excluded:      312  Unindexed:   20 Files/second: 54 (55)  │ │ │
-│ │ │ Index paths: 4,804  Unverified:   3                        │ │ │
+│ │ │ Total files: 500   Indexed:    480  Elapsed:      00:00:50 │ │ │
+│ │ │ Excluded:    31    Unindexed:  20   Files/second: 10 (11)  │ │ │
+│ │ │ Index paths: 484   Unverified: 3                           │ │ │
 │ │ │ [            ██████████                        ]           │ │ │
 │ │ │ [View Report]                      [Start]  [Stop]         │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
@@ -1122,8 +1122,8 @@ so ordinary builds and `dotnet run` are unchanged.
   paths* is the distinct trimmed, case-folded keys of the path set, counted as they are added, so it is live during the load; with the folder filter on it includes the rows
   that start with white space, and with it off the whole table. Both were built by approach A (the walk's third callback; `IndexPathSet.Add` reporting a new path), chosen over a
   private tally returned at the end and over reading the set's size after the load, because both keep the figures live. *Found*, *Duplicates* and a *Not on disk* statistic were
-  considered and left out. Decided by Claude (for the user to check): *Indexed* moved from the first column to the top of the centre one, because its place there was Claude's own
-  call by analogy (ruling R6 of Epic 1's milestone 5), not the user's. The design's section 6 records four possible optimisations of the index load and walk, none measured and
+  considered and left out. *Indexed* moved from the first column to the top of the centre one at the user's request; its old place was Claude's own call by analogy (ruling R6
+  of Epic 1's milestone 5), not the user's. The design's section 6 records four possible optimisations of the index load and walk, none measured and
   none built.
 
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
