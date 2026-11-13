@@ -24,7 +24,9 @@ public static class WindowAttention
     /// <summary>Keeps flashing until the window comes to the foreground (<c>FLASHW_TIMERNOFG</c>).</summary>
     private const uint FlashUntilForeground = 0xC;
 
-    /// <summary>Plays the sound for an icon and, when the window is not active, flashes its taskbar button until it comes to the foreground. The window is never activated.</summary>
+    /// <summary>
+    ///     Plays the sound for an icon and, when the window is not active, flashes its taskbar button until it comes to the foreground. The window is never activated.
+    /// </summary>
     /// <param name="window">The window to flash.</param>
     /// <param name="icon">The icon of the dialogue the signal accompanies; it chooses the sound.</param>
     public static void Request(Window window, DialogueIcons icon)

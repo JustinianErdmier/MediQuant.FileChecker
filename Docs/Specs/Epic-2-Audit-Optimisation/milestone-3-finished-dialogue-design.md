@@ -25,7 +25,7 @@ reads `Completed`, which nobody sees from another application. The app should te
 |---|---|
 | Completed | The finished dialogue (§4), with the taskbar flash and the information sound. |
 | Failed (any error that ends a started run, including a report that could not be written) | The existing error dialogue, unchanged, now with the taskbar flash and the error sound. |
-| Stopped by the user, with or without a report | Nothing new: the user pressed Stop, so they are at the window. The status bar reads `Stopped`, as today. |
+| Stopped by the user, with or without a report (including a Stop once checking is done, whose result stays *Completed*) | Nothing new: the user pressed Stop, so they are at the window. |
 | The window closed mid-run | Nothing new, as today. |
 
 Pre-flight errors (before a run starts) are unchanged: the user has just pressed Start, so they are at the window.

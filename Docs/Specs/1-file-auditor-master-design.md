@@ -130,9 +130,10 @@ Files**, where every file on disk is in the index table. The inputs both directi
   wraps only after a `\` or `/` separator, never at a space or hyphen inside a folder name (`PathText.Breakable`).
 - **The end of a run** draws attention to the window without taking the keyboard. A completed run shows the *finished* dialogue (§6.4, §6.5.4): the information icon, the audit's
   name, its final figures, the report's full path, and *View Report* (primary; Enter; access key `V`) and *OK* (Esc and the close box). A run that fails shows its error dialogue
-  as before. Both play a Windows sound (information for the finished dialogue, error for a failure), and when File Auditor is not the active application they also flash the
-  caption and the taskbar button until the window comes to the foreground (`WindowAttention`, §9). The window is never activated or brought forward. Both Win32 calls are best
-  effort: a failure is ignored and the dialogue still shows. A run the user stopped, a pre-flight error and a close mid-run show and sound nothing new.
+  as before. Both play a Windows sound (information for the finished dialogue, error for a failure), and when the main window is not active they also flash the caption and the
+  taskbar button until the window comes to the foreground (`WindowAttention`, §9). The window is never activated or brought forward. Both Win32 calls are best effort: a failure
+  is ignored and the dialogue still shows. A run the user stopped (even one whose result stays *Completed*, §6.4), a pre-flight error and a close mid-run show and sound nothing
+  new.
 - **No modern affordances** that Win9x lacked: no rounded corners, no flyouts, no toast notifications, no accent colours, no hamburger menus.
 
 Layout, top to bottom. The approved mock-ups are [`direction-tabs-layout.html`](../UserInterfaceDesign/Mockups/direction-tabs-layout.html), which shows the target layout with the
@@ -600,7 +601,8 @@ This section describes the missing-files audit; §6.5.4 gives the unindexed audi
   saved to:` and the report's full path. *View Report* opens the report the run wrote (the one captured at Start, not the selected tab's) through the same code as the Audit group's
   *View Report*, including its error dialogue; *OK* closes the dialogue. A run that **fails** (a SQL failure or a report write failure; also a path column that is not `nvarchar`,
   or not found, which the run refuses, §6.2) shows its error dialogue, now with the error sound and the flash. A run the user **stops**, before or after checking began, shows
-  nothing new, since they are at the window. Pre-flight errors, found before the run starts, get neither the sound nor the flash.
+  nothing new, since they are at the window; that includes a Stop during `Reading empty paths...`, whose result stays *Completed*, and *Stop it and exit?* answered Yes (any
+  stop request skips the finished dialogue). Pre-flight errors, found before the run starts, get neither the sound nor the flash.
 - **Closing the window mid-run**: a prompt, *"An audit is in progress. Stop it and exit?"*, with **Yes** and **No**. Yes stops the run, writes the report as
   `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same. If Yes is chosen before the count query returns, no report is written (as for
   Stop) and the application simply exits.
@@ -969,8 +971,8 @@ So the three states read: *ticked* — always save; *unticked* — ask at the ne
 ## 9. Code shape
 
 One project, `Source/FileAuditor/`, organised by folder (namespaces mirror folders). Only the `.csproj` and `app.manifest` sit at the project root; `Assets/` holds the
-app icon, and `Assets/Win95Icons/` the Windows 95 icon set. Dialogue icons are taken from that set (`error32.gif`, `warning32.png`, `question32.png`,
-`information32.png`), never drawn in XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj`. The code folders are:
+app icon, and `Assets/Win95Icons/` the Windows 95 icon set. Dialogue icons are taken from that set (`error32.gif`, `warning32.png`, `question32.png`, `information32.png`),
+never drawn in XAML. Each image the app uses is listed as an `AvaloniaResource` in the `.csproj`. The code folders are:
 
 - `Startup/` — `App`, `Program` and `UnexpectedErrorHandler`, the global exception handler (see *Errors* below).
 - `Views/` — `Main/` (`MainWindow`), `About/` (`AboutWindow`), `Dialogues/` (`MessageDialogueWindow`, `FileTypesDialogueWindow`), `Groups/` (a `UserControl` per group box:
@@ -1144,10 +1146,11 @@ so ordinary builds and `dotnet run` are unchanged.
 - The finished dialogue (Epic 2, milestone 3, design `Docs/Specs/Epic-2-Audit-Optimisation/milestone-3-finished-dialogue-design.md`), settled with the user: approach A (the
   dialogue, a taskbar flash and a sound), chosen over bringing the window to the front (which could take the keyboard while the user types elsewhere) and over the dialogue alone
   (which opens behind other windows and goes unseen); the dialogue appears for a completed run only, a failed run keeps its error dialogue and gains the attention, and a stopped
-  run, a pre-flight error and a close mid-run show nothing new; the dialogue's content is the audit's name, the final figures, the report's full path and *View Report* beside *OK*
-  (§5, §6.4, §6.5.4). Decided by Claude (for the user to check): *View Report* carries the access key `V`, since the other dialogues' action buttons have one (*Create Folder*,
-  *Yes*) and *OK* has none; the flash happens only when the main window is not active, and never activates it; both Win32 calls (`MessageBeep`, `FlashWindowEx`) are best effort,
-  so a failure is ignored and the dialogue still shows; the dialogue's *View Report* opens the report of the run that finished (captured at Start), not the selected tab's;
+  run, a pre-flight error and a close mid-run show nothing new; the dialogue's content is the audit's name, the final figures, the report's full path and *View Report* beside
+  *OK* (§5, §6.4, §6.5.4). Decided by Claude (for the user to check): *View Report* carries the access key `V`, since the other dialogues' action buttons have one (*Create
+  Folder*, *Yes*) and *OK* has none; the flash happens only when the main window is not active, and never activates it; both Win32 calls (`MessageBeep`, `FlashWindowEx`) are best
+  effort, so a failure is ignored and the dialogue still shows; the dialogue's *View Report* opens the report of the run that finished (captured at Start), not the selected
+  tab's; any stop request skips the finished dialogue, including a Stop during `Reading empty paths...` whose result stays *Completed*;
   `Assets\Win95Icons\information32.png`, already in the project folder, gained its `AvaloniaResource` entry in the `.csproj`, as every image the app uses must have (§9).
 
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level

@@ -507,8 +507,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         timer.Start();
 
-        string? status = null;
+        string? status        = null;
         string? error;
+        bool    stopRequested = false;
 
         try
         {
@@ -526,6 +527,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             timer.Stop();
 
             _auditCancellationSource = null;
+
+            stopRequested = cancellationTokenSource.IsCancellationRequested;
 
             cancellationTokenSource.Dispose();
 
@@ -547,7 +550,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             await _dialogues.ShowRunFailedAsync(error);
         }
-        else if (status is "Completed")
+        // A Stop that arrives once checking is done (while empty paths are read, say) still ends the run as Completed, and Stop and exit cancels the run too; either way the
+        // user is at the window, so the finished dialogue is not shown.
+        else if (status is "Completed" && !stopRequested)
         {
             string message = $"{run.FinishedTitle}\n\n{run.FinishedFigures}\n\nThe report was saved to:\n{PathText.Breakable(reportPath.FullPath)}";
 

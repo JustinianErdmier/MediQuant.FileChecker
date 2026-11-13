@@ -301,9 +301,10 @@ were counted). If it fails part-way, the report is written with `Result: Failed 
 the audit itself is fine: the report is still written, and its empty-path group says why the IDs are not listed.
 
 **When the audit ends.** A completed audit opens a dialogue that says *The Missing Files audit has finished.*, gives the final *Missing* and *Unverified* figures as the Audit group
-shows them, and gives the full path of the report. Press **View Report** (or Alt+V) to open the report, or **OK** to close the dialogue. If you are working in another program, the
-app's taskbar button flashes until you switch back to it, and Windows plays its information sound; the app never jumps in front of what you are doing. A failed audit shows its
-error in the same way, with the error sound instead. If you stopped the audit yourself, nothing new appears: you are already at the window.
+shows them, and gives the full path of the report. Press **View Report** (or Alt+V) to open the report, or **OK** to close the dialogue. Windows plays its information sound,
+and if you are working in another program the app's taskbar button also flashes until you switch back to it; the app never jumps in front of what you are doing. A failed audit
+shows its error in the same way, with the error sound instead. If you stopped the audit yourself, nothing new appears, even when the run had already finished checking: you are
+already at the window.
 
 **Closing the window during an audit** asks *"An audit is in progress. Stop it and exit?"*. *Yes* stops the audit, writes the report, and closes the app; *No* carries on.
 
@@ -500,9 +501,9 @@ listing folders and writes the report with `Result: Stopped by user`, listing wh
 **If the database fails** whilst the index is loading, an error is shown and no report is written, since nothing was walked; the screen keeps the Index paths count it had reached.
 
 **When the audit ends.** A completed audit opens a dialogue that says *The Unindexed Files audit has finished.*, gives the final *Unindexed* and *Unverified* figures as the Audit
-group shows them, and gives the full path of the report. Press **View Report** (or Alt+V) to open the report, or **OK** to close the dialogue. If you are working in another
-program, the app's taskbar button flashes until you switch back to it, and Windows plays its information sound; the app never jumps in front of what you are doing. A failed audit
-shows its error in the same way, with the error sound instead. If you stopped the audit yourself, nothing new appears: you are already at the window.
+group shows them, and gives the full path of the report. Press **View Report** (or Alt+V) to open the report, or **OK** to close the dialogue. Windows plays its information
+sound, and if you are working in another program the app's taskbar button also flashes until you switch back to it; the app never jumps in front of what you are doing. A failed
+audit shows its error in the same way, with the error sound instead. If you stopped the audit yourself, nothing new appears: you are already at the window.
 
 ## 5.5 The Audit Report
 
