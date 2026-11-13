@@ -58,6 +58,8 @@ generated table: `CountsSql` 2,211 / 1,796 / 1,490 ms (the first run cold) and `
 | `7433c69` | Final fix: guide and SDD wording, §10 timings                                 |
 | `941ff15` | Final fix: docs rewrapped to 180 characters                                   |
 | `4c9e0ef` | Re-review minors: a view that no longer binds (R5), CLR comment, §10 labelling |
+| `a593e5d` | This ledger                                                                   |
+| (next)    | The `SqlErrors` code constants grouped together                              |
 
 ## Verification
 
@@ -77,7 +79,7 @@ The R5 condition is not verified with a live run. It rests on the error sequence
 ## Outstanding items
 
 - **Next milestone (2):** builds on the `nvarchar` rule; nothing carried over.
-- **Deferred minor, not fixed:** the `SqlErrors` code constants for the two new errors sit after `QueryFailed`, not beside the existing constant. This is cosmetic.
+- None. The one deferred minor (the two new `SqlErrors` code constants sat after `QueryFailed`, not beside the existing constant) was fixed before the merge.
 
 ## Incidents
 

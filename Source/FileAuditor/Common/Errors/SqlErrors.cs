@@ -6,16 +6,16 @@ public static class SqlErrors
     /// <summary>The code of the error returned by <see cref="QueryFailed" />.</summary>
     public const string QueryFailedCode = "Sql.QueryFailed";
 
-    /// <summary>Creates the error for a query that SQL Server could not run or that failed part-way.</summary>
-    /// <param name="message">The message reported by SQL Server.</param>
-    /// <returns>A failure error with code <c>Sql.QueryFailed</c>.</returns>
-    public static Error QueryFailed(string message) => Error.Failure(QueryFailedCode, message);
-
     /// <summary>The code of the error returned by <see cref="PathColumnNotNvarchar" />.</summary>
     public const string PathColumnNotNvarcharCode = "Sql.PathColumnNotNvarchar";
 
     /// <summary>The code of the error returned by <see cref="PathColumnNotFound" />.</summary>
     public const string PathColumnNotFoundCode = "Sql.PathColumnNotFound";
+
+    /// <summary>Creates the error for a query that SQL Server could not run or that failed part-way.</summary>
+    /// <param name="message">The message reported by SQL Server.</param>
+    /// <returns>A failure error with code <c>Sql.QueryFailed</c>.</returns>
+    public static Error QueryFailed(string message) => Error.Failure(QueryFailedCode, message);
 
     /// <summary>Creates the error for a path column whose type is not <c>nvarchar</c>.</summary>
     /// <param name="column">The path column, as the user typed it.</param>
