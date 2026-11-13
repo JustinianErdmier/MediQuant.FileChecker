@@ -133,7 +133,7 @@ Files**, where every file on disk is in the index table. The inputs both directi
   as before. Both play a Windows sound (information for the finished dialogue, error for a failure), and when the main window is not active they also flash the caption and the
   taskbar button until the window comes to the foreground (`WindowAttention`, §9). The window is never activated or brought forward. Both Win32 calls are best effort: a failure
   is ignored and the dialogue still shows. A run the user stopped (even one whose result stays *Completed*, §6.4), a pre-flight error and a close mid-run show and sound nothing
-  new.
+  new, unless the stopped run then fails (its error dialogue keeps the sound and the flash).
 - **No modern affordances** that Win9x lacked: no rounded corners, no flyouts, no toast notifications, no accent colours, no hamburger menus.
 
 Layout, top to bottom. The approved mock-ups are [`direction-tabs-layout.html`](../UserInterfaceDesign/Mockups/direction-tabs-layout.html), which shows the target layout with the

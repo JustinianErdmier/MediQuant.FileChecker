@@ -151,8 +151,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     /// <summary>
     ///     Called whenever the window is asked to close. With an audit running the user is asked first, and on Yes the run is stopped and its report written. The project's settings
-    ///     are then saved or offered for saving under the same rule as Start. While Start, Open project or Close project is in progress (before any audit is running) the close is
-    ///     refused, so two save points never run at once; the user can close once that command's prompt has been answered.
+    ///     are then saved or offered for saving under the same rule as Start. While Start, Open project or Close project is in progress (before any audit is running, or while a
+    ///     run's finished or error dialogue is open, which is still part of Start) the close is refused, so two save points never run at once; the user can close once that
+    ///     command's prompt or dialogue has been answered.
     /// </summary>
     /// <returns><see langword="true" /> when the window may close.</returns>
     public async Task<bool> ConfirmCloseAsync()
