@@ -468,7 +468,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             run = new MissingAuditRun(MissingFiles.Audit, request);
         }
 
-        _auditTask = RunAuditAsync(run, direction);
+        _auditTask = RunAuditAsync(run, direction, reportPath);
 
         await _auditTask;
     }
@@ -476,8 +476,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>Runs one audit, refreshing the Audit group on a timer, and shows the final status and any error when it ends.</summary>
     /// <param name="run">The run to perform.</param>
     /// <param name="direction">The audit direction.</param>
+    /// <param name="reportPath">Where the run writes its report.</param>
     /// <returns>A task that completes when the run has ended and the window has been reset.</returns>
-    private async Task RunAuditAsync(AuditRun run, AuditDirections direction)
+    private async Task RunAuditAsync(AuditRun run, AuditDirections direction, ReportPath reportPath)
     {
         AuditStatusBase audit = run.Audit;
 
@@ -544,7 +545,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         if (error is not null)
         {
-            await _dialogues.ShowErrorAsync(error);
+            await _dialogues.ShowRunFailedAsync(error);
+        }
+        else if (status is "Completed")
+        {
+            string message = $"{run.FinishedTitle}\n\n{run.FinishedFigures}\n\nThe report was saved to:\n{PathText.Breakable(reportPath.FullPath)}";
+
+            if (await _dialogues.ShowFinishedAsync(message))
+            {
+                await OpenReportAsync(reportPath.FullPath);
+            }
         }
     }
 
@@ -555,10 +565,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>Opens the selected tab's report in the program Windows associates with it.</summary>
     /// <returns>A task that completes when the report has been opened or the failure has been shown.</returns>
     [ RelayCommand(CanExecute = nameof(CanViewReport)) ]
-    private async Task ViewReportAsync()
-    {
-        string path = SelectedReport.Current.FullPath;
+    private async Task ViewReportAsync() => await OpenReportAsync(SelectedReport.Current.FullPath);
 
+    /// <summary>Opens a report in the program Windows associates with it, showing an error dialogue when it cannot be opened.</summary>
+    /// <param name="path">The full path of the report.</param>
+    /// <returns>A task that completes when the report has been opened or the failure has been shown.</returns>
+    private async Task OpenReportAsync(string path)
+    {
         try
         {
             Process.Start(new ProcessStartInfo(path)

@@ -10,5 +10,8 @@ public enum DialogueIcons
     Warning,
 
     /// <summary>A blue circle with a question mark.</summary>
-    Question
+    Question,
+
+    /// <summary>A blue circle with an <c>i</c>.</summary>
+    Information
 }

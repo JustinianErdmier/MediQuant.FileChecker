@@ -22,6 +22,9 @@ public sealed record MessageDialogueViewModel(string Message, DialogueIcons Icon
     /// <summary>Gets a value indicating whether to show the error icon.</summary>
     public bool IsError => Icon is DialogueIcons.Error;
 
+    /// <summary>Gets a value indicating whether to show the information icon.</summary>
+    public bool IsInformation => Icon is DialogueIcons.Information;
+
     /// <summary>Gets a value indicating whether to show the question icon.</summary>
     public bool IsQuestion => Icon is DialogueIcons.Question;
 

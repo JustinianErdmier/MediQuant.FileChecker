@@ -13,6 +13,32 @@ public sealed class DialogueService(Func<Window?> ownerProvider)
     /// <returns>A task that completes when the dialogue closes.</returns>
     public async Task ShowErrorAsync(string message) => await ShowAsync(new MessageDialogueViewModel(message, DialogueIcons.Error, PrimaryText: "OK", SecondaryText: null));
 
+    /// <summary>Shows the dialogue for a run that failed: the error dialogue, with the error sound and a flashing taskbar button when the application is not active.</summary>
+    /// <param name="message">The message.</param>
+    /// <returns>A task that completes when the dialogue closes.</returns>
+    public async Task ShowRunFailedAsync(string message)
+    {
+        if (ownerProvider() is { } owner)
+        {
+            WindowAttention.Request(owner, DialogueIcons.Error);
+        }
+
+        await ShowErrorAsync(message);
+    }
+
+    /// <summary>Shows the dialogue for a run that finished, with the information sound and a flashing taskbar button when the application is not active.</summary>
+    /// <param name="message">The message.</param>
+    /// <returns><see langword="true" /> when the user chose View Report; <see langword="false" /> for OK or closing the dialogue.</returns>
+    public async Task<bool> ShowFinishedAsync(string message)
+    {
+        if (ownerProvider() is { } owner)
+        {
+            WindowAttention.Request(owner, DialogueIcons.Information);
+        }
+
+        return await ShowAsync(new MessageDialogueViewModel(message, DialogueIcons.Information, PrimaryText: "_View Report", SecondaryText: "OK")) is DialogueChoices.Primary;
+    }
+
     /// <summary>Shows a warning with an action button and Cancel.</summary>
     /// <param name="message">The message.</param>
     /// <param name="confirmText">The action button's text; an underscore marks its access key.</param>

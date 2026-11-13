@@ -46,6 +46,7 @@
         <AvaloniaResource Include="Assets\FileAuditor16.png" />
         <AvaloniaResource Include="Assets\Win95Icons\error32.gif" />
         <AvaloniaResource Include="Assets\Win95Icons\warning32.png" />
+        <AvaloniaResource Include="Assets\Win95Icons\information32.png" />
         <AvaloniaResource Include="Assets\Win95Icons\question32.png" />
     </ItemGroup>
 </Project>

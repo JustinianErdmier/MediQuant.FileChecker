@@ -15,6 +15,12 @@ public sealed class MissingAuditRun(AuditViewModel audit, AuditRequest request) 
     public override string Phase => _progress.Phase;
 
     /// <inheritdoc />
+    public override string FinishedTitle => "The Missing Files audit has finished.";
+
+    /// <inheritdoc />
+    public override string FinishedFigures => $"Missing: {audit.Missing}    Unverified: {audit.Unverified}";
+
+    /// <inheritdoc />
     public override void Update(TimeSpan elapsed, bool isFinished) => audit.Update(_progress, elapsed, isFinished);
 
     /// <inheritdoc />

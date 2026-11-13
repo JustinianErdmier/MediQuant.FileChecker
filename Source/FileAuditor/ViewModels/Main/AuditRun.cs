@@ -13,6 +13,12 @@ public abstract class AuditRun(AuditStatusBase audit)
     /// <summary>Gets the status-bar text for the phase the run is in.</summary>
     public abstract string Phase { get; }
 
+    /// <summary>Gets the first line of the finished dialogue, which names the audit.</summary>
+    public abstract string FinishedTitle { get; }
+
+    /// <summary>Gets the figures line of the finished dialogue, as the Audit group shows the run's final figures.</summary>
+    public abstract string FinishedFigures { get; }
+
     /// <summary>Refreshes the Audit group's statistics from the run's progress.</summary>
     /// <param name="elapsed">The time since the run started.</param>
     /// <param name="isFinished">Whether the run has ended.</param>

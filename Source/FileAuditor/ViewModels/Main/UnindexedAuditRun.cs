@@ -15,6 +15,12 @@ public sealed class UnindexedAuditRun(UnindexedAuditViewModel audit, AuditReques
     public override string Phase => _progress.Phase;
 
     /// <inheritdoc />
+    public override string FinishedTitle => "The Unindexed Files audit has finished.";
+
+    /// <inheritdoc />
+    public override string FinishedFigures => $"Unindexed: {audit.Unindexed}    Unverified: {audit.Unverified}";
+
+    /// <inheritdoc />
     public override void Begin() => audit.Begin();
 
     /// <inheritdoc />

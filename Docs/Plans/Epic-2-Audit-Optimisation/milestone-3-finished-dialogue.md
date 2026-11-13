@@ -69,16 +69,16 @@ Before Task 1 the controller creates branch `feat/milestone-3-finished-dialogue`
   `WindowAttention.Request` on the owner just before showing the dialogue; with no owner they do nothing, like the other methods.
 - Produces: `AuditRun.FinishedTitle : string` (the first line) and `AuditRun.FinishedFigures : string` (the figures line), implemented by both runs from their Audit group.
 
-- [ ] **Step 1: Icon and attention.** Add the enum member, the view-model flag and the image; add `WindowAttention` with its two `user32` imports, following the pattern of
+- [x] **Step 1: Icon and attention.** Add the enum member, the view-model flag and the image; add `WindowAttention` with its two `user32` imports, following the pattern of
   `UnexpectedErrorHandler`'s `MessageBoxW` import.
-- [ ] **Step 2: Dialogue service.** The two methods, building the dialogue through the existing `ShowAsync`.
-- [ ] **Step 3: Where a run ends.** `RunAuditAsync` takes the run's `ReportPath`; after the existing resets it shows the finished dialogue for `Completed` (opening the report on
+- [x] **Step 2: Dialogue service.** The two methods, building the dialogue through the existing `ShowAsync`.
+- [x] **Step 3: Where a run ends.** `RunAuditAsync` takes the run's `ReportPath`; after the existing resets it shows the finished dialogue for `Completed` (opening the report on
   *View Report* through the code the Audit group's command uses, factored into one method taking a path) and `ShowRunFailedAsync` in place of `ShowErrorAsync` for a run error.
-- [ ] **Step 4: Verify.** Clean build. Then in the app, against a LocalDB scratch database `FileAuditorE2M3Scratch` and a folder in the scratchpad (drop both at the end), read
+- [x] **Step 4: Verify.** Clean build. Then in the app, against a LocalDB scratch database `FileAuditorE2M3Scratch` and a folder in the scratchpad (drop both at the end), read
   each dialogue's text by UI Automation and check it against Global Constraints: a completed Missing Files run, a completed Unindexed Files run, a stopped run (no dialogue), and a
   failure (a path column of type `varchar(400)`). Choose *View Report* once and confirm the report opens (then close the program it opened). Say in the report which of Review
   Focus 2–4 you could not exercise without desktop control; the controller drives those with computer use. Close the app.
-- [ ] **Step 5: Commit** — `feat(✨): show a finished dialogue and signal the end of a run`.
+- [x] **Step 5: Commit** — `feat(✨): show a finished dialogue and signal the end of a run`.
 
 ### Task 2: SDD and user guide
 
