@@ -62,14 +62,14 @@ formatting is made reusable for `<type>`.
 - Consumes (existing): `QueryBuilder.QuoteTarget`, `ConnectionStrings.Build(server, database)`, `IndexTableReader.ReadPathColumnTypeAsync(connectionString, tableSql, columnSql,
   CancellationToken.None)`, `PathColumnType.Check`.
 
-- [ ] **Step 1: Remember.** Add the member and clear it in `Reset`; document it like the other remembered answers.
-- [ ] **Step 2: Warn.** In `PreflightChecker.RunAsync`, the last step before returning the report: the key, the lookup (only when not remembered), the warning for `varchar`, and
+- [x] **Step 1: Remember.** Add the member and clear it in `Reset`; document it like the other remembered answers.
+- [x] **Step 2: Warn.** In `PreflightChecker.RunAsync`, the last step before returning the report: the key, the lookup (only when not remembered), the warning for `varchar`, and
   the silent cases per Global Constraints. Update the class and method XML docs (the summary that says pre-flight runs "before the database is touched").
-- [ ] **Step 3: Verify.** Clean build. LocalDB scratch database `FileAuditorE2M5Scratch` (dropped at the end) with tables of `varchar(400)`, `varchar(5000)`, `varchar(max)`,
+- [x] **Step 3: Verify.** Clean build. LocalDB scratch database `FileAuditorE2M5Scratch` (dropped at the end) with tables of `varchar(400)`, `varchar(5000)`, `varchar(max)`,
   `nvarchar(400)` and `char(10)` path columns; project files in the scratchpad opened through *File > Open project...*. In the app, read each dialogue's text by UI Automation and
   exercise Review Focus 1–4 on the Missing Files tab, and the `varchar(400)` warning once on the Unindexed Files tab. For the unreachable database, use a database name that does
   not exist. Close the app.
-- [ ] **Step 4: Commit** — `feat(✨): warn before auditing a varchar path column`.
+- [x] **Step 4: Commit** — `feat(✨): warn before auditing a varchar path column`.
 
 ### Task 2: SDD and user guide
 

@@ -46,6 +46,12 @@ public sealed class ProjectSettingsService
     /// <summary>Gets or sets a value indicating whether the untick warning was confirmed this session.</summary>
     public bool UntickConfirmed { get; set; }
 
+    /// <summary>
+    ///     Gets or sets the key (server, database, table and path column, each trimmed and lower-cased) of the column whose varchar warning was answered Continue this session, or
+    ///     <see langword="null" /> when none was. It is never saved in the project file.
+    /// </summary>
+    public string? VarcharConfirmedFor { get; set; }
+
     /// <summary>Loads a project settings file off the UI thread.</summary>
     /// <param name="filePath">The full path of the settings file.</param>
     /// <returns>The settings, or <see cref="SettingsErrors.Unreadable" /> when the file cannot be read or is not a File Auditor project.</returns>
@@ -67,6 +73,7 @@ public sealed class ProjectSettingsService
         RedundantTypesConfirmed = false;
         OverlapConfirmed        = false;
         UntickConfirmed         = false;
+        VarcharConfirmedFor     = null;
     }
 
     /// <summary>Records a successfully opened project.</summary>

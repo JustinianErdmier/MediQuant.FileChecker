@@ -1,13 +1,16 @@
 namespace FileAuditor.Services.Auditing;
 
-/// <summary>The checks that run when Start is pressed, before the database is touched. Each failure or declined confirmation is explained in a dialogue.</summary>
+/// <summary>
+///     The checks that run when Start is pressed, before the run starts. They touch the database only for the one path column type lookup behind the varchar warning. Each failure
+///     or declined confirmation is explained in a dialogue.
+/// </summary>
 /// <param name="dialogues">Shows the errors and confirmations.</param>
 /// <param name="projectSettingsService">Remembers which warnings were answered Continue this session.</param>
 public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsService projectSettingsService)
 {
     /// <summary>
     ///     Runs the checks in order: identifiers, the two reports' custom names, the Unindexed direction's folders and file types, custom file name, custom location form, report
-    ///     folder, existing report.
+    ///     folder, existing report, then the varchar path column warning (last, and only while it is unanswered for the current column).
     /// </summary>
     /// <param name="settings">The settings to audit with.</param>
     /// <param name="direction">The audit direction, which decides the report file name.</param>
@@ -105,26 +108,97 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             return null;
         }
 
-        if (!await Task.Run(() => File.Exists(report.FullPath)))
+        if (await Task.Run(() => File.Exists(report.FullPath)))
         {
-            return report;
+            // An existing read-only report would pass the folder probe but fail at the final move, after the whole table had been checked.
+            if (await Task.Run(() => IsReadOnly(report.FullPath)))
+            {
+                await dialogues.ShowErrorAsync(ReportErrors.ReadOnly(report.FullPath)
+                                                           .Description);
+
+                return null;
+            }
+
+            if (!await dialogues.ConfirmAsync($"The report already exists:\n{PathText.Breakable(report.FullPath)}\n\nDo you want to overwrite it?", confirmText: "_Overwrite"))
+            {
+                return null;
+            }
         }
 
-        // An existing read-only report would pass the folder probe but fail at the final move, after the whole table had been checked.
-        if (await Task.Run(() => IsReadOnly(report.FullPath)))
-        {
-            await dialogues.ShowErrorAsync(ReportErrors.ReadOnly(report.FullPath)
-                                                       .Description);
+        // Last, so a Start that would fail for another reason never reaches the database.
+        return await ConfirmVarcharAsync(settings) ? report : null;
+    }
 
-            return null;
+    /// <summary>
+    ///     Warns before a <c>varchar</c> path column is audited, unless the warning was already answered Continue for this column. The column's type is read here, the one place
+    ///     pre-flight touches the database; any error or exception from the read is ignored, because the run reports it.
+    /// </summary>
+    /// <param name="settings">The settings to audit with.</param>
+    /// <returns><see langword="false" /> when the user chose Cancel; otherwise <see langword="true" />, including when nothing needed asking.</returns>
+    private async Task<bool> ConfirmVarcharAsync(AppSettings settings)
+    {
+        string key = string.Join(separator: '\n', settings.Server.Trim(), settings.Database.Trim(), settings.Table.Trim(), settings.PathColumn.Trim())
+                           .ToLowerInvariant();
+
+        if (projectSettingsService.VarcharConfirmedFor == key)
+        {
+            return true;
         }
 
-        if (!await dialogues.ConfirmAsync($"The report already exists:\n{PathText.Breakable(report.FullPath)}\n\nDo you want to overwrite it?", confirmText: "_Overwrite"))
+        string                          column = settings.PathColumn.Trim();
+        (string TypeName, short MaxLength) found;
+        string                          target;
+
+        try
         {
-            return null;
+            ErrorOr<(string QuotedTable, string QuotedPathColumn)> quoted = QueryBuilder.QuoteTarget(settings.Table, settings.PathColumn);
+
+            if (quoted.IsError)
+            {
+                return true;
+            }
+
+            ErrorOr<(string TypeName, short MaxLength)?> read = await IndexTableReader.ReadPathColumnTypeAsync(ConnectionStrings.Build(settings.Server, settings.Database),
+                                                                                                                quoted.Value.QuotedTable,
+                                                                                                                quoted.Value.QuotedPathColumn,
+                                                                                                                CancellationToken.None);
+
+            if (read.IsError
+                || read.Value is null)
+            {
+                return true;
+            }
+
+            found = read.Value.Value;
+
+            ErrorOr<string?> convertTo = PathColumnType.Check(settings.Table, settings.PathColumn, found);
+
+            // Null is nvarchar; an error is a refused type, which the run reports.
+            if (convertTo.IsError
+                || convertTo.Value is null)
+            {
+                return true;
+            }
+
+            target = convertTo.Value;
+        }
+        catch (Exception)
+        {
+            // The run repeats the lookup and reports the failure.
+            return true;
         }
 
-        return report;
+        if (!await dialogues.ConfirmAsync($"The path column '{column}' is {PathColumnType.Format(found.TypeName, found.MaxLength)}.\n"
+                                          + $"The File Auditor prefers an nvarchar column. It can convert this one to {target} and audit it, but a varchar column may have changed "
+                                          + "some characters in its paths when they were stored. See \"varchar Path Columns\" in the user guide.\n\nDo you want to continue?",
+                                          confirmText: "_Continue"))
+        {
+            return false;
+        }
+
+        projectSettingsService.VarcharConfirmedFor = key;
+
+        return true;
     }
 
     /// <summary>Checks the unindexed-files inputs: the folders first, then the two file type lists, then the three type warnings.</summary>
