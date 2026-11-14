@@ -20,6 +20,7 @@
         <File Path="Docs/Ledgers/Epic-2-Audit-Optimisation/milestone-3-ledger.md" />
         <File Path="Docs/Ledgers/Epic-2-Audit-Optimisation/milestone-4-ledger.md" />
         <File Path="Docs/Ledgers/Epic-2-Audit-Optimisation/milestone-5-ledger.md" />
+        <File Path="Docs/Ledgers/Epic-2-Audit-Optimisation/milestone-6-ledger.md" />
     </Folder>
     <Folder Name="/Docs/Plans/" />
     <Folder Name="/Docs/Plans/Epic-1-MVP/">
@@ -38,6 +39,7 @@
         <File Path="Docs/Plans/Epic-2-Audit-Optimisation/milestone-3-finished-dialogue.md" />
         <File Path="Docs/Plans/Epic-2-Audit-Optimisation/milestone-4-varchar-path-column.md" />
         <File Path="Docs/Plans/Epic-2-Audit-Optimisation/milestone-5-varchar-warning.md" />
+        <File Path="Docs/Plans/Epic-2-Audit-Optimisation/milestone-6-streaming-missing-audit.md" />
     </Folder>
     <Folder Name="/Docs/Specs/">
         <File Path="Docs/Specs/1-file-auditor-master-design.md" />
@@ -53,6 +55,7 @@
         <File Path="Docs/Specs/Epic-2-Audit-Optimisation/milestone-3-finished-dialogue-design.md" />
         <File Path="Docs/Specs/Epic-2-Audit-Optimisation/milestone-4-varchar-path-column-design.md" />
         <File Path="Docs/Specs/Epic-2-Audit-Optimisation/milestone-5-varchar-warning-design.md" />
+        <File Path="Docs/Specs/Epic-2-Audit-Optimisation/milestone-6-streaming-missing-audit-design.md" />
     </Folder>
     <Folder Name="/Docs/UserInterfaceDesign/" />
     <Folder Name="/Docs/UserInterfaceDesign/Mockups/">
