@@ -1,0 +1,32 @@
+File Auditor Missing Report
+===========================
+
+Server:          kdcsql16
+Database:        InterimMontefiore_CRM10118
+Table:           [dbo].[_DMS_MRM.DRC.DOC.pages_Index]
+Path column:     [MQFilePath]
+ID column:       (none)
+Empty files:     Reported as missing
+
+Started:         2026-11-13 23:22:55
+Finished:        2026-11-13 23:45:32
+Elapsed:         00:22:36
+Result:          Completed
+
+Summary
+-------
+Total files:     1,570,465
+Found:           1,570,430
+Missing:         33
+Unverified:      2
+Skipped:         0
+
+Missing Files (33)
+------------------
+[Empty (33)]
+omitted for privacy...
+
+Unverified Files (2)
+--------------------
+[Other errors (2)]
+omitted for privacy...
