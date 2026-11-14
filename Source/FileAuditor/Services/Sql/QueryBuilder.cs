@@ -82,9 +82,9 @@ public static class QueryBuilder
     /// </param>
     /// <param name="convertTo">
     ///     The type to convert the path column to in the folder filter (<c>nvarchar(4000)</c>, from <see cref="PathColumnType.Check" />), or
-    ///     <see langword="null" /> for an <c>nvarchar</c> column. Both <c>LIKE</c> clauses test only the start of the path, so characters beyond 4,000 never change the result. The selected value stays the column itself; only the filter's <c>LIKE</c> clauses compare the converted value,
-    ///     because their <c>COLLATE</c> clause would otherwise be applied to the <c>varchar</c> value before it meets the <c>nvarchar</c> parameters. Without a filter nothing is
-    ///     converted.
+    ///     <see langword="null" /> for an <c>nvarchar</c> column. Both <c>LIKE</c> clauses test only the start of the path, so characters beyond 4,000 never change the
+    ///     result. The selected value stays the column itself; only the filter's <c>LIKE</c> clauses compare the converted value, because their <c>COLLATE</c> clause would
+    ///     otherwise be applied to the <c>varchar</c> value before it meets the <c>nvarchar</c> parameters. Without a filter nothing is converted.
     /// </param>
     /// <returns>The query, or <c>Query.InvalidIdentifier</c> when a name is malformed.</returns>
     public static ErrorOr<PathQuery> BuildPaths(string table, string pathColumn, IReadOnlyList<string> folders, string? convertTo)

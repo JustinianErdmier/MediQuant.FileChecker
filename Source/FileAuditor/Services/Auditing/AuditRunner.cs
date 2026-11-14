@@ -110,7 +110,13 @@ public static class AuditRunner
                                          // ReSharper disable AccessToDisposedClosure
                                          readResult = await IndexTableReader.ReadAsync(connectionString,
                                                                                        query,
-                                                                                       row => Classify(row, query.HasIdColumn, seen, emptyPathIds, progress, channel.Writer, linkedSource.Token),
+                                                                                       row => Classify(row,
+                                                                                                       query.HasIdColumn,
+                                                                                                       seen,
+                                                                                                       emptyPathIds,
+                                                                                                       progress,
+                                                                                                       channel.Writer,
+                                                                                                       linkedSource.Token),
                                                                                        linkedSource.Token);
 
                                          // ReSharper restore AccessToDisposedClosure
@@ -232,7 +238,13 @@ public static class AuditRunner
     /// <param name="writer">The channel that feeds the file checks.</param>
     /// <param name="cancellationToken">Stops the wait for room in the channel.</param>
     /// <returns>A task that ends when the row has been handled, which for a new real path is when it has a place in the channel.</returns>
-    private static ValueTask Classify(IndexRow row, bool hasIdColumn, PathKeySet seen, List<string> emptyPathIds, AuditProgress progress, ChannelWriter<IndexRow> writer, CancellationToken cancellationToken)
+    private static ValueTask Classify(IndexRow                row,
+                                      bool                    hasIdColumn,
+                                      PathKeySet              seen,
+                                      List<string>            emptyPathIds,
+                                      AuditProgress           progress,
+                                      ChannelWriter<IndexRow> writer,
+                                      CancellationToken       cancellationToken)
     {
         if (SkipMarker.IsSkipped(row.Path))
         {

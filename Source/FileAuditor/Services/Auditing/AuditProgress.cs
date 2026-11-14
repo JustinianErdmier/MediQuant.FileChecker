@@ -69,8 +69,8 @@ public sealed class AuditProgress
     }
 
     /// <summary>
-    ///     Gets the number of rows handled so far: every skipped, empty and duplicate row (handled when read) and every distinct row whose check has ended. The progress bar and the
-    ///     remaining time run on this figure out of <see cref="TotalRows" />.
+    ///     Gets the number of rows handled so far: every skipped, empty and duplicate row (handled when read) and every distinct row whose check has ended. The progress bar
+    ///     and the remaining time run on this figure out of <see cref="TotalRows" />.
     /// </summary>
     public long RowsHandled => Checked + Duplicates + EmptyPaths + Skipped;
 
@@ -105,7 +105,9 @@ public sealed class AuditProgress
     public void AddDistinct() => Interlocked.Increment(ref _distinct);
 
     /// <summary>Records one checked distinct path.</summary>
-    /// <param name="outcome">The path's outcome. A <see cref="CheckOutcomes.Skipped" /> outcome should never arrive, because the stream excludes skip rows; it is recorded as Unverified.</param>
+    /// <param name="outcome">
+    ///     The path's outcome. A <see cref="CheckOutcomes.Skipped" /> outcome should never arrive, because the stream excludes skip rows; it is recorded as Unverified.
+    /// </param>
     public void Record(CheckOutcomes outcome)
     {
         switch (outcome)

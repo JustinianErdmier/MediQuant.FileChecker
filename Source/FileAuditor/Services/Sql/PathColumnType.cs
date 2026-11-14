@@ -3,7 +3,7 @@ namespace FileAuditor.Services.Sql;
 /// <summary>Checks that the path column is <c>nvarchar</c> or <c>varchar</c> and says what the audit statements convert it to.</summary>
 public static class PathColumnType
 {
-    /// <summary>The type a <c>varchar</c> column is converted to in the Unindexed folder filter, whatever the column's length: the filter tests only the start of the path.</summary>
+    /// <summary>The type a <c>varchar</c> column is converted to in the Unindexed folder filter, whatever its length: the filter tests only the start of the path.</summary>
     private const string FilterTarget = "nvarchar(4000)";
 
     /// <summary>Checks the type found for the path column.</summary>

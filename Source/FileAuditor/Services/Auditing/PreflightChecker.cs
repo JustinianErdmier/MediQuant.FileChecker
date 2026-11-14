@@ -187,11 +187,11 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
             found = read.Value.Value;
 
-            ErrorOr<string?> convertTo = PathColumnType.Check(settings.Table, settings.PathColumn, found);
+            ErrorOr<string?> typeCheck = PathColumnType.Check(settings.Table, settings.PathColumn, found);
 
             // Null is nvarchar; an error is a refused type, which the run reports.
-            if (convertTo.IsError
-                || convertTo.Value is null)
+            if (typeCheck.IsError
+                || typeCheck.Value is null)
             {
                 return (true, read);
             }
