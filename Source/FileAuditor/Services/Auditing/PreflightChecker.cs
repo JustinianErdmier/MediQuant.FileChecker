@@ -1,18 +1,27 @@
 namespace FileAuditor.Services.Auditing;
 
-/// <summary>The checks that run when Start is pressed, before the database is touched. Each failure or declined confirmation is explained in a dialogue.</summary>
+/// <summary>
+///     The checks that run when Start is pressed, before the run starts. They touch the database only for the one path column type lookup behind the varchar warning. Each failure
+///     or declined confirmation is explained in a dialogue.
+/// </summary>
 /// <param name="dialogues">Shows the errors and confirmations.</param>
 /// <param name="projectSettingsService">Remembers which warnings were answered Continue this session.</param>
 public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsService projectSettingsService)
 {
+    /// <summary>The longest the varchar warning's type lookup may take; past it the warning is skipped and the run's own check decides.</summary>
+    private static readonly TimeSpan VarcharLookupTimeout = TimeSpan.FromSeconds(30);
+
     /// <summary>
     ///     Runs the checks in order: identifiers, the two reports' custom names, the Unindexed direction's folders and file types, custom file name, custom location form, report
-    ///     folder, existing report.
+    ///     folder, existing report, then the varchar path column warning (last, and only while it is unanswered for the current column).
     /// </summary>
     /// <param name="settings">The settings to audit with.</param>
     /// <param name="direction">The audit direction, which decides the report file name.</param>
-    /// <returns>The resolved report path when the run may start; <see langword="null" /> when a check failed or the user declined (the user has been told).</returns>
-    public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirections direction)
+    /// <returns>
+    ///     The resolved report path, with the path column type when the varchar check read it, when the run may start; <see langword="null" /> when a check failed or the user
+    ///     declined (the user has been told).
+    /// </returns>
+    public async Task<PreflightResult?> RunAsync(AppSettings settings, AuditDirections direction)
     {
         ErrorOr<AuditQuery> query = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn, convertTo: null);
 
@@ -105,26 +114,108 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             return null;
         }
 
-        if (!await Task.Run(() => File.Exists(report.FullPath)))
+        if (await Task.Run(() => File.Exists(report.FullPath)))
         {
-            return report;
+            // An existing read-only report would pass the folder probe but fail at the final move, after the whole table had been checked.
+            if (await Task.Run(() => IsReadOnly(report.FullPath)))
+            {
+                await dialogues.ShowErrorAsync(ReportErrors.ReadOnly(report.FullPath)
+                                                           .Description);
+
+                return null;
+            }
+
+            if (!await dialogues.ConfirmAsync($"The report already exists:\n{PathText.Breakable(report.FullPath)}\n\nDo you want to overwrite it?", confirmText: "_Overwrite"))
+            {
+                return null;
+            }
         }
 
-        // An existing read-only report would pass the folder probe but fail at the final move, after the whole table had been checked.
-        if (await Task.Run(() => IsReadOnly(report.FullPath)))
-        {
-            await dialogues.ShowErrorAsync(ReportErrors.ReadOnly(report.FullPath)
-                                                       .Description);
+        // Last, so a Start that would fail for another reason never reaches the database.
+        (bool proceed, ErrorOr<(string TypeName, short MaxLength)?>? read) = await ConfirmVarcharAsync(settings);
 
-            return null;
+        return proceed ? new PreflightResult(report, read) : null;
+    }
+
+    /// <summary>
+    ///     Warns before a <c>varchar</c> path column is audited, unless the warning was already answered Continue for this column. The column's type is read here, the one place
+    ///     pre-flight touches the database. A failed read shows nothing here: it is handed to the run, which reports it without connecting again.
+    /// </summary>
+    /// <param name="settings">The settings to audit with.</param>
+    /// <returns>
+    ///     Whether to proceed (<see langword="false" /> only for Cancel), and the read's result for the run to use; <see langword="null" /> when no read was made or it did not
+    ///     finish (cancelled, or an exception), so the run reads the type itself.
+    /// </returns>
+    private async Task<(bool Proceed, ErrorOr<(string TypeName, short MaxLength)?>? Read)> ConfirmVarcharAsync(AppSettings settings)
+    {
+        string key = string.Join(separator: '\n', settings.Server.Trim(), settings.Database.Trim(), settings.Table.Trim(), settings.PathColumn.Trim())
+                           .ToLowerInvariant();
+
+        if (projectSettingsService.VarcharConfirmedFor == key)
+        {
+            return (true, null);
         }
 
-        if (!await dialogues.ConfirmAsync($"The report already exists:\n{PathText.Breakable(report.FullPath)}\n\nDo you want to overwrite it?", confirmText: "_Overwrite"))
+        string                                       column = settings.PathColumn.Trim();
+        ErrorOr<(string TypeName, short MaxLength)?> read;
+        (string TypeName, short MaxLength)           found;
+        string                                       target;
+
+        try
         {
-            return null;
+            ErrorOr<(string QuotedTable, string QuotedPathColumn)> quoted = QueryBuilder.QuoteTarget(settings.Table, settings.PathColumn);
+
+            if (quoted.IsError)
+            {
+                return (true, null);
+            }
+
+            // Off the UI thread: opening a connection does some work synchronously (name resolution, authentication) before its first await, as the runs also allow for. The
+            // lookup has no command timeout of its own, so a blocked one is cancelled here; the cancellation lands in the catch below, and the run then reads the type itself.
+            using CancellationTokenSource timeout = new(VarcharLookupTimeout);
+
+            read = await Task.Run(() => IndexTableReader.ReadPathColumnTypeAsync(ConnectionStrings.Build(settings.Server, settings.Database),
+                                                                                 quoted.Value.QuotedTable,
+                                                                                 quoted.Value.QuotedPathColumn,
+                                                                                 timeout.Token));
+
+            // A failed read (an unreachable server, say) or a missing column goes to the run, which reports it exactly as before without connecting again.
+            if (read.IsError
+                || read.Value is null)
+            {
+                return (true, read);
+            }
+
+            found = read.Value.Value;
+
+            ErrorOr<string?> convertTo = PathColumnType.Check(settings.Table, settings.PathColumn, found);
+
+            // Null is nvarchar; an error is a refused type, which the run reports.
+            if (convertTo.IsError
+                || convertTo.Value is null)
+            {
+                return (true, read);
+            }
+
+            target = convertTo.Value;
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            // The run reads the type itself and reports any failure. A bug in this block is hidden here too, by design: the warning is a courtesy and must never stop a Start.
+            return (true, null);
         }
 
-        return report;
+        if (!await dialogues.ConfirmAsync($"The path column '{column}' is {PathColumnType.Format(found.TypeName, found.MaxLength)}.\n"
+                                          + $"The File Auditor prefers an nvarchar column. It can convert this one to {target} and audit it, but a varchar column may have changed "
+                                          + "some characters in its paths when they were stored. See \"varchar Path Columns\" in the user guide.\n\nDo you want to continue?",
+                                          confirmText: "_Continue"))
+        {
+            return (false, null);
+        }
+
+        projectSettingsService.VarcharConfirmedFor = key;
+
+        return (true, read);
     }
 
     /// <summary>Checks the unindexed-files inputs: the folders first, then the two file type lists, then the three type warnings.</summary>

@@ -40,10 +40,12 @@ public static class AuditRunner
 
         try
         {
-            ErrorOr<(string TypeName, short MaxLength)?> columnType = await IndexTableReader.ReadPathColumnTypeAsync(connectionString,
-                                                                                                                      target.Value.QuotedTable,
-                                                                                                                      target.Value.QuotedPathColumn,
-                                                                                                                      cancellationToken);
+            // Pre-flight's read, when it made one, so an unreachable server is not waited for twice.
+            ErrorOr<(string TypeName, short MaxLength)?> columnType = request.PathColumnType
+                                                                      ?? await IndexTableReader.ReadPathColumnTypeAsync(connectionString,
+                                                                                                                        target.Value.QuotedTable,
+                                                                                                                        target.Value.QuotedPathColumn,
+                                                                                                                        cancellationToken);
 
             if (columnType.IsError)
             {

@@ -440,7 +440,7 @@ stop-and-exit question (§6.4).
 
 ## 6. Running an audit
 
-### 6.1 Pre-flight checks (on Start, before touching the database)
+### 6.1 Pre-flight checks (on Start, before touching the database, but for one type lookup)
 
 1. Validate inputs (identifiers well formed; custom File name has no invalid file-name characters). With the built location, the Project folder must be a single
    folder name: not rooted, no `\` or `/`, not `.` or `..`, and no invalid file-name characters. Failure → error dialog, run does not start.
@@ -455,7 +455,19 @@ stop-and-exit question (§6.4).
 3. Report file already exists (either mode):
     - if it is read-only → **error dialog**, run does not start;
     - otherwise → **warning dialog** with **Overwrite** and **Cancel**.
-4. Run the save rule (§8.2) for the project's settings. It may ask whether or where to save; *Cancel* on any of its prompts stops the run from starting.
+4. **varchar path column warning** (both tabs), the last check, so a Start that would fail for another reason never reaches the database. Unless the answer is already remembered
+   for the current column, the path column's type is read with the lookup the runs use (`IndexTableReader.ReadPathColumnTypeAsync` on the quoted names, then
+   `PathColumnType.Check`); this lookup is the one place pre-flight touches the database. When the column is `varchar`, a **warning dialogue** (*Continue*, access key `C`, and
+   *Cancel*) says: `The path column '<column>' is <type>.` / `The File Auditor prefers an nvarchar column. It can convert this one to <target> and audit it, but a varchar column
+   may have changed some characters in its paths when they were stored. See "varchar Path Columns" in the user guide.` / a blank line / `Do you want to continue?`. `<column>` is
+   the name as typed (trimmed), `<type>` is `varchar(<n>)` or `varchar(max)` (`PathColumnType.Format`, as in the refusal of §6.2) and `<target>` is the type the audit converts to
+   (§6.2). *Cancel* stops the Start: no run, no report, nothing saved. For an `nvarchar` column, a refused type, a missing column or table, any SQL error, any exception except
+   out-of-memory, or a lookup that takes longer than 30 seconds (`VarcharLookupTimeout`; the lookup is then abandoned), nothing is shown and the Start goes on. Whatever the
+   lookup returned (a type, not found, or a SQL error) is handed to the run (`PreflightResult`, `AuditRequest.PathColumnType`), which uses it instead of connecting again and
+   reports a refusal or error exactly as before; so an unreachable server is waited for once. Only an abandoned lookup, an exception, or a remembered answer (no lookup) leaves
+   the run to read the type itself. *Continue* is remembered for the column (server, database, table and path column, each trimmed and compared ignoring case) until *Close
+   project*, *Open project...* or a fresh launch; a different column asks again, and while it is remembered no lookup is made. It is never saved in the project file.
+5. Run the save rule (§8.2) for the project's settings. It may ask whether or where to save; *Cancel* on any of its prompts stops the run from starting.
 
 ### 6.2 Query
 
@@ -628,7 +640,8 @@ This section describes the missing-files audit; §6.5.4 gives the unindexed audi
 
 ### 6.5 Running the unindexed audit
 
-Start on the Unindexed Files tab runs the pre-flight checks of §6.1 (the ID column is not used), then those of §6.5.1, then the run itself.
+Start on the Unindexed Files tab runs the pre-flight checks of §6.1 (the ID column is not used) with those of §6.5.1 added after the identifier, project folder and
+file-name checks, the varchar warning (§6.1 step 4) coming last of all, and then the run itself.
 
 #### 6.5.1 Pre-flight additions
 
@@ -658,6 +671,8 @@ project...* or a fresh launch, like the remembered answers of §8.1; each has it
    `zip.000` are ordinary use and raise nothing.
 
 A match-every-file entry alone in File types, with an empty Exclude list, is accepted without a warning.
+
+After these checks, and after the report checks of §6.1, comes the *varchar* path column warning of §6.1 step 4, which both tabs share.
 
 #### 6.5.2 Loading the index
 
@@ -918,12 +933,12 @@ direction adds its folder list (`ScanFolders`: each folder's path and *Include s
 (`GroupByFoundExtension`) and its own custom file name (`UnindexedCustomFileName`, default `FileAuditorUnindexedReport.txt`). A file without them loads with an empty folder list,
 the 15 built-in file types, an empty blacklist, *Listed type* grouping and the default name; a folder entry without a path is dropped, and an invalid entry in either type list is
 dropped on its own while the others are kept. Older files load, but their custom file names fall back to the defaults; no migration is attempted. The remembered answers to the
-three file-type warnings (§6.5.1) are not stored either. No credentials. The *Save project settings* checkbox is not stored in it. The file is written with a temp
-file + `File.Move(overwrite: true)`; a save never creates a folder. A `null` value of any kind (a string, a flag, a list, a list element or a folder's path) and an undefined enum
-value fall back, field by field, to that field's default; every other value is kept. The file is read into a `ProjectFile`, a model with nullable members that mirrors the
-JSON (and a `ProjectFileFolder` for each scan folder), and `SettingsStore` maps it to an `AppSettings` that has no nullable members, so nothing else in the app ever sees a
-missing value. The keys keep their names (`ProjectStage` and `AuditStage` among them), enums are written as strings and no `null` is written. Window size and position are not
-saved — the window is fixed-size. The milestone 2 spec (`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`) has the full prompt texts.
+three file-type warnings (§6.5.1) and to the varchar warning (§6.1) are not stored either. No credentials. The *Save project settings* checkbox is not stored in it. The file is
+written with a temp file + `File.Move(overwrite: true)`; a save never creates a folder. A `null` value of any kind (a string, a flag, a list, a list element or a folder's path) and
+an undefined enum value fall back, field by field, to that field's default; every other value is kept. The file is read into a `ProjectFile`, a model with nullable members that
+mirrors the JSON (and a `ProjectFileFolder` for each scan folder), and `SettingsStore` maps it to an `AppSettings` that has no nullable members, so nothing else in the app ever
+sees a missing value. The keys keep their names (`ProjectStage` and `AuditStage` among them), enums are written as strings and no `null` is written. Window size and position are
+not saved — the window is fixed-size. The milestone 2 spec (`Docs/Specs/Epic-1-MVP/milestone-2-project-settings-design.md`) has the full prompt texts.
 
 ### 8.1 Start-up, opening and closing a project
 
@@ -939,12 +954,12 @@ saved — the window is fixed-size. The milestone 2 spec (`Docs/Specs/Epic-1-MVP
     - *File read:* the project is reset as for *Close project*, the file's settings are loaded, and it becomes the project's file. The loaded settings are the baseline for
       "nothing has changed" (§8.2). The window title does not show the open project.
 - **Close project** runs the save rule, then resets every input to its default, ticks the checkbox, forgets the *No* answer, the untick-warning answer, the three file-type
-  warning answers (§6.5.1) and the open file, and clears both Audit groups' statistics and the last run's status (the status bar reads `Enter the required details`, §5.5). It is
-  equivalent to relaunching the app.
+  warning answers (§6.5.1), the varchar warning's remembered column (§6.1) and the open file, and clears both Audit groups' statistics and the last run's status (the status bar
+  reads `Enter the required details`, §5.5). It is equivalent to relaunching the app.
 
 ### 8.2 The save rule
 
-One rule, applied at four save points: **Start** (after the pre-flight checks pass, §6.1 step 4), **closing the window** (§6.4), **Close project** and **Open project...**.
+One rule, applied at four save points: **Start** (after the pre-flight checks pass, §6.1 step 5), **closing the window** (§6.4), **Close project** and **Open project...**.
 
 1. **Nothing has changed** since the project was opened or last saved (the current inputs equal the settings last loaded or saved; a fresh, untouched window counts as
    unchanged) → do nothing, and do not ask.
@@ -1023,8 +1038,9 @@ never drawn in XAML. Each image the app uses is listed as an `AvaloniaResource` 
   failed-run error dialogue, the *Open Project* file picker, the File Types dialogue and `WindowAttention`, the static class that plays the end-of-run sound and flashes the main
   window's taskbar button through `MessageBeep` and `FlashWindowEx`, §5). Stateless services are static classes (§12). Return `ErrorOr<T>` for expected failures.
 - `Models/` — plain data, with no behaviour worth a service. `Settings/` (`AppSettings`, the settings record with no nullable members; `ProjectFile` and `ProjectFileFolder`, the
-  nullable JSON shape of §8; `ScanFolder`; and `SavePointResult`), `Auditing/` (`AuditQuery`, `PathQuery`, `IndexRow`, `CheckResult`, `MappedOutcome`, `AuditRequest`, `ScannedFile`
-  and `UnverifiedFolder`), `Dialogues/` (`ProjectFilePick`, the *Open Project* picker's result) and `Reporting/` (`AuditReport`, `UnindexedReport` and `ReportPath`).
+  nullable JSON shape of §8; `ScanFolder`; and `SavePointResult`), `Auditing/` (`AuditQuery`, `PathQuery`, `IndexRow`, `CheckResult`, `MappedOutcome`, `AuditRequest`,
+  `PreflightResult`, `ScannedFile` and `UnverifiedFolder`), `Dialogues/` (`ProjectFilePick`, the *Open Project* picker's result) and `Reporting/` (`AuditReport`,
+  `UnindexedReport` and `ReportPath`).
 - `Common/` — `GlobalUsings.cs`; `Constants/` (every enum, one file each, in a folder named for the area it serves and with a plural type name: `Auditing/` `AuditDirections`, the
   directions `Missing` and `Unindexed`, whose member names the report file names are tied to, and `CheckOutcomes`; `Dialogues/` `DialogueChoices` and `DialogueIcons`; `Reporting/`
   `AuditResultKinds`; `Settings/` `ProjectStages` and `AuditStages`); `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/`
@@ -1082,7 +1098,7 @@ so ordinary builds and `dotnet run` are unchanged.
 - Read-only preview of the built report path, with `<placeholders>`; Start disabled until the path is complete. *(shown in mock-up, accepted)*
 - Disabling, rather than hiding, the Project folder row and both stage groups while Custom is ticked, on both tabs. *(shown disabled in the mock-up and accepted; the user
   changed it to hidden during milestone 4 and back to disabled in milestone 4.1)*
-- Pre-flight checks happen on Start, before the database is queried.
+- Pre-flight checks happen on Start, before the database is queried (milestone 5 adds one exception: the path column type lookup behind the varchar warning, §6.1).
 - Report timestamps in local time; sorting by path; UTF-8 without BOM; CRLF.
 - Behaviour on Stop and on mid-run SQL failure (§6.4).
 - `schema.table` support and bracket quoting.
@@ -1182,6 +1198,16 @@ so ordinary builds and `dotnet run` are unchanged.
   call). Decided by Claude (for the user to check): the refusal's wording is `... expects an nvarchar or varchar column.`; its code is renamed `Sql.PathColumnUnsupported`
   (from `Sql.PathColumnNotNvarchar`) to match the rule; on the Missing tab the conversion is computed in one apply (`[fa_p]`, column `[FaPath]`) and everything else uses it, and
   on the Unindexed tab it appears only in the folder filter, so the selected value stays the raw column and with no filter nothing is converted.
+- The varchar warning (Epic 2, milestone 5, design `Docs/Specs/Epic-2-Audit-Optimisation/milestone-5-varchar-warning-design.md`), settled with the user: a *Continue* / *Cancel*
+  warning on Start, on both tabs, before a `varchar` path column is audited, remembered like the file-type warnings (until *Close project*, *Open project...* or a fresh launch,
+  never saved in the project file); approach A, the type read in pre-flight, chosen over asking from inside the run (which needs a question opened mid-run, plumbing from the
+  background run to the window, a clock that counts while the user reads, and a new way for a run to end); a user guide section on `varchar` path columns (§8.4 of the guide).
+  Decided by Claude (for the user to check): the remembered answer is keyed to server, database, table and path column (trimmed, ignoring case), so a different column is asked
+  about again; the silent cases (`nvarchar`, a refused type, a missing column or table, any SQL error, any exception except out-of-memory, or a lookup that takes longer than 30
+  seconds) defer to the run, which reports them as before; the warning is the last pre-flight step, after the existing-report check and before the save rule, so a Start that fails
+  for another reason never reaches the database; and `PathColumnType.Format` is public so the warning can write `<type>` as the refusal does. Settled with the user after the
+  final review: an unreachable server is waited for once, so the lookup's result (a type, not found, or a SQL error) is handed to the run, which uses it instead of connecting
+  again (`PreflightResult`, `AuditRequest.PathColumnType`).
 
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
 that failed, found by walking the path (§6.3); the close-mid-run prompt.

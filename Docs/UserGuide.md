@@ -124,11 +124,9 @@ The **File Index Table** group holds:
 
 - **Table:** required. Type the table's name, or `schema.table` if it is not in the default schema.
 - **Path column:** required. The column holding each document's full path. It may be an **`nvarchar`** (Unicode text) or a **`varchar`** column, of any length, including the `max`
-  forms. The app converts a `varchar` column to `nvarchar` itself, so you need do nothing. `nvarchar` is still the better choice: a `varchar` column cannot store characters outside
-  its collation's code page, and a path containing one was changed when the row was written, to a look-alike letter (`Ł` became `L`) or to `?`. Such a path may point at a
-  different file, or at none. A path with a `?` is listed by the Missing Files audit under *Unverified — Invalid characters in path*, and never matches a file in the Unindexed
-  Files audit. Any other type, such as `char`, `nchar` or `text`, is refused when you press Start, with a message that names the column and its type (see section 9). Both audits
-  apply this rule. If your path column is of another type, ask for it to be converted to `nvarchar`, or use a view of the table that casts it.
+  forms. The app converts a `varchar` column to `nvarchar` itself, but it warns you first, and `nvarchar` is the better choice (see section 8.4). Any other type, such as `char`,
+  `nchar` or `text`, is refused when you press Start, with a message that names the column and its type (see section 9). Both audits apply this rule. If your path column is of
+  another type, ask for it to be converted to `nvarchar`, or use a view of the table that casts it.
 - **ID column:** optional. When it is filled in, the Missing Files report shows each row's ID beside its path. The Unindexed Files audit does not use it (a file that is not in
   the table has no ID), but it is still saved with the project. The ID must be **unique to its file**: one ID per path, such as a document ID. Do not use a patient or account
   ID that several files share or that repeats across a file's rows (see §4.1); the app does not check this.
@@ -692,8 +690,8 @@ This section briefly explains how each audit stays fast on large projects and tr
 - **"Could not check" is never "missing" or "unindexed".** Every failure is mapped to a named *Unverified* reason instead. The old tool used a simple existence check that
   answered "no" for every kind of failure, so an unreachable share looked like N number of missing files. File Auditor asks Windows in a way that reports *why* a file could not
   be read.
-- **Problems are caught before the long part.** The inputs, the report folder, and the report file are all checked when you press Start, before the database is touched, so a
-  long audit cannot end with "the report could not be written".
+- **Problems are caught before the long part.** The inputs, the report folder, and the report file are all checked when you press Start, before the audit reads the table (the only
+  database call is a quick look at the path column's type, section 8.4), so a long audit cannot end with "the report could not be written".
 - **No handwritten SQL.** The app builds the query from the names you give it and quotes every name, so a typing mistake cannot change what the query does.
 - **Settings belong to the project, not to the computer.** The program runs from a shared server, so a settings file beside it would be shared by everyone. Keeping the settings
   beside each project's report means they travel with the project and never leak from one project into another.
@@ -739,6 +737,34 @@ This section briefly explains how each audit stays fast on large projects and tr
   listing can never pass for a complete one.
 - **The recent speed waits for the walk.** Loading the index can take minutes on a large table, so the bracketed recent speed is timed from the start of the walk, not from Start.
 
+## 8.4 varchar Path Columns
+
+**The warning.** When the path column is a `varchar` column, pressing Start on either tab shows a warning before the audit starts: it names the column and its type, says that
+`nvarchar` is preferred, and says which `nvarchar` type the app will convert the column to. *Continue* goes on with the audit; *Cancel* stops the Start, with no audit and no report
+written. It appears last, after the other checks, so you are not asked about a column when something else would stop the Start anyway. Once you choose *Continue* it is not asked
+again for that server, database, table and path column until you use *Close project* or *Open project...* or restart the app; changing any of the four asks again. The answer is not
+saved in the project file. An `nvarchar` column shows no warning. To decide whether to warn, the app looks up the column's type when you press Start, and the audit then uses
+that answer rather than asking again. If the lookup fails (for example, the server cannot be reached), no warning is shown and the audit reports the problem straight away, so
+you wait for the server only once. If the lookup takes longer than 30 seconds (for example, the table is locked), it is given up and the audit checks the column itself.
+
+**How the conversion works.** A `varchar(n)` column, with *n* up to 4,000, is converted to `nvarchar(n)`; a longer one, and `varchar(max)`, to `nvarchar(max)`. The Missing Files
+audit converts each row's path once and works on the converted path throughout: classifying the row, reading it and counting it. The Unindexed Files audit reads the column as it
+is, and converts it only inside the folder filter that limits which rows are loaded; with no filter (no input folder, more than 20, or an empty one) nothing is converted.
+
+**Why it is done.** The Missing Files checks for white space and for skip markers follow Unicode rules, which the database applies to Unicode text, so each path needs one
+consistent Unicode form. The Unindexed Files folder filter compares letters ignoring case, and on a `varchar` value that comparison would be done in the column's code page first:
+a path outside Latin-1 could then miss its own folder and be reported as unindexed. Converting first avoids both.
+
+**Possible effects.** A `varchar` column cannot store characters outside its collation's code page, so such a character was already replaced when the row was written: by a
+look-alike letter (`Ł` became `L`) or by `?`. The conversion cannot undo that.
+
+- A replaced path may name a different file. If that file exists, the Missing Files audit reports the row as *Found* although the file it was meant to name may be missing, and the
+  Unindexed Files audit counts that other file as indexed.
+- A path holding `?` is listed by the Missing Files audit under *Unverified — Invalid characters in path*, and never matches a file in the Unindexed Files audit.
+- A `varchar(max)` column, or one longer than 4,000 characters, is counted more slowly, because it is converted to `nvarchar(max)`: roughly twice as long in our measurements.
+
+The cure is to have the column converted to `nvarchar`, after which the warning no longer appears. Paths that were already changed cannot be recovered from the table.
+
 # 9. Troubleshooting
 
 **Start is disabled, and the status bar reads "Enter the required details".** Fill in Server, Database, Table and Path column, and complete the report location: a project
@@ -762,6 +788,10 @@ with your Windows account, so your account needs permission to read the table; r
 **"The path column '...' is char(400). The File Auditor expects an nvarchar or varchar column."** The path column is neither an `nvarchar` nor a `varchar` column (the message names
 its actual type, for example `char(400)`, `nchar(10)` or `int`). Nothing was read and no report was written. Ask for the column to be converted to `nvarchar`, or point the audit at
 a view of the table that casts the column to `nvarchar`, and type the view's name as the Table. The ID column can be of any type.
+
+**A warning says "The path column '...' is varchar(400)..." when I press Start.** The path column is a `varchar` column. The warning is not an error: *Continue* audits it,
+converting it to `nvarchar` as the message says, and *Cancel* stops the Start with nothing written. Some of the paths may have been changed when they were stored; section 8.4
+explains how, and what to do. You are not asked again for that column until you close the project, open another, or restart the app.
 
 **"The path column '...' was not found in the table '...'."** The table has no column with that name, or the table itself was not found. Check the spelling of both, and the schema
 if the table is not in the default one. If your account has no permission to read the table, SQL Server's own permission error is shown instead (for example
@@ -922,9 +952,9 @@ Audit optimisation: the audits read the index table differently, report more abo
 
 **Changes that may affect existing projects:**
 
-- **The path column must be `nvarchar` or `varchar`.** A `varchar` or `nvarchar` path column works on both audits (the app converts a `varchar` column itself). Only another
-  type (`char`, `nchar`, `text`, `ntext`, a number, …) is refused, naming the type, before a row is read (section 3.1). A project with such a column stops working; convert the
-  column or point the app at a view that casts it (section 9).
+- **The path column must be `nvarchar` or `varchar`.** A `varchar` or `nvarchar` path column works on both audits (the app converts a `varchar` column itself, after a warning
+  that you can continue or cancel, section 8.4). Only another type (`char`, `nchar`, `text`, `ntext`, a number, …) is refused, naming the type, before a row is read (section 3.1).
+  A project with such a column stops working; convert the column or point the app at a view that casts it (section 9).
 - **Each path is checked once.** A path listed on several rows (an index built around patients rather than files) is checked once, so *Total files* counts distinct paths, not
   rows. With an ID column, each ID is expected to belong to one path.
 - **The reports' Summary has changed.** The Missing Files report adds *Duplicates*, *Found*, the table's rows beside *Total files* and the empty paths beside *Unverified*; the
