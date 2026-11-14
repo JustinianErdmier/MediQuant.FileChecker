@@ -951,7 +951,7 @@ To see what version of the app you’re using, navigate to `Help > About File Au
 
 ## Version 2.0.0
 
-**Release Date:** 13 November 2026
+**Release Date:** 14 November 2026
 
 Audit optimisation: the audits read the index table differently, report more about what they read, and tell you when they finish.
 
