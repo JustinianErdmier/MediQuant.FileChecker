@@ -59,7 +59,8 @@ is done and what its effects can be.
 - For `nvarchar` it shows nothing. For a refused type, a missing column or a SQL error, pre-flight shows nothing either and lets the run start: the run's own type check reports
   those exactly as today, so their errors, attention signal and report behaviour do not change. (Added during execution, ledger ruling R1–R2: the same holds for any exception
   except out-of-memory, and for a lookup cancelled after 30 seconds.)
-- The run is unchanged: it still reads and checks the type itself. The second read is one metadata call.
+- The run is unchanged: it still reads and checks the type itself. The second read is one metadata call. (Changed after the final review, at the user's request: the run uses
+  pre-flight's result when there is one, so an unreachable server is waited for once; ledger R4.)
 - **What changes in a principle:** SDD §6.1 says pre-flight runs *before touching the database*. That becomes "before touching the database, except for this one type lookup,
   made only while the warning is unanswered". A slow or unreachable server now delays the step after Start by the lookup's connection time, with no status text, before the
   run's own error appears.

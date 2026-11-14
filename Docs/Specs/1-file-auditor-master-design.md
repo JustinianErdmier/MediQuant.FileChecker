@@ -462,10 +462,11 @@ stop-and-exit question (§6.4).
    may have changed some characters in its paths when they were stored. See "varchar Path Columns" in the user guide.` / a blank line / `Do you want to continue?`. `<column>` is
    the name as typed (trimmed), `<type>` is `varchar(<n>)` or `varchar(max)` (`PathColumnType.Format`, as in the refusal of §6.2) and `<target>` is the type the audit converts to
    (§6.2). *Cancel* stops the Start: no run, no report, nothing saved. For an `nvarchar` column, a refused type, a missing column or table, any SQL error, any exception except
-   out-of-memory, or a lookup that takes longer than 30 seconds (`VarcharLookupTimeout`; the lookup is then abandoned), nothing is shown and the Start goes on; the run repeats the
-   type check and reports a refusal or error exactly as before. An unreachable server therefore delays the Start by the connection timeout twice, once for this lookup and once for
-   the run's own check. *Continue* is remembered for the column (server, database, table and path column, each trimmed and compared ignoring case) until *Close project*, *Open
-   project...* or a fresh launch; a different column asks again, and while it is remembered no lookup is made. It is never saved in the project file.
+   out-of-memory, or a lookup that takes longer than 30 seconds (`VarcharLookupTimeout`; the lookup is then abandoned), nothing is shown and the Start goes on. Whatever the
+   lookup returned (a type, not found, or a SQL error) is handed to the run (`PreflightResult`, `AuditRequest.PathColumnType`), which uses it instead of connecting again and
+   reports a refusal or error exactly as before; so an unreachable server is waited for once. Only an abandoned lookup, an exception, or a remembered answer (no lookup) leaves
+   the run to read the type itself. *Continue* is remembered for the column (server, database, table and path column, each trimmed and compared ignoring case) until *Close
+   project*, *Open project...* or a fresh launch; a different column asks again, and while it is remembered no lookup is made. It is never saved in the project file.
 5. Run the save rule (§8.2) for the project's settings. It may ask whether or where to save; *Cancel* on any of its prompts stops the run from starting.
 
 ### 6.2 Query
@@ -1037,8 +1038,9 @@ never drawn in XAML. Each image the app uses is listed as an `AvaloniaResource` 
   failed-run error dialogue, the *Open Project* file picker, the File Types dialogue and `WindowAttention`, the static class that plays the end-of-run sound and flashes the main
   window's taskbar button through `MessageBeep` and `FlashWindowEx`, §5). Stateless services are static classes (§12). Return `ErrorOr<T>` for expected failures.
 - `Models/` — plain data, with no behaviour worth a service. `Settings/` (`AppSettings`, the settings record with no nullable members; `ProjectFile` and `ProjectFileFolder`, the
-  nullable JSON shape of §8; `ScanFolder`; and `SavePointResult`), `Auditing/` (`AuditQuery`, `PathQuery`, `IndexRow`, `CheckResult`, `MappedOutcome`, `AuditRequest`, `ScannedFile`
-  and `UnverifiedFolder`), `Dialogues/` (`ProjectFilePick`, the *Open Project* picker's result) and `Reporting/` (`AuditReport`, `UnindexedReport` and `ReportPath`).
+  nullable JSON shape of §8; `ScanFolder`; and `SavePointResult`), `Auditing/` (`AuditQuery`, `PathQuery`, `IndexRow`, `CheckResult`, `MappedOutcome`, `AuditRequest`,
+  `PreflightResult`, `ScannedFile` and `UnverifiedFolder`), `Dialogues/` (`ProjectFilePick`, the *Open Project* picker's result) and `Reporting/` (`AuditReport`,
+  `UnindexedReport` and `ReportPath`).
 - `Common/` — `GlobalUsings.cs`; `Constants/` (every enum, one file each, in a folder named for the area it serves and with a plural type name: `Auditing/` `AuditDirections`, the
   directions `Missing` and `Unindexed`, whose member names the report file names are tied to, and `CheckOutcomes`; `Dialogues/` `DialogueChoices` and `DialogueIcons`; `Reporting/`
   `AuditResultKinds`; `Settings/` `ProjectStages` and `AuditStages`); `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/`
@@ -1203,7 +1205,9 @@ so ordinary builds and `dotnet run` are unchanged.
   Decided by Claude (for the user to check): the remembered answer is keyed to server, database, table and path column (trimmed, ignoring case), so a different column is asked
   about again; the silent cases (`nvarchar`, a refused type, a missing column or table, any SQL error, any exception except out-of-memory, or a lookup that takes longer than 30
   seconds) defer to the run, which reports them as before; the warning is the last pre-flight step, after the existing-report check and before the save rule, so a Start that fails
-  for another reason never reaches the database; and `PathColumnType.Format` is public so the warning can write `<type>` as the refusal does.
+  for another reason never reaches the database; and `PathColumnType.Format` is public so the warning can write `<type>` as the refusal does. Settled with the user after the
+  final review: an unreachable server is waited for once, so the lookup's result (a type, not found, or a SQL error) is handed to the run, which uses it instead of connecting
+  again (`PreflightResult`, `AuditRequest.PathColumnType`).
 
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
 that failed, found by walking the path (§6.3); the close-mid-run prompt.

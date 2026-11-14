@@ -17,8 +17,11 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
     /// </summary>
     /// <param name="settings">The settings to audit with.</param>
     /// <param name="direction">The audit direction, which decides the report file name.</param>
-    /// <returns>The resolved report path when the run may start; <see langword="null" /> when a check failed or the user declined (the user has been told).</returns>
-    public async Task<ReportPath?> RunAsync(AppSettings settings, AuditDirections direction)
+    /// <returns>
+    ///     The resolved report path, with the path column type when the varchar check read it, when the run may start; <see langword="null" /> when a check failed or the user
+    ///     declined (the user has been told).
+    /// </returns>
+    public async Task<PreflightResult?> RunAsync(AppSettings settings, AuditDirections direction)
     {
         ErrorOr<AuditQuery> query = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn, convertTo: null);
 
@@ -129,28 +132,34 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         }
 
         // Last, so a Start that would fail for another reason never reaches the database.
-        return await ConfirmVarcharAsync(settings) ? report : null;
+        (bool proceed, ErrorOr<(string TypeName, short MaxLength)?>? read) = await ConfirmVarcharAsync(settings);
+
+        return proceed ? new PreflightResult(report, read) : null;
     }
 
     /// <summary>
     ///     Warns before a <c>varchar</c> path column is audited, unless the warning was already answered Continue for this column. The column's type is read here, the one place
-    ///     pre-flight touches the database; any error or exception from the read is ignored, because the run reports it.
+    ///     pre-flight touches the database. A failed read shows nothing here: it is handed to the run, which reports it without connecting again.
     /// </summary>
     /// <param name="settings">The settings to audit with.</param>
-    /// <returns><see langword="false" /> when the user chose Cancel; otherwise <see langword="true" />, including when nothing needed asking.</returns>
-    private async Task<bool> ConfirmVarcharAsync(AppSettings settings)
+    /// <returns>
+    ///     Whether to proceed (<see langword="false" /> only for Cancel), and the read's result for the run to use; <see langword="null" /> when no read was made or it did not
+    ///     finish (cancelled, or an exception), so the run reads the type itself.
+    /// </returns>
+    private async Task<(bool Proceed, ErrorOr<(string TypeName, short MaxLength)?>? Read)> ConfirmVarcharAsync(AppSettings settings)
     {
         string key = string.Join(separator: '\n', settings.Server.Trim(), settings.Database.Trim(), settings.Table.Trim(), settings.PathColumn.Trim())
                            .ToLowerInvariant();
 
         if (projectSettingsService.VarcharConfirmedFor == key)
         {
-            return true;
+            return (true, null);
         }
 
-        string                          column = settings.PathColumn.Trim();
-        (string TypeName, short MaxLength) found;
-        string                          target;
+        string                                       column = settings.PathColumn.Trim();
+        ErrorOr<(string TypeName, short MaxLength)?> read;
+        (string TypeName, short MaxLength)           found;
+        string                                       target;
 
         try
         {
@@ -158,23 +167,23 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
 
             if (quoted.IsError)
             {
-                return true;
+                return (true, null);
             }
 
             // Off the UI thread: opening a connection does some work synchronously (name resolution, authentication) before its first await, as the runs also allow for. The
-            // lookup has no command timeout of its own, so a blocked one is cancelled here; the cancellation lands in the catch below, and the run then reports what it finds.
+            // lookup has no command timeout of its own, so a blocked one is cancelled here; the cancellation lands in the catch below, and the run then reads the type itself.
             using CancellationTokenSource timeout = new(VarcharLookupTimeout);
 
-            ErrorOr<(string TypeName, short MaxLength)?> read =
-                await Task.Run(() => IndexTableReader.ReadPathColumnTypeAsync(ConnectionStrings.Build(settings.Server, settings.Database),
-                                                                              quoted.Value.QuotedTable,
-                                                                              quoted.Value.QuotedPathColumn,
-                                                                              timeout.Token));
+            read = await Task.Run(() => IndexTableReader.ReadPathColumnTypeAsync(ConnectionStrings.Build(settings.Server, settings.Database),
+                                                                                 quoted.Value.QuotedTable,
+                                                                                 quoted.Value.QuotedPathColumn,
+                                                                                 timeout.Token));
 
+            // A failed read (an unreachable server, say) or a missing column goes to the run, which reports it exactly as before without connecting again.
             if (read.IsError
                 || read.Value is null)
             {
-                return true;
+                return (true, read);
             }
 
             found = read.Value.Value;
@@ -185,15 +194,15 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             if (convertTo.IsError
                 || convertTo.Value is null)
             {
-                return true;
+                return (true, read);
             }
 
             target = convertTo.Value;
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            // The run repeats the lookup and reports the failure. A bug in this block is hidden here too, by design: the warning is a courtesy and must never stop a Start.
-            return true;
+            // The run reads the type itself and reports any failure. A bug in this block is hidden here too, by design: the warning is a courtesy and must never stop a Start.
+            return (true, null);
         }
 
         if (!await dialogues.ConfirmAsync($"The path column '{column}' is {PathColumnType.Format(found.TypeName, found.MaxLength)}.\n"
@@ -201,12 +210,12 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
                                           + "some characters in its paths when they were stored. See \"varchar Path Columns\" in the user guide.\n\nDo you want to continue?",
                                           confirmText: "_Continue"))
         {
-            return false;
+            return (false, null);
         }
 
         projectSettingsService.VarcharConfirmedFor = key;
 
-        return true;
+        return (true, read);
     }
 
     /// <summary>Checks the unindexed-files inputs: the folders first, then the two file type lists, then the three type warnings.</summary>

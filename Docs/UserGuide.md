@@ -743,8 +743,9 @@ This section briefly explains how each audit stays fast on large projects and tr
 `nvarchar` is preferred, and says which `nvarchar` type the app will convert the column to. *Continue* goes on with the audit; *Cancel* stops the Start, with no audit and no report
 written. It appears last, after the other checks, so you are not asked about a column when something else would stop the Start anyway. Once you choose *Continue* it is not asked
 again for that server, database, table and path column until you use *Close project* or *Open project...* or restart the app; changing any of the four asks again. The answer is not
-saved in the project file. An `nvarchar` column shows no warning. To decide whether to warn, the app looks up the column's type when you press Start. If the lookup fails (for
-example, the server cannot be reached) or takes longer than 30 seconds (for example, the table is locked), no warning is shown, and the audit's own check then reports the problem.
+saved in the project file. An `nvarchar` column shows no warning. To decide whether to warn, the app looks up the column's type when you press Start, and the audit then uses
+that answer rather than asking again. If the lookup fails (for example, the server cannot be reached), no warning is shown and the audit reports the problem straight away, so
+you wait for the server only once. If the lookup takes longer than 30 seconds (for example, the table is locked), it is given up and the audit checks the column itself.
 
 **How the conversion works.** A `varchar(n)` column, with *n* up to 4,000, is converted to `nvarchar(n)`; a longer one, and `varchar(max)`, to `nvarchar(max)`. The Missing Files
 audit converts each row's path once and works on the converted path throughout: classifying the row, reading it and counting it. The Unindexed Files audit reads the column as it

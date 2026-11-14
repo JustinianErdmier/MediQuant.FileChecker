@@ -435,14 +435,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ RelayCommand(CanExecute = nameof(CanStart)) ]
     private async Task StartAsync()
     {
-        AuditDirections direction  = SelectedDirection;
-        AppSettings     settings   = Snapshot();
-        ReportPath?     reportPath = await _preflight.RunAsync(settings, direction);
+        AuditDirections  direction = SelectedDirection;
+        AppSettings      settings  = Snapshot();
+        PreflightResult? preflight = await _preflight.RunAsync(settings, direction);
 
-        if (reportPath is null)
+        if (preflight is null)
         {
             return;
         }
+
+        ReportPath reportPath = preflight.ReportPath;
 
         SavePointResult savePoint = await _projectSettingsService.RunSavePointAsync(settings, reportPath, ReportLocation.SaveProjectSettings);
 
@@ -456,7 +458,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             SetSaveProjectSettings(value: true);
         }
 
-        AuditRequest request = new(settings, reportPath);
+        AuditRequest request = new(settings, reportPath, preflight.PathColumnType);
 
         AuditRun run;
 

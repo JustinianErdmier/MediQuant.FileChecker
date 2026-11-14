@@ -34,6 +34,10 @@ Decisions taken without the user, each with what it costs if wrong.
   out-of-memory, which SDD §9 treats as fatal. It is cancelled after 30 seconds, because it has no command timeout and a blocked `sp_describe_first_result_set` would otherwise
   keep Start busy indefinitely. The last two parts came from the task review. Cost if wrong: one constant, one filter.
 - **R3:** `PathColumnType.Format` is made public and given a `varchar` case, for the warning's `<type>`. The refusal error text is unchanged. Cost if wrong: nothing.
+- **R4** (after the final review; the user said an unreachable server should only be waited for once): pre-flight returns its lookup's result in a `PreflightResult`, and
+  `AuditRequest.PathColumnType` carries it to the run. Both runners use it instead of reading the type again. A type, not found or a SQL error is passed on. A lookup that was
+  abandoned or threw, or one that never ran because the answer was remembered, passes nothing, so the run reads the type itself. Errors still reach the user through the run's
+  normal failure path. Cost if wrong: one optional record member.
 
 ## Defects found in the plan
 
@@ -51,7 +55,8 @@ Decisions taken without the user, each with what it costs if wrong.
 | `0c2c662` | Task 2 fix round: the warning's position wording, order, silent cases, delay, `?` in 8.4      |
 | `aca652a` | Task 2 fix round: reflow                                                                      |
 | `1caeadb` | Task 2 fix round: reflow                                                                      |
-| (next)    | Final review minors: the guide's timeout example, notes in the plan and design; this ledger   |
+| `c1a7e1f` | Final review minors: the guide's timeout example, notes in the plan and design; this ledger   |
+| (next)    | One wait for an unreachable server: pre-flight's lookup handed to the run (R4)                |
 
 ## Verification
 
@@ -66,14 +71,15 @@ Decisions taken without the user, each with what it costs if wrong.
   - **Responsive:** the UI stayed responsive during the lookup.
 - **Not exercised:**
   - *Close project* itself (it calls the same `Reset` as *Open project...*).
-  - A truly unreachable server.
+  - A truly unreachable server, before R4. After R4 the controller drove one in the real window (server `nonexistent-host-fa5`): the run's *could not read the file index table*
+    error appeared 10 to 15 seconds after Start, with the run's Elapsed at `00:00:00` and status *Failed*, so there was one connection attempt.
   - The 30-second cancellation. Its path was confirmed by code reading in the final review: the cancellation reaches the catch, the token source is disposed only after the
     lookup completes, and nothing is left running.
 
 ## Outstanding items
 
-- **Accepted:** with an unreachable server, the first Start for a column waits for the connection timeout twice, once for the lookup and once for the run, with no status text.
-  This is the cost of approach A that the design records.
+- **Accepted:** with an unreachable server, the first Start for a column waits for one connection timeout, with no status text, before the run's error appears (R4 removed the
+  second wait).
 - **Accepted:** the remembered key is lexical (R1).
 
 ## Incidents
