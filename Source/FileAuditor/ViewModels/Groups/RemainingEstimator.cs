@@ -39,9 +39,6 @@ public sealed class RemainingEstimator
     /// <summary>The remaining time on display, in seconds; <see langword="null" /> until there is an estimate.</summary>
     private double? _shown;
 
-    /// <summary>Gets the recent rate in rows per second, or <see langword="null" /> during the warm-up.</summary>
-    public double? RecentRate => _rate.Value;
-
     /// <summary>Forgets the previous run.</summary>
     public void Reset()
     {

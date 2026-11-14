@@ -1,4 +1,3 @@
-
 # File Auditor — Master Design
 
 **Date:** 2026-11-06 **Status:** Approved 2026-11-06; amended through milestone 4 (2026-11-08)
@@ -176,14 +175,14 @@ and this section are the contract.
 │ │ └────────────────────────────────────────────────────────────┘ │ │
 │ │ ┌ Audit ─────────────────────────────────────────────────────┐ │ │
 │ │ │ Total files: 10     Found:      4     Elapsed:   00:02:14  │ │ │
-│ │ │ Distinct:    6      Missing:    1     Remaining: 00:02:18  │ │ │
+│ │ │ Distinct:    6      Missing:    1     Remaining: 00:00:00  │ │ │
 │ │ │ Duplicates:  2      Unverified: 1 (1) Files/second: 9      │ │ │
 │ │ │ Checked:     6      Skipped:    1                          │ │ │
-│ │ │ [██████████████████                            ]           │ │ │
+│ │ │ [██████████████████████████████████████████████]           │ │ │
 │ │ │ [View Report]                      [Start]  [Stop]         │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
 │ └────────────────────────────────────────────────────────────────┘ │
-│ Checking files...                                        │ 49%     │
+│ Completed                                                │ 100%    │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -561,8 +560,8 @@ unindexed direction reads only the path column, in the query of §6.5.2, and is 
 
 Each distinct real path is checked concurrently with bounded parallelism (builder chooses the mechanism and degree; the old app's unbounded `ThreadPool` + 1 million queue cap is
 not a requirement). Empty-path rows, skip markers and duplicates never reach the checks: the audit classifies and removes them as it reads (§6.2), so the checker only ever sees
-real paths. It keeps its own skip and empty tests as a safety net that should never fire; a stray one is recorded as an *Unverified* outcome so the sums of §6.2 still hold. Each
-file lands in exactly one outcome:
+real paths. It keeps its own skip and empty tests as a safety net that should never fire: since milestone 6 the reader and the checker run the same tests on the same string, so a
+stray skip or empty outcome cannot occur. Each file lands in exactly one outcome:
 
 | Outcome                                       | When                                                                                |
 |-----------------------------------------------|-------------------------------------------------------------------------------------|
@@ -1128,19 +1127,20 @@ so ordinary builds and `dotnet run` are unchanged.
   window grows to 640 × 668 for the fourth statistics row, with the grid columns of §5.4; on screen *Checked* is Found + Missing + U with each counter read once per refresh,
   because reading a separate Checked counter gave a torn snapshot mid-run (Checked below Missing); the checker keeps its skip and empty tests as an unreachable safety net, and a
   stray one is recorded as *Unverified — Other errors* with the reason `Skip marker not recognised by the database` (reachable, because the checker's `OrdinalIgnoreCase` folds
-  `ſkip` to `SKIP` where the database does not), so it is counted and listed; a failure of the empty-path ID read alone keeps the completed audit's report.
+  `ſkip` to `SKIP` where the database does not), so it is counted and listed *(superseded by milestone 6, below: the reader and the checker run the same tests on the same
+  string, so a stray one cannot occur)*; a failure of the empty-path ID read alone keeps the completed audit's report.
 - The nvarchar path column (Epic 2, milestone 1.1; **its requirement that the column be `nvarchar` is superseded by milestone 4**, below, which accepts `varchar` too; the history
   stays as it was), settled with the user: the cast of the path column to `nvarchar(max)`, which made the classification type-agnostic but is the costliest type to work on, is
   removed; the app expects an `nvarchar` path column, checked before any row is read, for both audits, with the two errors of §6.2; the ID column stays unrestricted. Decided by
   Claude (for the user to check): the check reads the column's system type, so an alias type over `nvarchar` is accepted and `nchar` is refused, since the user said `nvarchar` (a
   one-line change if wrong); the type is read under each audit's existing first status with no new status text, and Stop during it is the stop-before-checking of §6.4 and §6.5.4.
-  One cast remains, inside the trim's length and only for rows past the `skip` prefilter, because without it a 4,000-character value in an `nvarchar(4000)` column is truncated by
-  the added character (a skip marker padded to 4,000 characters was misclassified, and one with 3,996 trailing spaces failed the whole audit with error 537). Measured on 200,000
-  rows in LocalDB, with the cast and without it: the counts statement 1,154 to 589 ms (about 620 to 850 ms on a later, noisier run), the stream 1,654 to 1,385 ms, the empty-ID read
-  498 to 238 ms; these headline figures were taken on the fully cast-free statements, before the narrow `LEN` cast was restored. The final statements, re-timed on a separately
-  generated 200,000-row `nvarchar(400)` table (140,000 real paths, 40,000 empty, 20,000 `SKIP`), three runs each in LocalDB on a different day: the counts statement 2,211, 1,796
-  and 1,490 ms (the first run is cold) and the stream (distinct real rows, with an ID column) 1,530, 1,243 and 1,232 ms. These are not comparable with the figures above (different
-  data and machine load), and say nothing about the cast; the type lookup was not timed.
+  *(Superseded by milestone 6, below, for the Missing tab: the audit converts nothing.)* One cast remains, inside the trim's length and only for rows past the `skip` prefilter,
+  because without it a 4,000-character value in an `nvarchar(4000)` column is truncated by the added character (a skip marker padded to 4,000 characters was misclassified, and one
+  with 3,996 trailing spaces failed the whole audit with error 537). Measured on 200,000 rows in LocalDB, with the cast and without it: the counts statement 1,154 to 589 ms (about
+  620 to 850 ms on a later, noisier run), the stream 1,654 to 1,385 ms, the empty-ID read 498 to 238 ms; these headline figures were taken on the fully cast-free statements, before
+  the narrow `LEN` cast was restored. The final statements, re-timed on a separately generated 200,000-row `nvarchar(400)` table (140,000 real paths, 40,000 empty, 20,000 `SKIP`),
+  three runs each in LocalDB on a different day: the counts statement 2,211, 1,796 and 1,490 ms (the first run is cold) and the stream (distinct real rows, with an ID column)
+  1,530, 1,243 and 1,232 ms. These are not comparable with the figures above (different data and machine load), and say nothing about the cast; the type lookup was not timed.
 - The path column's type lookup (Epic 2, milestone 1.1, final review), decided by Claude (for the user to check): the type is read from the result-set metadata of the statements'
   own SELECT shape (`sp_describe_first_result_set`, §6.2) rather than from the catalogue views, so permissions, synonyms (also to another database) and views behave as the
   statements do. A first error of 207 or 208 is "not found", unless a 4413 follows (a view that no longer binds, whose message is shown as it is); any other error, such as

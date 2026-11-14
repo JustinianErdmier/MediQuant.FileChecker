@@ -376,10 +376,10 @@ How to read it:
 - **The header** records exactly what was audited and how: the connection, the table and columns, the empty-files option and, for a built location, the project folder and
   stages. `ID column:` reads `(none)` when no ID column was set.
 - **The result** is `Completed`, `Stopped by user`, or `Failed —` followed by the error.
-- **The summary** always adds up, in the two ways of section 4.3: Found + Missing + Unverified = Distinct, and Distinct + Duplicates + the empty paths (the bracket on
-  `Unverified:`) + Skipped = Total files. *Total files* is the table's rows; `Distinct:`, `Duplicates:` and `Skipped:` are always shown. A stopped or failed run adds a `Not
-  checked:` line, after `Skipped:`, for the rows it did not finish with, so Found + Missing + Unverified + Duplicates + the empty paths + Skipped + Not checked = Total files; a
-  completed run has no such line.
+- **The summary** of a completed run adds up in the two ways of section 4.3: Found + Missing + Unverified = Distinct, and Distinct + Duplicates + the empty paths (the bracket
+  on `Unverified:`) + Skipped = Total files. *Total files* is the table's rows; `Distinct:`, `Duplicates:` and `Skipped:` are always shown. A stopped or failed run adds a `Not
+  checked:` line, after `Skipped:`, for the rows it did not finish with, and adds up as Checked + Duplicates + the empty paths + Skipped + Not checked = Total files (Checked being
+  Found + Missing + Unverified, the bracket on `Unverified:` left out); a completed run has no such line.
 - **The Unverified Files count** (`Unverified Files (430)` above) includes the empty-path rows, since they are listed there: 120 files that could not be checked, plus 310 rows with
   no path.
 - **Missing Files** and **Unverified Files** list each file under its reason, in square brackets with a count. Grouping by reason makes it easy to act on many files at once:
@@ -717,8 +717,8 @@ This section briefly explains how each audit stays fast on large projects and tr
   remembers that folder. Every later file under it gets the same answer straight away, whilst files elsewhere are still checked normally. A single blocked folder therefore costs
   one slow lookup, not one per file, and its files are still listed one by one in the report.
 - **Duplicates are found by fingerprint.** Each path (with its ID, when an ID column is set) is turned into a 128-bit fingerprint (a hash), ignoring letter case and trailing
-  spaces, and only the fingerprints are kept: about 48 MB per million rows. A fingerprint seen before marks a duplicate row, which is not checked again. At 128 bits, two different
-  paths sharing a fingerprint is so unlikely that it will not happen in any real table, so a path is never wrongly passed over as a duplicate.
+  spaces, and only the fingerprints are kept: about 48 MB per million distinct paths. A fingerprint seen before marks a duplicate row, which is not checked again. At 128 bits,
+  two different paths sharing a fingerprint is so unlikely that it will not happen in any real table, so a path is never wrongly passed over as a duplicate.
 - **Skip markers and empty paths are never checked.** The app recognises them as it reads each row, so they are counted but never sent to the file checks. The IDs of the empty-path
   rows are collected as the rows are read, when an ID column is set.
 - **An honest Remaining.** The estimate follows a speed weighted to the last 30 seconds of rows handled, ignores the first few seconds of start-up, counts down smoothly, and holds
@@ -970,7 +970,7 @@ Audit optimisation: the audits read the index table differently, report more abo
 - Missing Files tab: live counts. The table's rows are counted in a moment (*Total files*) and are then read and checked at once, however large the table; *Distinct*, *Duplicates*,
   *Skipped* and the empty paths in brackets on *Unverified* grow as the rows are read, and *Remaining* and the progress bar follow the rows handled. New statistics: *Distinct* (the
   different paths seen, which the checks then work through), *Found* and *Duplicates*. The report's Summary lists *Total files*, *Distinct*, *Duplicates*, *Found*, *Missing*,
-  *Unverified* and *Skipped*, and *Not checked* for a stopped run; the IDs of empty-path rows are listed in the report as they were read (or a note says why they are not).
+  *Unverified* and *Skipped*, and *Not checked* for a stopped or failed run; the IDs of empty-path rows are listed in the report as they were read (or a note says why not).
 - Unindexed Files tab: *Excluded* (files the type filters skipped) and *Index paths* (the paths loaded to compare against, counted live while the index loads); *Indexed* moves
   to the top of the second column.
 - A *finished* dialogue when an audit completes, with its key figures, the report's location and *View Report*. If you are in another program, the taskbar button flashes and

@@ -146,7 +146,6 @@ measurement in the plan's verification (the same LocalDB table, before and after
 
 ## 12. Settled after the builder check
 
-The builder check raised five questions, all settled from the conversation or as Claude's calls: *Distinct* counts paths first seen, not paths checked, and *Duplicates*
-keeps counting extra rows (confirmed by the user; §6); the key trims only
-trailing spaces (§5); the clean-up happens after the merge, the branches on GitHub included (§10); *Remaining* and *Files/second* use separate rates (§6); a table changing
-mid-run stays out of scope (§6).
+The builder check raised five questions, all settled from the conversation or as Claude's calls: *Distinct* counts paths first seen, not paths checked, and *Duplicates* keeps
+counting extra rows (confirmed by the user; §6); the key trims only trailing spaces (§5); the clean-up happens after the merge, the branches on GitHub included (§10); *Remaining*
+and *Files/second* use separate rates (§6); a table changing mid-run stays out of scope (§6).

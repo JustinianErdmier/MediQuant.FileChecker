@@ -125,6 +125,7 @@ public sealed partial class AuditViewModel : AuditStatusBase
         Percent       = total > 0 ? Math.Min(100, handled * 100.0 / total) : isFinished && hasCounts ? 100 : 0;
         StatusPercent = hasCounts ? $"{Percent:0}%" : string.Empty;
     }
+
     /// <summary>Formats a count with thousands separators.</summary>
     private static string Format(long value) => value.ToString(format: "N0", CultureInfo.CurrentCulture);
 
