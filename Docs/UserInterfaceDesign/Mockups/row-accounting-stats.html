@@ -32,7 +32,8 @@
 </head>
 <body>
 <h1>Missing Files tab: Audit group</h1>
-<p class="sub">Four rows instead of three. Left: Total files, Duplicates, Checked. Middle: Found, Missing, Unverified, Skipped. Right: Elapsed, Remaining, Files/second.</p>
+<p class="sub">Four rows. Left: Total files, Distinct, Duplicates, Checked. Middle: Found, Missing, Unverified, Skipped. Right: Elapsed, Remaining, Files/second.
+Every figure but Total files is live.</p>
 
 <div class="wrap">
   <div class="win">
@@ -41,29 +42,29 @@
       <fieldset>
         <legend>Audit</legend>
         <div class="stats">
-          <div class="cell new"><span>Total files:</span><span class="v">98,200 (124,500)</span></div>
-          <div class="cell new"><span>Found:</span><span class="v">41,500</span></div>
+          <div class="cell new"><span>Total files:</span><span class="v">124,500</span></div>
+          <div class="cell"><span>Found:</span><span class="v">41,500</span></div>
           <div class="cell"><span>Elapsed:</span><span class="v">00:01:12</span></div>
 
-          <div class="cell new"><span>Duplicates:</span><span class="v">24,750</span></div>
+          <div class="cell new"><span>Distinct:</span><span class="v">51,600</span></div>
           <div class="cell"><span>Missing:</span><span class="v">260</span></div>
           <div class="cell"><span>Remaining:</span><span class="v">00:01:38</span></div>
 
-          <div class="cell"><span>Checked:</span><span class="v">41,880</span></div>
-          <div class="cell new"><span>Unverified:</span><span class="v">120 (310)</span></div>
+          <div class="cell"><span>Duplicates:</span><span class="v">10,800</span></div>
+          <div class="cell new"><span>Unverified:</span><span class="v">120 (130)</span></div>
           <div class="cell"><span>Files/second:</span><span class="v">582 (610)</span></div>
 
-          <div class="cell"></div>
-          <div class="cell new"><span>Skipped:</span><span class="v">1,240</span></div>
+          <div class="cell"><span>Checked:</span><span class="v">41,880</span></div>
+          <div class="cell"><span>Skipped:</span><span class="v">640</span></div>
           <div class="cell"></div>
         </div>
         <div class="bar"><i style="width:43%"></i></div>
         <div class="row"><span class="btn dis">View Report</span><span style="flex:1"></span><span class="btn dis">Start</span><span class="btn">Stop</span></div>
       </fieldset>
       <div class="sums">
-        Found + Missing + Unverified = Checked: 41,500 + 260 + 120 = <b>41,880</b> of 98,200<br>
-        Total rows: 98,200 + 24,750 duplicates + 310 empty + 1,240 skipped = <b>124,500</b><br>
-        Duplicates, empty (310) and Skipped are known the moment counting ends.
+        Found + Missing + Unverified = Checked: 41,500 + 260 + 120 = <b>41,880</b>, which trails Distinct (51,600) by the paths queued or being checked.<br>
+        The bar and Remaining run on rows handled: 41,880 + 10,800 + 130 + 640 = <b>53,450</b> of 124,500.<br>
+        Duplicates, empty paths (130) and Skipped count the rows read so far.
       </div>
     </div>
   </div>
@@ -75,32 +76,31 @@
         <legend>Audit</legend>
         <div class="stats">
           <div class="cell new"><span>Total files:</span><span class="v">48,207</span></div>
-          <div class="cell new"><span>Found:</span><span class="v">48,190</span></div>
+          <div class="cell"><span>Found:</span><span class="v">48,190</span></div>
           <div class="cell"><span>Elapsed:</span><span class="v">00:01:29</span></div>
 
-          <div class="cell new"><span>Duplicates:</span><span class="v">0</span></div>
+          <div class="cell new"><span>Distinct:</span><span class="v">48,207</span></div>
           <div class="cell"><span>Missing:</span><span class="v">12</span></div>
           <div class="cell"><span>Remaining:</span><span class="v">00:00:00</span></div>
 
-          <div class="cell"><span>Checked:</span><span class="v">48,207</span></div>
+          <div class="cell"><span>Duplicates:</span><span class="v">0</span></div>
           <div class="cell new"><span>Unverified:</span><span class="v">5</span></div>
           <div class="cell"><span>Files/second:</span><span class="v">541</span></div>
 
-          <div class="cell"></div>
-          <div class="cell new"><span>Skipped:</span><span class="v">0</span></div>
+          <div class="cell"><span>Checked:</span><span class="v">48,207</span></div>
+          <div class="cell"><span>Skipped:</span><span class="v">0</span></div>
           <div class="cell"></div>
         </div>
         <div class="bar"><i style="width:100%"></i></div>
         <div class="row"><span class="btn">View Report</span><span style="flex:1"></span><span class="btn">Start</span><span class="btn dis">Stop</span></div>
       </fieldset>
       <div class="sums">
-        Total files has no parentheses because the table total equals the distinct total.<br>
+        Completed run: Found + Missing + Unverified = Checked = Distinct = <b>48,207</b>; Distinct + Duplicates + empty paths + Skipped = Total files.<br>
         Unverified has no parentheses because there are no empty paths.
       </div>
     </div>
   </div>
 </div>
-
 <h1 style="margin-top:32px">Unindexed Files tab: Audit group</h1>
 <p class="sub">Three rows instead of two. Left: Total files, Excluded, Index paths. Middle: Indexed, Unindexed, Unverified. Right: Elapsed, Files/second. No Remaining.</p>
 
@@ -161,6 +161,6 @@
   </div>
 </div>
 
-<p class="legend"><span>Yellow</span> = new or changed. At the end, Checked equals Total files, since the empty and skipped rows are no longer part of it.</p>
+<p class="legend"><span>Yellow</span> = new or changed. At the end of a completed run, Checked equals Distinct.</p>
 </body>
 </html>

@@ -85,12 +85,12 @@ public static class IndexTableReader
         }
     }
 
-    /// <summary>Counts how the rows of the table divide into empty paths, skip markers, distinct real paths and duplicates.</summary>
+    /// <summary>Counts the rows of the table.</summary>
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The audit query.</param>
     /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
-    /// <returns>The row counts, or <c>Sql.QueryFailed</c> when SQL Server reports an error.</returns>
-    public static async Task<ErrorOr<RowCounts>> CountRowsAsync(string connectionString, AuditQuery query, CancellationToken cancellationToken)
+    /// <returns>The number of rows, or <c>Sql.QueryFailed</c> when SQL Server reports an error.</returns>
+    public static async Task<ErrorOr<long>> CountRowsAsync(string connectionString, AuditQuery query, CancellationToken cancellationToken)
     {
         try
         {
@@ -98,18 +98,16 @@ public static class IndexTableReader
 
             await connection.OpenAsync(cancellationToken);
 
-            await using SqlCommand command = new(query.CountsSql, connection);
+            await using SqlCommand command = new(query.CountSql, connection);
 
             command.CommandTimeout = 0;
-
-            AddParameters(command, query.Parameters);
 
             await using CancellationTokenRegistration registration = cancellationToken.Register(command.Cancel);
             await using SqlDataReader                 reader       = await command.ExecuteReaderAsync(cancellationToken);
 
             await reader.ReadAsync(cancellationToken);
 
-            return new RowCounts(reader.GetInt64(i: 0), reader.GetInt64(i: 1), reader.GetInt64(i: 2), reader.GetInt64(i: 3));
+            return reader.GetInt64(i: 0);
         }
         catch (SqlException exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -122,59 +120,7 @@ public static class IndexTableReader
         }
     }
 
-    /// <summary>Reads the ID of every row whose path is empty, as text.</summary>
-    /// <param name="connectionString">The connection string.</param>
-    /// <param name="query">The audit query; its <see cref="AuditQuery.EmptyIdsSql" /> must not be <see langword="null" />.</param>
-    /// <param name="cancellationToken">Cancels the operation; cancellation surfaces as <see cref="OperationCanceledException" />.</param>
-    /// <returns>The IDs, with <c>NULL</c> as an empty string, or <c>Sql.QueryFailed</c> when SQL Server reports an error.</returns>
-    public static async Task<ErrorOr<IReadOnlyList<string>>> ReadEmptyIdsAsync(string connectionString, AuditQuery query, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await using SqlConnection connection = new(connectionString);
-
-            await connection.OpenAsync(cancellationToken);
-
-            await using SqlCommand command = new(query.EmptyIdsSql, connection);
-
-            command.CommandTimeout = 0;
-
-            AddParameters(command, query.Parameters);
-
-            await using CancellationTokenRegistration registration = cancellationToken.Register(command.Cancel);
-            await using SqlDataReader                 reader       = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-
-            List<string> ids = [];
-
-            try
-            {
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    ids.Add(await ReadStringAsync(reader, ordinal: 0, cancellationToken) ?? string.Empty);
-                }
-            }
-            catch
-            {
-                // Closing a reader drains the remaining rows unless the command is cancelled first.
-                command.Cancel();
-
-                throw;
-            }
-
-            return ids;
-        }
-        catch (SqlException exception) when (!cancellationToken.IsCancellationRequested)
-        {
-            return SqlErrors.QueryFailed(exception.Message);
-        }
-        catch (SqlException)
-        {
-            // SqlClient may fault a cancelled command with a SqlException; report it as the cancellation it is.
-            throw new OperationCanceledException(cancellationToken);
-        }
-    }
-
-    /// <summary>Streams the distinct real rows of the index table (neither empty nor skip markers) to a callback.</summary>
+    /// <summary>Streams every row of the index table, in table order, to a callback; the first row arrives as soon as SQL Server starts the scan.</summary>
     /// <param name="connectionString">The connection string.</param>
     /// <param name="query">The audit query.</param>
     /// <param name="onRow">Called once per row, in order.</param>
@@ -191,8 +137,6 @@ public static class IndexTableReader
             await using SqlCommand command = new(query.SelectSql, connection);
 
             command.CommandTimeout = 0;
-
-            AddParameters(command, query.Parameters);
 
             await using CancellationTokenRegistration registration = cancellationToken.Register(command.Cancel);
             await using SqlDataReader                 reader       = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);

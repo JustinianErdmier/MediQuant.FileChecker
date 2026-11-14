@@ -38,10 +38,10 @@
                            Grid.Column="5"
                            Text="{Binding Elapsed}" />
                 <TextBlock Grid.Row="1"
-                           Text="Duplicates:" />
+                           Text="Distinct:" />
                 <TextBlock Grid.Row="1"
                            Grid.Column="1"
-                           Text="{Binding Duplicates}" />
+                           Text="{Binding Distinct}" />
                 <TextBlock Grid.Row="1"
                            Grid.Column="2"
                            Text="Missing:" />
@@ -55,10 +55,10 @@
                            Grid.Column="5"
                            Text="{Binding Remaining}" />
                 <TextBlock Grid.Row="2"
-                           Text="Checked:" />
+                           Text="Duplicates:" />
                 <TextBlock Grid.Row="2"
                            Grid.Column="1"
-                           Text="{Binding Checked}" />
+                           Text="{Binding Duplicates}" />
                 <TextBlock Grid.Row="2"
                            Grid.Column="2"
                            Text="Unverified:" />
@@ -71,6 +71,11 @@
                 <TextBlock Grid.Row="2"
                            Grid.Column="5"
                            Text="{Binding FilesPerSecond}" />
+                <TextBlock Grid.Row="3"
+                           Text="Checked:" />
+                <TextBlock Grid.Row="3"
+                           Grid.Column="1"
+                           Text="{Binding Checked}" />
                 <TextBlock Grid.Row="3"
                            Grid.Column="2"
                            Text="Skipped:" />
