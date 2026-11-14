@@ -115,14 +115,14 @@ Before Task 1 the controller creates branch `feat/milestone-6-streaming-missing-
 
 **Files:** Modify `Docs/Specs/1-file-auditor-master-design.md`, `Docs/UserGuide.md`
 
-- [ ] **Step 1: SDD.** §5.4 (the grid and the live figures), §6.2 (the two statements; the classification, key and empty IDs in the app; the type rule unchanged; the warning's
+- [x] **Step 1: SDD.** §5.4 (the grid and the live figures), §6.2 (the two statements; the classification, key and empty IDs in the app; the type rule unchanged; the warning's
   wording), §6.4 (progress by rows, stop, the removed phase), §6.5.2 (the `nvarchar(4000)` filter conversion), §7 (the Summary and the empty-path notes), §9 (new and removed
   members), §10 (this milestone's calls; mark milestone 1's SQL classification and up-front counts and milestone 4's Missing-tab conversion as superseded). Remove anything
   this makes false.
-- [ ] **Step 2: User guide.** Section 4 (the statistics table, the sums, the sample report Summary), section 8.4 rewritten (only the Unindexed filter converts, to
+- [x] **Step 2: User guide.** Section 4 (the statistics table, the sums, the sample report Summary), section 8.4 rewritten (only the Unindexed filter converts, to
   `nvarchar(4000)`; why; the effects of stored look-alikes and `?`), section 9 (the warning's new wording), section 8 / 10 wherever they describe counting, and the 2.0.0
   changelog entry (live counts and *Distinct*; the Summary's new lines). Hard-wrap at 180 characters, reflowing whole paragraphs.
-- [ ] **Step 3: Commit** — `docs(📝): document the streaming Missing Files audit`.
+- [x] **Step 3: Commit** — `docs(📝): document the streaming Missing Files audit`.
 
 After the PR is merged (not part of the PR): the controller deletes `Docs/Temp/` from `main` in a clean-up commit and the branches `diag/v1.0.0-debug-report` and
 `diag/v2.0.0-debug-report` locally and on GitHub, and drops the `FileAuditorPerf` database.

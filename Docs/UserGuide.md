@@ -113,8 +113,8 @@ because every letter was already taken.
 | Help > About File Auditor |          | Shows the app's version.                                                              |
 
 **The status bar** reads `Ready` when the selected tab can start, `Enter the required details` when something it needs is still empty, and, whilst an audit runs, its phase:
-`Counting files...`, `Loading the index...`, `Checking files...`, `Reading empty paths...` or `Writing report...`. When a run ends it reads `Completed`, `Stopped`, or `Failed`, and
-that result stays on its tab until the next run. Whilst an audit runs, the status bar follows it even if you switch to the other tab.
+`Counting files...`, `Loading the index...`, `Checking files...` or `Writing report...`. When a run ends it reads `Completed`, `Stopped`, or `Failed`, and that result stays on its
+tab until the next run. Whilst an audit runs, the status bar follows it even if you switch to the other tab.
 
 ## 3.1 SQL Server Connection
 
@@ -124,9 +124,9 @@ The **File Index Table** group holds:
 
 - **Table:** required. Type the table's name, or `schema.table` if it is not in the default schema.
 - **Path column:** required. The column holding each document's full path. It may be an **`nvarchar`** (Unicode text) or a **`varchar`** column, of any length, including the `max`
-  forms. The app converts a `varchar` column to `nvarchar` itself, but it warns you first, and `nvarchar` is the better choice (see section 8.4). Any other type, such as `char`,
-  `nchar` or `text`, is refused when you press Start, with a message that names the column and its type (see section 9). Both audits apply this rule. If your path column is of
-  another type, ask for it to be converted to `nvarchar`, or use a view of the table that casts it.
+  forms. The app reads a `varchar` column as it is, but it warns you first, because `nvarchar` is the better choice (see section 8.4). Any other type, such as `char`, `nchar` or
+  `text`, is refused when you press Start, with a message that names the column and its type (see section 9). Both audits apply this rule. If your path column is of another type,
+  ask for it to be converted to `nvarchar`, or use a view of the table that casts it.
 - **ID column:** optional. When it is filled in, the Missing Files report shows each row's ID beside its path. The Unindexed Files audit does not use it (a file that is not in
   the table has no ID), but it is still saved with the project. The ID must be **unique to its file**: one ID per path, such as a document ID. Do not use a patient or account
   ID that several files share or that repeats across a file's rows (see §4.1); the app does not check this.
@@ -202,17 +202,17 @@ These checks ensure that you never find out _after_ a long run that the report c
 
 ## 4.1 Overview
 
-The Missing Files audit reads every row of the index table and checks that the file at its path exists on disk. Many index tables are built around patients rather than
-files, so one path can appear on many rows; the app reads each distinct path once, so each file is checked and counted once. With an ID column set, it reads each distinct path
-and ID pair instead, which is why the ID must be unique to its file: a path listed with three different IDs is checked three times. Letter case and trailing spaces usually
-do not make two paths distinct.
+The Missing Files audit reads every row of the index table and checks that the file at its path exists on disk. Many index tables are built around patients rather than files, so
+one path can appear on many rows; the app checks each distinct path once, so each file is checked and counted once. With an ID column set, it treats each distinct path and ID pair
+as one, which is why the ID must be unique to its file: a path listed with three different IDs is checked three times. Letter case and trailing spaces do not make two paths
+distinct; any other difference, including a leading space, does.
 
-Before it checks anything, the app sorts every row of the table into one of four kinds, and counts them, so you can see where every row went:
+As it reads the table, the app sorts every row into one of four kinds, and counts them as it goes, so you can see where every row went:
 
 | Kind       | What it is                                                                                                                                       |
 |------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
 | Distinct   | A real path, the first row to carry it (or the first row with that path and ID, when an ID column is set). These are the files that get checked. |
-| Duplicate  | A further row for a path (or path and ID) already counted. Not checked again.                                                                    |
+| Duplicate  | A further row for a path (or path and ID) already seen. Not checked again.                                                                       |
 | Empty path | The path is `NULL`, empty, or only whitespace. Never checked; counted, and listed by ID when an ID column is set (see *Path is empty*, below).   |
 | Skipped    | The path is a skip marker (below). Never checked and never listed.                                                                               |
 
@@ -238,7 +238,7 @@ The important difference is between **Missing** and **Unverified**. *Missing* me
 **Skipped rows.** Some index rows carry a marker instead of a path, written by hand or by the tool that builds the index table. A row is skipped when its value, ignoring spaces
 around it and letter case, is `SKIP` or `SKIPPED`, or starts with `SKIP:` or `SKIPPED:` followed by anything (`SKIPPED: preflight`, `skip:duplicate`). Nothing else is a recognised
 skip marker: not `SKIP preflight` (no colon), not `SKIPPEDX`, and not a real path that happens to contain the word, such as `C:\SKIPPED\a.txt`. A skipped row is never checked and
-never listed in the report, but it is counted, so the numbers still add up. Skipped rows are counted before any file is checked, so *Skipped* is final the moment counting ends.
+never listed in the report, but it is counted, so the numbers still add up. Skipped rows are counted as they are read, so *Skipped* grows during the run.
 
 ## 4.2 Empty Files Option
 
@@ -251,54 +251,56 @@ The option belongs to the Missing Files audit only. The report's header says whi
 
 Press **Start**. The app runs its pre-flight checks (section 3.4), saves the project's settings if they need saving (section 6), then:
 
-1. **Counts the rows** (status `Counting files...`): the table's rows, the empty paths, the skipped rows and the distinct paths, so it can show progress and the time remaining.
-2. **Checks the files** (status `Checking files...`), many at a time. Only the distinct paths are checked; empty and skipped rows never reach this step.
-3. **Reads the empty paths** (status `Reading empty paths...`), only when the check completed, some rows had an empty path, and you set an ID column: it fetches the ID of each such
-   row so the report can list them. It is one more pass over the table, but a lighter one than counting, which has to work out every row's kind and its distinct path.
-4. **Writes the report** (status `Writing report...`).
+1. **Counts the rows** (status `Counting files...`): the table's row count, which is *Total files*. This takes a moment, however large the table.
+2. **Reads the rows and checks the files** (status `Checking files...`). The rows are read straight away, in the table's order, and each is sorted into its kind as it arrives. Only
+   the distinct paths are checked, many at a time; duplicate, empty and skipped rows never reach this step. Every statistic except *Total files* is live, so you see the table being
+   worked through.
+3. **Writes the report** (status `Writing report...`).
 
 **The statistics**
 
-| Statistic    | Meaning                                                                                                                       |
-|--------------|-------------------------------------------------------------------------------------------------------------------------------|
-| Total files  | The distinct files to check. When the table has more rows than that, the table's rows follow in brackets: `98,200 (124,500)`. |
-| Duplicates   | Rows that repeat a path (or path and ID) already counted, such as a file listed once per patient.                             |
-| Checked      | Files checked so far: Found + Missing + Unverified. Skipped and empty-path rows are not included.                             |
-| Found        | Files that exist (and, with the empty-files option on, are not empty) so far.                                                 |
-| Missing      | Missing files found so far.                                                                                                   |
-| Unverified   | Files that could not be checked so far. When some rows have an empty path, their count follows in brackets: `120 (310)`.      |
-| Skipped      | Rows passed over because they hold a skip marker.                                                                             |
-| Elapsed      | Time since you pressed Start, as `hh:mm:ss`.                                                                                  |
-| Remaining    | Estimated time left. It reads `Calculating...` whilst the rows are counted and for the first 5 seconds of checking.           |
-| Files/second | The run's average speed, then, whilst the run is going, the recent speed in brackets, such as `54,112 (60,001)`.              |
+| Statistic    | Meaning                                                                                                                                                      |
+|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Total files  | The table's rows. Known the moment counting ends, and fixed for the run.                                                                                     |
+| Distinct     | The different real paths seen so far, each counted when it is first read. Each is then checked, so Checked trails it a little.                               |
+| Duplicates   | Rows that repeat a path (or path and ID) already seen, such as a file listed once per patient. A path listed three times is one Distinct and two Duplicates. |
+| Checked      | Files checked so far: Found + Missing + Unverified. Skipped, empty-path and duplicate rows are not included.                                                 |
+| Found        | Files that exist (and, with the empty-files option on, are not empty) so far.                                                                                |
+| Missing      | Missing files found so far.                                                                                                                                  |
+| Unverified   | Files that could not be checked so far. When some rows have an empty path, their count so far follows in brackets: `120 (310)`.                              |
+| Skipped      | Rows passed over because they hold a skip marker, counted as they are read.                                                                                  |
+| Elapsed      | Time since you pressed Start, as `hh:mm:ss`.                                                                                                                 |
+| Remaining    | Estimated time left, from how fast rows are being handled. It reads `Calculating...` whilst the rows are counted and for the first 5 seconds of checking.    |
+| Files/second | The run's average speed in files checked, then, whilst the run is going, the recent speed in brackets, such as `54,112 (60,001)`.                            |
 
 **How the numbers add up.** Two sums always hold once a run completes:
 
-- **Found + Missing + Unverified = Total files.** (The *Unverified* here is the number before the brackets, so it leaves out the empty-path rows.)
-- **Total files + Duplicates + the empty paths (the bracket on Unverified) + Skipped = the table's rows.**
+- **Found + Missing + Unverified = Checked = Distinct.** (The *Unverified* here is the number before the brackets, so it leaves out the empty-path rows.)
+- **Distinct + Duplicates + the empty paths (the bracket on Unverified) + Skipped = Total files.**
 
-Total files, Duplicates, Skipped and the bracketed counts are known the moment counting ends and do not change during the run; only Found, Missing, Unverified and Checked grow.
-If you stop or the run fails, the report adds a *Not checked* line for the distinct files it did not reach, so the first sum still holds. The app assumes the index table does not
-change whilst an audit runs; if rows are added or removed meanwhile, the sums may not hold.
+Total files is known the moment counting ends and does not change during the run. Distinct, Duplicates, Skipped and the bracketed count grow as the rows are read, and Found,
+Missing, Unverified and Checked as the files are checked, so the sums hold once the run completes; until then Checked trails Distinct a little. If you stop or the run fails, the
+report adds a *Not checked* line for the rows the audit did not finish with (those it never read, and the distinct paths it read but did not check), so Checked + Duplicates + the
+empty paths + Skipped + Not checked = Total files. The app assumes the index table does not change whilst an audit runs; if rows are added or removed meanwhile, the sums may not
+hold.
 
-The progress bar shows the share of Total files checked. If the table has no real paths at all (only empty or skipped rows, or no rows), the run still completes and the bar reads
-100%.
+The progress bar shows the share of Total files handled: a duplicate, empty or skipped row is handled the moment it is read, and a distinct path when its check ends. Remaining and
+the status bar's percentage use the same count, so they stay accurate while a run of duplicates is read. If the table has no rows, the run still completes and the bar reads 100%.
 
-**About Remaining.** The estimate follows the speed of roughly the last 30 seconds, not the whole run, so it reacts when the network speeds up or slows down. Between updates,
-it counts down one second per second and glides to each new estimate over a few seconds, so it never jumps about. If checking stalls (a slow share, say), it holds still rather than
-running down to zero. At the end it reads `00:00:00`.
+**About Remaining.** The estimate follows the speed of roughly the last 30 seconds of rows handled, not the whole run, so it reacts when the network speeds up or slows down.
+Between updates, it counts down one second per second and glides to each new estimate over a few seconds, so it never jumps about. If the work stalls (a slow share, say), it holds
+still rather than running down to zero. At the end it reads `00:00:00`.
 
-**About Files/second.** The first number counts *checked* files over the whole elapsed time: how fast this run has been. The number in brackets is the *recent* speed of
-checked files: how fast it is going now, and the speed behind Remaining. When the run ends, only the first number stays.
+**About Files/second.** The first number counts *checked* files over the whole elapsed time: how fast this run has been. The number in brackets is the *recent* speed of checked
+files: how fast it is going now. Remaining has its own recent speed, over rows handled, so a long run of duplicates changes Remaining but not Files/second. When the run ends, only
+the first number stays.
 
-**Stopping.** Press **Stop** (or Esc). The app stops checking and writes the report with `Result: Stopped by user`, listing what it checked so far, with a *Not checked* count for
-the rest. If you stop whilst the rows are still being counted, nothing has been checked, so no report is written and the status bar reads `Stopped`. If you stop whilst the empty
-paths are being read (the last step), every file has already been checked, so the result stays `Completed`; the report just says the empty paths were not listed because the audit
-was stopped.
+**Stopping.** Press **Stop** (or Esc). The app stops reading rows and checking files and writes the report with `Result: Stopped by user`, listing what it checked so far, with a
+*Not checked* count for the rest and the IDs of the empty-path rows it had read. If you stop before the row count has come back (a moment at the start), nothing has been checked,
+so no report is written and the status bar reads `Stopped`.
 
-**If the database fails.** A connection problem, a wrong table or column name, or a timeout shows an error. If nothing was checked yet, no report is written (even though the rows
-were counted). If it fails part-way, the report is written with `Result: Failed —` and the message, and the counts so far. If only the last step, reading the empty paths, fails,
-the audit itself is fine: the report is still written, and its empty-path group says why the IDs are not listed.
+**If the database fails.** A connection problem, a wrong table or column name, or a timeout shows an error. If no row had been handled yet, no report is written. If it fails
+part-way, the report is written with `Result: Failed —` and the message, the counts so far, and the IDs of the empty-path rows read so far.
 
 **When the audit ends.** A completed audit opens a dialogue that says *The Missing Files audit has finished.*, gives the final *Missing* and *Unverified* figures as the Audit group
 shows them, and gives the full path of the report. Press **View Report** (or Alt+V) to open the report, or **OK** to close the dialogue. Windows plays its information sound,
@@ -334,7 +336,8 @@ Result:          Completed
 
 Summary
 -------
-Total files:     98,200 (124,500)
+Total files:     124,500
+Distinct:        98,200
 Duplicates:      24,750
 Found:           97,820
 Missing:         260
@@ -373,10 +376,10 @@ How to read it:
 - **The header** records exactly what was audited and how: the connection, the table and columns, the empty-files option and, for a built location, the project folder and
   stages. `ID column:` reads `(none)` when no ID column was set.
 - **The result** is `Completed`, `Stopped by user`, or `Failed —` followed by the error.
-- **The summary** always adds up, in the two ways of section 4.3: Found + Missing + Unverified + *Not checked* = Total files, and Total files + Duplicates + the empty paths (the
-  bracket on `Unverified:`) + Skipped = the table's rows (the bracket on `Total files:`). *Total files* is the distinct files, with the table's rows in brackets when they differ;
-  `Duplicates:` and `Skipped:` are always shown. A stopped or failed run adds a `Not checked:` line, after `Skipped:`, for the distinct files it did not reach, so the first sum
-  still holds; a completed run has no such line.
+- **The summary** always adds up, in the two ways of section 4.3: Found + Missing + Unverified = Distinct, and Distinct + Duplicates + the empty paths (the bracket on
+  `Unverified:`) + Skipped = Total files. *Total files* is the table's rows; `Distinct:`, `Duplicates:` and `Skipped:` are always shown. A stopped or failed run adds a `Not
+  checked:` line, after `Skipped:`, for the rows it did not finish with, so Found + Missing + Unverified + Duplicates + the empty paths + Skipped + Not checked = Total files; a
+  completed run has no such line.
 - **The Unverified Files count** (`Unverified Files (430)` above) includes the empty-path rows, since they are listed there: 120 files that could not be checked, plus 310 rows with
   no path.
 - **Missing Files** and **Unverified Files** list each file under its reason, in square brackets with a count. Grouping by reason makes it easy to act on many files at once:
@@ -387,11 +390,10 @@ How to read it:
 - **Skipped rows are not listed**, only counted.
 
 **The "Path is empty" group.** A row whose path is empty has no path to print, so the group *[Path is empty in the index table]* lists the row's ID instead, one line per row, so
-the group's count matches its lines. That is why it can be long. It needs an ID column; without one, the group keeps its count but holds a single line in place of the IDs:
+the group's count matches its lines. That is why it can be long. It needs an ID column, and a stopped or failed run lists the IDs it had read so far. Without an ID column, the
+group keeps its count but holds a single line in place of the IDs:
 
 - `Missing filepaths not listed because no ID column was specified`: set an ID column and run the audit again to see which rows they are.
-- `Missing filepaths not listed because the audit was stopped` or `... because the audit failed`: the run ended before the IDs were read. Run it again to completion.
-- `Missing filepaths not listed because they could not be read: <message>`: the audit finished, but reading the IDs failed, for the reason given.
 
 # 5. Unindexed Files Audit
 
@@ -703,9 +705,9 @@ This section briefly explains how each audit stays fast on large projects and tr
 
 ## 8.2 Missing Files Audit
 
-- **Count first, then stream.** The rows are counted first (the table's rows, the empty paths, the skipped rows and the distinct paths), so progress and Remaining can be shown and
-  the skipped and empty-path rows never need to be checked one by one. The distinct paths are then read as a stream and handed to the file checks through a queue of at most 10,000
-  rows, so even a table of millions of rows never has to fit in memory at once.
+- **Count, then stream.** The rows are counted first, which takes a moment, and are then read as a stream from the first row, with nothing worked out in the database: no
+  conversion, no de-duplicating, no filtering. The app sorts each row as it arrives and hands the distinct paths to the file checks through a queue of at most 10,000 rows, so
+  checking starts at once however large the table is, and even a table of millions of rows never has to fit in memory at once.
 - **Many checks at once.** Up to 32 files are checked at the same time. Most of a check's time is spent waiting on the network, so working in parallel makes a large audit many
   times faster without overloading the file server.
 - **Each drive or share is checked once.** The first time a path's root (such as `U:\` or `\\fs01\docs`) is seen, the app checks that it exists and remembers the answer. If it
@@ -714,10 +716,13 @@ This section briefly explains how each audit stays fast on large projects and tr
 - **Unreachable folders are found once.** When a file cannot be reached, the app walks its path one folder at a time to find the first folder that cannot be reached, and
   remembers that folder. Every later file under it gets the same answer straight away, whilst files elsewhere are still checked normally. A single blocked folder therefore costs
   one slow lookup, not one per file, and its files are still listed one by one in the report.
-- **Skip markers and empty paths are not streamed.** The database recognises them whilst counting, so they are counted but never sent to the app as rows to check. Only the IDs
-  of the empty-path rows are read, once, at the end of a completed check, and only when an ID column is set.
-- **An honest Remaining.** The estimate follows a speed weighted to the last 30 seconds, ignores the first few seconds of start-up, counts down smoothly, and holds still during a
-  stall, so it is useful on long audits over a variable network.
+- **Duplicates are found by fingerprint.** Each path (with its ID, when an ID column is set) is turned into a 128-bit fingerprint (a hash), ignoring letter case and trailing
+  spaces, and only the fingerprints are kept: about 48 MB per million rows. A fingerprint seen before marks a duplicate row, which is not checked again. At 128 bits, two different
+  paths sharing a fingerprint is so unlikely that it will not happen in any real table, so a path is never wrongly passed over as a duplicate.
+- **Skip markers and empty paths are never checked.** The app recognises them as it reads each row, so they are counted but never sent to the file checks. The IDs of the empty-path
+  rows are collected as the rows are read, when an ID column is set.
+- **An honest Remaining.** The estimate follows a speed weighted to the last 30 seconds of rows handled, ignores the first few seconds of start-up, counts down smoothly, and holds
+  still during a stall, so it is useful on long audits over a variable network.
 
 ## 8.3 Unindexed Files Audit
 
@@ -739,29 +744,29 @@ This section briefly explains how each audit stays fast on large projects and tr
 
 ## 8.4 varchar Path Columns
 
-**The warning.** When the path column is a `varchar` column, pressing Start on either tab shows a warning before the audit starts: it names the column and its type, says that
-`nvarchar` is preferred, and says which `nvarchar` type the app will convert the column to. *Continue* goes on with the audit; *Cancel* stops the Start, with no audit and no report
-written. It appears last, after the other checks, so you are not asked about a column when something else would stop the Start anyway. Once you choose *Continue* it is not asked
-again for that server, database, table and path column until you use *Close project* or *Open project...* or restart the app; changing any of the four asks again. The answer is not
-saved in the project file. An `nvarchar` column shows no warning. To decide whether to warn, the app looks up the column's type when you press Start, and the audit then uses
-that answer rather than asking again. If the lookup fails (for example, the server cannot be reached), no warning is shown and the audit reports the problem straight away, so
-you wait for the server only once. If the lookup takes longer than 30 seconds (for example, the table is locked), it is given up and the audit checks the column itself.
+**The warning.** When the path column is a `varchar` column, pressing Start on either tab shows a warning before the audit starts: it names the column and its type, and says that
+`nvarchar` is preferred because a `varchar` column may have changed some characters in its paths when they were stored. *Continue* goes on with the audit; *Cancel* stops the Start,
+with no audit and no report written. It appears last, after the other checks, so you are not asked about a column when something else would stop the Start anyway. Once you choose
+*Continue* it is not asked again for that server, database, table and path column until you use *Close project* or *Open project...* or restart the app; changing any of the four
+asks again. The answer is not saved in the project file. An `nvarchar` column shows no warning. To decide whether to warn, the app looks up the column's type when you press Start,
+and the audit then uses that answer rather than asking again. If the lookup fails (for example, the server cannot be reached), no warning is shown and the audit reports the problem
+straight away, so you wait for the server only once. If the lookup takes longer than 30 seconds (for example, the table is locked), it is given up and the audit checks the column
+itself.
 
-**How the conversion works.** A `varchar(n)` column, with *n* up to 4,000, is converted to `nvarchar(n)`; a longer one, and `varchar(max)`, to `nvarchar(max)`. The Missing Files
-audit converts each row's path once and works on the converted path throughout: classifying the row, reading it and counting it. The Unindexed Files audit reads the column as it
-is, and converts it only inside the folder filter that limits which rows are loaded; with no filter (no input folder, more than 20, or an empty one) nothing is converted.
+**What is converted.** The Missing Files audit converts nothing: it reads a `varchar` column as it is, whatever its length, and does all its work on the paths in the app. The
+Unindexed Files audit reads the column as it is too, and converts it in one place only: the folder filter that limits which rows are loaded. There, each comparison treats a
+`varchar` path as `nvarchar(4000)`, whatever the column's length, because the filter compares only the start of the path (an input folder, or the first character), so characters
+beyond the 4,000th can never change the result. With no filter (no input folder, more than 20, or an empty one) nothing is converted.
 
-**Why it is done.** The Missing Files checks for white space and for skip markers follow Unicode rules, which the database applies to Unicode text, so each path needs one
-consistent Unicode form. The Unindexed Files folder filter compares letters ignoring case, and on a `varchar` value that comparison would be done in the column's code page first:
-a path outside Latin-1 could then miss its own folder and be reported as unindexed. Converting first avoids both.
+**Why the filter converts.** The folder filter compares letters ignoring case, and on a `varchar` value that comparison would be done in the column's code page first: a path
+outside Latin-1 could then miss its own folder and be reported as unindexed. Converting the value first avoids that.
 
 **Possible effects.** A `varchar` column cannot store characters outside its collation's code page, so such a character was already replaced when the row was written: by a
-look-alike letter (`Ł` became `L`) or by `?`. The conversion cannot undo that.
+look-alike letter (`Ł` became `L`) or by `?`. This comes from how the paths were stored, not from the audits, and nothing can undo it.
 
 - A replaced path may name a different file. If that file exists, the Missing Files audit reports the row as *Found* although the file it was meant to name may be missing, and the
   Unindexed Files audit counts that other file as indexed.
 - A path holding `?` is listed by the Missing Files audit under *Unverified — Invalid characters in path*, and never matches a file in the Unindexed Files audit.
-- A `varchar(max)` column, or one longer than 4,000 characters, is counted more slowly, because it is converted to `nvarchar(max)`: roughly twice as long in our measurements.
 
 The cure is to have the column converted to `nvarchar`, after which the warning no longer appears. Paths that were already changed cannot be recovered from the table.
 
@@ -789,9 +794,9 @@ with your Windows account, so your account needs permission to read the table; r
 its actual type, for example `char(400)`, `nchar(10)` or `int`). Nothing was read and no report was written. Ask for the column to be converted to `nvarchar`, or point the audit at
 a view of the table that casts the column to `nvarchar`, and type the view's name as the Table. The ID column can be of any type.
 
-**A warning says "The path column '...' is varchar(400)..." when I press Start.** The path column is a `varchar` column. The warning is not an error: *Continue* audits it,
-converting it to `nvarchar` as the message says, and *Cancel* stops the Start with nothing written. Some of the paths may have been changed when they were stored; section 8.4
-explains how, and what to do. You are not asked again for that column until you close the project, open another, or restart the app.
+**A warning says "The path column '...' is varchar(400)..." when I press Start.** The path column is a `varchar` column. The warning is not an error: *Continue* audits the column
+as it is, and *Cancel* stops the Start with nothing written. Some of the paths may have been changed when they were stored; section 8.4 explains how, and what to do. You are not
+asked again for that column until you close the project, open another, or restart the app.
 
 **"The path column '...' was not found in the table '...'."** The table has no column with that name, or the table itself was not found. Check the spelling of both, and the schema
 if the table is not in the default one. If your account has no permission to read the table, SQL Server's own permission error is shown instead (for example
@@ -841,17 +846,17 @@ folder it creates is a custom report folder, when you choose **Create Folder**.
 Their path value is a skip marker (`SKIP`, `SKIPPED`, or either followed by a colon and a note) instead of a path. They are counted so the totals add up, but never checked or
 listed.
 
-**Why is Total files smaller than the number of rows in my table?**
-Many index tables repeat a file on several rows (a document listed once per patient, say). The app checks each distinct path once and shows that as Total files, with the table's
-rows in brackets, `98,200 (124,500)`. The rows it did not check again are the *Duplicates* (and any empty-path or skipped rows, which are counted separately). Total files +
-Duplicates + empty paths + Skipped = the table's rows.
+**Why is Checked smaller than Total files?**
+Many index tables repeat a file on several rows (a document listed once per patient, say). The app checks each distinct path once, so Checked counts files, not rows. The rows it
+did not check again are the *Duplicates* (and any empty-path or skipped rows, which are counted separately). Distinct + Duplicates + empty paths + Skipped = Total files, the
+table's rows.
 
 **Where are the rows with no path, and why does my report not list them?**
-They are under *[Path is empty in the index table]*, which lists one ID per row when you set an ID column. With no ID column, or when the audit stopped, failed, or could not read
-the IDs, the group has one line saying why instead (section 4.4).
+They are under *[Path is empty in the index table]*, which lists one ID per row when you set an ID column. With no ID column, the group has one line saying why instead (section
+4.4). A stopped or failed audit lists the IDs of the empty-path rows it had read so far.
 
-**Why does Total files not equal Checked when I stop an audit?**
-The report adds a *Not checked* line for the distinct files it did not reach, so Found + Missing + Unverified + Not checked = Total files.
+**Why do the figures not add up to Total files when I stop an audit?**
+The report adds a *Not checked* line for the rows the audit did not finish with, so Found + Missing + Unverified + Duplicates + empty paths + Skipped + Not checked = Total files.
 
 **Why is Total files on the Unindexed Files tab smaller than the files Explorer shows in my folders?**
 Total files counts only the files the audit checks: those that match your File types and are not in Exclude. Files that do not match are counted as *Excluded*. Hidden and
@@ -952,18 +957,20 @@ Audit optimisation: the audits read the index table differently, report more abo
 
 **Changes that may affect existing projects:**
 
-- **The path column must be `nvarchar` or `varchar`.** A `varchar` or `nvarchar` path column works on both audits (the app converts a `varchar` column itself, after a warning
-  that you can continue or cancel, section 8.4). Only another type (`char`, `nchar`, `text`, `ntext`, a number, …) is refused, naming the type, before a row is read (section 3.1).
-  A project with such a column stops working; convert the column or point the app at a view that casts it (section 9).
-- **Each path is checked once.** A path listed on several rows (an index built around patients rather than files) is checked once, so *Total files* counts distinct paths, not
-  rows. With an ID column, each ID is expected to belong to one path.
-- **The reports' Summary has changed.** The Missing Files report adds *Duplicates*, *Found*, the table's rows beside *Total files* and the empty paths beside *Unverified*; the
-  Unindexed Files report adds *Excluded* and *Index paths*. Anything that reads the reports by line should be checked.
+- **The path column must be `nvarchar` or `varchar`.** A `varchar` or `nvarchar` path column works on both audits (the app reads a `varchar` column as it is, after a warning that
+  you can continue or cancel, section 8.4). Only another type (`char`, `nchar`, `text`, `ntext`, a number, …) is refused, naming the type, before a row is read (section 3.1). A
+  project with such a column stops working; convert the column or point the app at a view that casts it (section 9).
+- **Each path is checked once.** A path listed on several rows (an index built around patients rather than files) is checked once, so *Distinct* counts paths and *Checked* counts
+  files, not rows; *Total files* is the table's rows. With an ID column, each ID is expected to belong to one path.
+- **The reports' Summary has changed.** The Missing Files report adds *Distinct*, *Duplicates* and *Found*, makes *Total files* the table's rows and puts the empty paths beside
+  *Unverified*; the Unindexed Files report adds *Excluded* and *Index paths*. Anything that reads the reports by line should be checked.
 
 **New:**
 
-- Missing Files tab: *Found* and *Duplicates* statistics; *Total files* shows the table's rows in brackets when they differ, and *Unverified* the empty paths. Empty and skipped
-  rows are counted up front, and the IDs of empty-path rows are listed at the end of the report (or a note says why they are not).
+- Missing Files tab: live counts. The table's rows are counted in a moment (*Total files*) and are then read and checked at once, however large the table; *Distinct*, *Duplicates*,
+  *Skipped* and the empty paths in brackets on *Unverified* grow as the rows are read, and *Remaining* and the progress bar follow the rows handled. New statistics: *Distinct* (the
+  different paths seen, which the checks then work through), *Found* and *Duplicates*. The report's Summary lists *Total files*, *Distinct*, *Duplicates*, *Found*, *Missing*,
+  *Unverified* and *Skipped*, and *Not checked* for a stopped run; the IDs of empty-path rows are listed in the report as they were read (or a note says why they are not).
 - Unindexed Files tab: *Excluded* (files the type filters skipped) and *Index paths* (the paths loaded to compare against, counted live while the index loads); *Indexed* moves
   to the top of the second column.
 - A *finished* dialogue when an audit completes, with its key figures, the report's location and *View Report*. If you are in another program, the taskbar button flashes and

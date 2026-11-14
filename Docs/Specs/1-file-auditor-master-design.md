@@ -1,3 +1,4 @@
+
 # File Auditor — Master Design
 
 **Date:** 2026-11-06 **Status:** Approved 2026-11-06; amended through milestone 4 (2026-11-08)
@@ -174,10 +175,10 @@ and this section are the contract.
 │ │ │ File name:   [FileAuditorMissingReport_Interim.txt]        │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
 │ │ ┌ Audit ─────────────────────────────────────────────────────┐ │ │
-│ │ │ Total files: 6 (10) Found:      4     Elapsed:   00:02:14  │ │ │
-│ │ │ Duplicates:  2      Missing:    1     Remaining: 00:02:18  │ │ │
-│ │ │ Checked:     6      Unverified: 1 (1) Files/second: 9      │ │ │
-│ │ │                     Skipped:    1                          │ │ │
+│ │ │ Total files: 10     Found:      4     Elapsed:   00:02:14  │ │ │
+│ │ │ Distinct:    6      Missing:    1     Remaining: 00:02:18  │ │ │
+│ │ │ Duplicates:  2      Unverified: 1 (1) Files/second: 9      │ │ │
+│ │ │ Checked:     6      Skipped:    1                          │ │ │
 │ │ │ [██████████████████                            ]           │ │ │
 │ │ │ [View Report]                      [Start]  [Stop]         │ │ │
 │ │ └────────────────────────────────────────────────────────────┘ │ │
@@ -246,8 +247,8 @@ The Unindexed Files tab's content scrolls vertically when it is taller than the 
 ### 5.2 File Index Table group
 
 - **Table**: required. Accepts `table` or `schema.table`.
-- **Path column**: required. The column must be `nvarchar` or `varchar` (§6.2; a `varchar` column is converted to `nvarchar` by the audits); on Start any other type is refused
-  for both directions.
+- **Path column**: required. The column must be `nvarchar` or `varchar` (§6.2; a `varchar` column is read as it is, and converted only inside the Unindexed audit's folder filter,
+  §6.5.2); on Start any other type is refused for both directions.
 - **ID column**: optional, with a muted "(Optional)" note beside it. It is shared by both directions, but only the missing-files direction uses it: an unindexed file has no
   row, so no ID. On the Unindexed Files tab it stays editable and is still saved with the project.
 
@@ -340,31 +341,36 @@ unchanged from milestone 2:
 
 The Audit group sits at the bottom of its tab, below the Report group; each direction's tab has its own, so a tab's statistics are those of its own last run.
 
-- Read-only statistics in three columns of up to four rows (the approved mock-up is [`row-accounting-stats.html`](../UserInterfaceDesign/Mockups/row-accounting-stats.html)):
-  **Total files**, **Duplicates** and **Checked** on the left; **Found**, **Missing**, **Unverified** and **Skipped** in the centre; **Elapsed**, **Remaining** and
-  **Files/second** on the right. Counts use thousands separators (`N0`, current culture); times are `hh:mm:ss`. Blank before the first run. The grid's columns are 74, 128, 68,
-  118, 82 and `*` pixels wide, so `9,999,999 (99,999,999)` fits in *Total files* and `9,999,999 (9,999,999)` in *Unverified*.
-    - The figures are those of §6.2's row kinds: T is the table's rows, D its distinct real paths, E its empty-path rows, S its skip-marker rows, Dup the duplicates and U the
-      checked *Unverified* outcomes (E is not part of U). **Total files** is `D`, or `D (T)` when T differs from D. **Duplicates** is Dup = T − D − E − S. **Unverified** is `U`, or
-      `U (E)` when E is above zero: the parenthesised rows are the empty-path rows, which are *Unverified* but never reach the checks (§6.3). **Skipped** is S. *Total files*,
-      *Duplicates*, *Skipped* and the parenthesised E are set the moment counting ends and do not change during the run.
-    - **Checked** is Found + Missing + U (each counter read once per refresh, so the three never disagree) and never includes skipped or empty-path rows. **Found** is the files
-      that exist (and are not empty, when that option is on). When the run completes, Found + Missing + U = D and D + Dup + E + S = T. The table is assumed not to change during a
-      run (§6.2), so *Total files* is never adjusted to match what was read.
+- Read-only statistics in three columns of four rows (the approved mock-up is [`row-accounting-stats.html`](../UserInterfaceDesign/Mockups/row-accounting-stats.html)):
+  **Total files**, **Distinct**, **Duplicates** and **Checked** on the left; **Found**, **Missing**, **Unverified** and **Skipped** in the centre; **Elapsed**, **Remaining** and
+  **Files/second** on the right (its fourth row is empty). Counts use thousands separators (`N0`, current culture); times are `hh:mm:ss`. Blank before the first run. The grid's
+  columns are 74, 128, 68, 118, 82 and `*` pixels wide, so `9,999,999 (9,999,999)` fits in *Unverified*.
+    - The figures are those of §6.2's row kinds, counted as the rows stream in (no figure is known up front but the table's row count): T is the table's rows, D the different real
+      paths seen so far, E the empty-path rows read so far, S the skip-marker rows read so far, Dup the duplicate rows read so far and U the checked *Unverified* outcomes (E is not
+      part of U). **Total files** is T, the table's row count, known the moment counting ends (an instant `COUNT_BIG(*)`) and fixed for the run. **Distinct** is D, counted when a
+      new key enters the key set, so it never goes down; **Checked** trails it by the distinct rows queued or being checked (up to the channel's 10,000), and on screen *Distinct*
+      is never shown below *Checked*, so one refresh never contradicts itself. **Duplicates** is Dup: each row whose path was already seen, one per row, so a path listed three
+      times is one *Distinct* and two *Duplicates*. **Unverified** is `U`, or `U (E)` when E is above zero: the parenthesised rows are the empty-path rows, which are *Unverified*
+      but never reach the checks (§6.3). **Skipped** is S. *Duplicates*, *Skipped* and the parenthesised E count rows and grow while the rows are read.
+    - **Checked** is Found + Missing + U (each counter read once per refresh, so the three never disagree) and never includes skipped, empty-path or duplicate rows. **Found**
+      is the files that exist (and are not empty, when that option is on). When the run completes, Found + Missing + U = Checked = D and D + Dup + E + S = T. The table is assumed
+      not to change during a run (§6.2), so *Total files* is never adjusted to match what was read.
     - **Files/second** is a whole number (`N0`, culture-aware thousands separators, rounded). Its first figure counts checked files only: the whole run's average, files checked
       divided by **Elapsed** (the span the window shows, counting included); it stays blank until at least one full second has elapsed. Once the 5-second warm-up of checking has
-      passed, and only while the run is under way, the **recent rate** follows in parentheses, as in `54,112 (60,001)`. The recent rate is the rate behind **Remaining**: rows
-      *checked* per second of *checking* time, which excludes the counting. The two figures therefore have different bases, on purpose: the first answers "how fast has this run
-      been", the second "how fast is it going now". After the run, the whole-run figure stands alone again. Parentheses rather than a middot: a Win9x dialogue puts a secondary
-      figure in parentheses, and a middot was no Win9x convention.
+      passed, and only while the run is under way, the **recent rate** follows in parentheses, as in `54,112 (60,001)`. Its recent rate is its own (a `RecentRate` of the screen's
+      files-checked figure), not the one behind **Remaining**: files *checked* per second of *checking* time, which excludes the counting. The two figures therefore have
+      different bases, on purpose: the first answers "how fast has this run been", the second "how fast is it going now". A burst of duplicates moves *Remaining* but not
+      *Files/second*. After the run, the whole-run figure stands alone again. Parentheses rather than a middot: a Win9x dialogue puts a secondary figure in parentheses, and a
+      middot was no Win9x convention.
     - **Remaining** is `Calculating...` while the rows are counted and for the first 5 seconds of checking, then the time left at the **recent rate**, an exponentially weighted
-      rate over roughly the last 30 seconds (a 30-second time constant) of checking time, counting checked rows, over the D − checked rows still to do. The rate is seeded from the
-      second half of the warm-up (from 2.5 s), so the slow start-up ramp does not drag it down. Between refreshes the display counts down one second per second and eases toward
-      each new estimate with a 3-second time constant, so it neither holds still nor jumps. When the checked count has been unchanged for about 1 second the display holds where it
-      is (no countdown, no easing) instead of running on to zero, while the rate keeps decaying, so a long stall lets Remaining rise when work resumes. The shown value is clamped
-      to 36,000,000 seconds (10,000 hours) so no stall can overflow the format. It reads `00:00:00` when the run ends.
-- A progress bar (percentage of the distinct real paths D checked; only checked rows move it, since skipped and empty-path rows are counted up front and never checked). With D = 0
-  the run still completes and the bar reads 100%.
+      rate over roughly the last 30 seconds (a 30-second time constant) of checking time, counting rows *handled* (a skipped, empty or duplicate row is handled when it is read, a
+      distinct row when its check ends), over the T − handled rows still to do. The rate is seeded from the second half of the warm-up (from 2.5 s), so the slow start-up ramp does
+      not drag it down. Between refreshes the display counts down one second per second and eases toward each new estimate with a 3-second time constant, so it neither holds
+      still nor jumps. When the handled count has been unchanged for about 1 second the display holds where it is (no countdown, no easing) instead of running on to zero, while
+      the rate keeps decaying, so a long stall lets Remaining rise when work resumes. The shown value is clamped to 36,000,000 seconds (10,000 hours) so no stall can overflow the
+      format. It reads `00:00:00` when the run ends.
+- A progress bar (the percentage of the table's rows T handled, by the same count as *Remaining*, so it stays accurate rather than pessimistic while duplicates are read). With
+  T = 0 the run still completes and the bar reads 100%.
 - A row of command buttons: **View Report** left-justified; **Start** then **Stop** right-justified. There is no Close button.
 
 ### 5.4a Unindexed Audit group
@@ -389,12 +395,11 @@ The Unindexed Files tab has its own group (headed *Audit*, `UnindexedAuditView`)
 
 ### 5.5 Status bar
 
-One status bar for the window, with two sunken panes: a message pane that fills the width (`Ready`, `Counting files...`, `Loading the index...`, `Checking files...`,
-`Reading empty paths...`, `Writing report...`, `Completed`, `Stopped`, `Failed`) and a fixed-width percentage pane at the right edge. `Reading empty paths...` is the missing-files
-audit's phase between `Checking files...` and `Writing report...`, shown only while the IDs of the empty-path rows are read after a completed check (§6.4). **While an audit runs**,
-the bar shows that run's phase and percentage whichever tab is selected, so switching tabs never hides a run. **Otherwise** it shows the selected tab's own state: with no run on
-that tab, the message reads `Ready` only while that tab's **Start** is enabled, and `Enter the required details` while it is not. Once a run has ended, its result (`Completed`,
-`Stopped` or `Failed`) stays on that tab until its next run starts. Each tab keeps its own last result.
+One status bar for the window, with two sunken panes: a message pane that fills the width (`Ready`, `Counting files...`, `Loading the index...`, `Checking files...`, `Writing
+report...`, `Completed`, `Stopped`, `Failed`) and a fixed-width percentage pane at the right edge. **While an audit runs**, the bar shows that run's phase and percentage whichever
+tab is selected, so switching tabs never hides a run. **Otherwise** it shows the selected tab's own state: with no run on that tab, the message reads `Ready` only while that tab's
+**Start** is enabled, and `Enter the required details` while it is not. Once a run has ended, its result (`Completed`, `Stopped` or `Failed`) stays on that tab until its next run
+starts. Each tab keeps its own last result.
 
 ### 5.6 Menu bar
 
@@ -458,82 +463,80 @@ stop-and-exit question (§6.4).
 4. **varchar path column warning** (both tabs), the last check, so a Start that would fail for another reason never reaches the database. Unless the answer is already remembered
    for the current column, the path column's type is read with the lookup the runs use (`IndexTableReader.ReadPathColumnTypeAsync` on the quoted names, then
    `PathColumnType.Check`); this lookup is the one place pre-flight touches the database. When the column is `varchar`, a **warning dialogue** (*Continue*, access key `C`, and
-   *Cancel*) says: `The path column '<column>' is <type>.` / `The File Auditor prefers an nvarchar column. It can convert this one to <target> and audit it, but a varchar column
-   may have changed some characters in its paths when they were stored. See "varchar Path Columns" in the user guide.` / a blank line / `Do you want to continue?`. `<column>` is
-   the name as typed (trimmed), `<type>` is `varchar(<n>)` or `varchar(max)` (`PathColumnType.Format`, as in the refusal of §6.2) and `<target>` is the type the audit converts to
-   (§6.2). *Cancel* stops the Start: no run, no report, nothing saved. For an `nvarchar` column, a refused type, a missing column or table, any SQL error, any exception except
-   out-of-memory, or a lookup that takes longer than 30 seconds (`VarcharLookupTimeout`; the lookup is then abandoned), nothing is shown and the Start goes on. Whatever the
-   lookup returned (a type, not found, or a SQL error) is handed to the run (`PreflightResult`, `AuditRequest.PathColumnType`), which uses it instead of connecting again and
-   reports a refusal or error exactly as before; so an unreachable server is waited for once. Only an abandoned lookup, an exception, or a remembered answer (no lookup) leaves
-   the run to read the type itself. *Continue* is remembered for the column (server, database, table and path column, each trimmed and compared ignoring case) until *Close
-   project*, *Open project...* or a fresh launch; a different column asks again, and while it is remembered no lookup is made. It is never saved in the project file.
+   *Cancel*) says: `The path column '<column>' is <type>.` / `The File Auditor prefers an nvarchar column. A varchar column may have changed some characters in its paths when they
+   were stored. See "varchar Path Columns" in the user guide.` / a blank line / `Do you want to continue?`. `<column>` is the name as typed (trimmed) and `<type>` is
+   `varchar(<n>)` or `varchar(max)` (`PathColumnType.Format`, as in the refusal of §6.2). *Cancel* stops the Start: no run, no report, nothing saved. For an `nvarchar` column, a
+   refused type, a missing column or table, any SQL error, any exception except out-of-memory, or a lookup that takes longer than 30 seconds (`VarcharLookupTimeout`; the lookup
+   is then abandoned), nothing is shown and the Start goes on. Whatever the lookup returned (a type, not found, or a SQL error) is handed to the run (`PreflightResult`,
+   `AuditRequest.PathColumnType`), which uses it instead of connecting again and reports a refusal or error exactly as before; so an unreachable server is waited for once. Only
+   an abandoned lookup, an exception, or a remembered answer (no lookup) leaves the run to read the type itself. *Continue* is remembered for the column (server, database,
+   table and path column, each trimmed and compared ignoring case) until *Close project*, *Open project...* or a fresh launch; a different column asks again, and while it is
+   remembered no lookup is made. It is never saved in the project file.
 5. Run the save rule (§8.2) for the project's settings. It may ask whether or where to save; *Cancel* on any of its prompts stops the run from starting.
 
 ### 6.2 Query
 
-Built from the inputs; each identifier part is bracket-quoted with `]` escaped as `]]` (never string-concatenated raw). Three statements are used (`QueryBuilder.Build`), all
-built over the same classification of each row, written here in outline (`<path>` and `<id>` stand for the quoted columns, `<path>` being the converted value for a `varchar`
-column, see below; `<empty>` and `<skip>` for the predicates below):
+Built from the inputs; each identifier part is bracket-quoted with `]` escaped as `]]` (never string-concatenated raw). Two plain statements are used (`QueryBuilder.Build`, which
+returns an `AuditQuery` holding both), the two statements the 1.0.0 audit ran (`<path>` and `<id>` stand for the quoted columns):
 
 ```sql
--- 1. Counts (one round trip): the table's rows T, its empty-path rows E, its skip-marker rows S, and the distinct real paths D.
-SELECT T, E, S, D FROM ...;
--- 2. The stream: distinct real paths only (ID part omitted when no ID column).
-SELECT DISTINCT <path> AS [Path], <id> AS [Id] FROM [schema].[table] WHERE NOT <empty> AND NOT <skip>;
--- 3. Only with an ID column and E > 0, after the check completes: the ID of every empty-path row, not distinct.
-SELECT <id> AS [Id] FROM [schema].[table] WHERE <empty>;
+-- 1. The table's rows: Total files.
+SELECT COUNT_BIG(*) FROM [schema].[table];
+-- 2. Every row, in table order (ID part omitted when no ID column).
+SELECT <path> AS [Path], <id> AS [Id] FROM [schema].[table];
 ```
+
+SQL does nothing else: no conversion, no `WHERE`, no `DISTINCT` and no parameters, so it has nothing to classify. The count returns at once and the select streams its first row at
+once, so checking starts as soon as counting ends, however long the table (milestone 6 measured the alternatives that classified or de-duplicated in SQL, §10). The path is read as
+it is, `NULL` as empty (`IndexTableReader.CountRowsAsync` and `ReadAsync`).
 
 **The row kinds.** Every row of the table is exactly one of:
 
 | Kind              | Rule                                                                                                  | Symbol |
 |-------------------|-------------------------------------------------------------------------------------------------------|--------|
-| Empty path        | `NULL`, or made only of white-space characters (`char.IsWhiteSpace`), including the empty string      | E      |
-| Skip marker       | Not empty, and a skip marker by the rule of §6.3                                                      | S      |
+| Skip marker       | A skip marker by the rule of §6.3                                                                     | S      |
+| Empty path        | Not a skip marker, and `NULL` or made only of white-space characters (`char.IsWhiteSpace`)            | E      |
 | First of its kind | Neither of the above, and the first row of its distinct path (or path and ID pair, with an ID column) | D      |
 | Duplicate         | Neither of the above, and not the first row of its distinct path (or pair)                            | Dup    |
 
-T (the table's rows) = D + Dup + E + S; Dup is never counted directly but is T − D − E − S. Of the D distinct real paths, each lands in Found, Missing or Unverified (U, the
-checked *Unverified* outcomes; E is not part of U), so **Found + Missing + U + Not checked = D** (Not checked is 0 for a completed run) and **D + Dup + E + S = T**.
+T (the table's rows) = D + Dup + E + S. Of the D distinct real paths, each lands in Found, Missing or Unverified (U, the checked *Unverified* outcomes; E is not part of U), so on a
+completed run **Found + Missing + U = Checked = D** and **D + Dup + E + S = T**. On a stopped run **Not checked** is T − (Checked + Dup + E + S), the rows never read plus the
+distinct rows read but not checked, so **Checked + Dup + E + S + Not checked = T**; D is then the distinct paths found before the stop, and Not checked is never below zero.
 
-**The classification is done in SQL and matches the app's rules exactly.** The empty and skip predicates are built so they agree with `string.IsNullOrWhiteSpace` and
-`SkipMarker` character for character, whatever the column's collation: the same binary-collation technique as the unindexed white-space clause (§6.5.2, `WhitespacePattern`),
-with `[^<white space>]` classes to find the first and last non-white-space characters, so a value is empty when it has none and is otherwise trimmed on both ends. The skip rule's
-`SKIP`, `SKIPPED`, `SKIP:…` and `SKIPPED:…` are matched on ASCII letters in either case (a binary `LIKE` with `[Ss][Kk]…` classes); the non-ASCII letters that
-`OrdinalIgnoreCase` also folds to `I` or `S` (such as `ı` and `ſ`) do not occur in marker values and are not handled. The white-space characters are passed as the `@ws` parameter.
+**The classification is done in the app, row by row, in the order of the table above** (`AuditRunner`; the reader is the only thread that classifies, so the key set needs no lock).
+`SkipMarker.IsSkipped` first: a skip marker is *Skipped*, not checked and not de-duplicated. Then `string.IsNullOrWhiteSpace`: an empty path is *Unverified — Path is empty in the
+index table*, not checked and not de-duplicated, and with an ID column its ID (`NULL` as the empty string) is kept for the report (§7). Otherwise the row's key is looked up in the
+set of keys seen so far (`PathKeySet`): already there is a *Duplicate*, not checked; new is *Distinct*, and the row goes to the checks. Skipped, empty and duplicate rows are never
+checked. Each counter moves the moment its row is read, which is what makes every figure on the screen live (§5.4).
 
-**The shape of the statements.** The table is aliased (`FROM <table> AS [fa_t]`), every column of the user's table is qualified with that alias, and the helper aliases and columns
-(`[fa_v]`, `[fa_n]`, `[fa_k]`, `[FaValue]`, `[FaTrimmed]`, `[FaKind]`) are deliberately unlikely names, so a table called `p` or `n`, or a path or ID column called `V` or `Lead`,
-cannot collide. Each row's kind is one `CASE`: empty is a single binary `LIKE` with no non-white-space character (or `NULL`); a cheap binary test for `skip` anywhere in the value
-comes next and yields a real path, so the trim (`PATINDEX`, `REVERSE`, `SUBSTRING`) and the four skip `LIKE`s run only for the few rows that contain the word. SQL Server inlines
-the `CROSS APPLY` scalars, so a value is recomputed at every reference: the counts therefore reference the kind once, as a weight (empty 1, skip marker 2^32) in a single `SUM`,
-and take the distinct count over the select statement, which is the only second pass. For an `nvarchar` column the statements do not cast the path column: the classification runs
-on it directly. For a `varchar` column the statements convert it once per row, in one `CROSS APPLY (SELECT CAST([fa_t].<column> AS <nvarchar type>) AS [FaPath]) AS [fa_p]` right
-after `FROM <table> AS [fa_t]`, and the classification, the `DISTINCT` select (`AS [Path]`), the empty-ID read and the counts all use `[fa_p].[FaPath]` wherever they would use the
-column (an `nvarchar` column has no `[fa_p]`, and its statements are the ones described above). `<nvarchar type>` comes from the type check, below. The narrow cast inside the
-trim's length stays for both: `LEN(CAST(<path> AS nvarchar(max)) + N'x') - 1`, because adding a character to a value held in an `nvarchar(4000)` column would truncate a
-4,000-character value, so the length is taken over `nvarchar(max)`. It is evaluated only for rows past the cheap `skip` test, so it costs nothing for the rest.
+**The de-duplication key (`PathKeySet`).** The path with trailing spaces (U+0020 only) removed and upper-cased in the invariant culture (`ToUpperInvariant`), plus, with an ID
+column, the ID as read. The path's length and an ID flag are hashed ahead of the text, so the pair is unambiguous (`("a", "bc")` and `("ab", "c")` differ). The text is hashed to
+128 bits with MD5 (speed and even spread, not security; a collision is negligible at 128 bits) and only the hash is kept, about 48 MB per million keys. Case is ignored because
+Windows paths are case-insensitive, and so was 2.0.0's `DISTINCT` under the usual case-insensitive collations; trailing spaces are ignored because SQL Server's comparison ignores
+them and Windows strips them from a path. Nothing else is trimmed: a path with a leading space, or a trailing tab or other white space, is its own key and is checked (the checker
+reports it, for example as *Invalid characters in path*), so no row with a problem can hide behind a clean duplicate. Unlike a collation, the invariant upper-casing does not treat
+`ß` as `ss`, so `Straße` and `Strasse` are two paths. `IndexPathSet` (§6.5.2) trims both ends, so it is not reused. With an ID column the unit is the path and ID pair, so the ID
+column is expected to be **unique to its path** (one ID per file); the app does not check that, and an ID that varies across the rows of one path makes that path *Distinct* once
+per ID.
 
 **The path column must be `nvarchar` or `varchar`.** Before counting (or, for the unindexed audit, before loading the index) the app reads the path column's type with
-`sp_describe_first_result_set` on the statements' own SELECT shape, `SELECT TOP (0) [fa_t].<column> FROM <table> AS [fa_t];`, built from the same bracket-quoted names the
-statements use (so a schema, spaces or `]` in a name are found). The type is therefore read as the statements see it: permissions, synonyms (also to a table in another database)
-and views behave as they do for the statements. It is the column's *system* type (`system_type_name`; the user type name only for a user-defined CLR type, which is refused
-with its name) that must be `nvarchar` or `varchar`, of any length including `max`; so an alias type built on either passes, and a view whose column is either passes. What the
-audits then work on:
+`sp_describe_first_result_set` on a `SELECT` of the column alone, `SELECT TOP (0) [fa_t].<column> FROM <table> AS [fa_t];`, built from the same bracket-quoted names the audits use
+(so a schema, spaces or `]` in a name are found). The type is therefore read as the audits see it: permissions, synonyms (also to a table in another database) and views behave as
+they do for the audits' own statements. It is the column's *system* type (`system_type_name`; the user type name only for a user-defined CLR type, which is refused with its name)
+that must be `nvarchar` or `varchar`, of any length including `max`; so an alias type built on either passes, and a view whose column is either passes. What the audits then work
+on:
 
-| Path column (system type)                                    | The audits work on                |
-|--------------------------------------------------------------|-----------------------------------|
-| `nvarchar(n)`, `nvarchar(max)`                               | the column itself, as it is       |
-| `varchar(n)`, `n` ≤ 4,000                                    | `CAST(<column> AS nvarchar(n))`   |
-| `varchar(n)`, `n` > 4,000, and `varchar(max)`                | `CAST(<column> AS nvarchar(max))` |
-| anything else (`char`, `nchar`, `text`, `ntext`, numbers, …) | refused                           |
+| Path column (system type)                                    | The Missing Files audit | The Unindexed Files audit                                         |
+|--------------------------------------------------------------|-------------------------|-------------------------------------------------------------------|
+| `nvarchar(n)`, `nvarchar(max)`                               | the column, as it is    | the column, as it is                                              |
+| `varchar(n)`, `varchar(max)`                                 | the column, as it is    | the column, as it is; the folder filter compares `nvarchar(4000)` |
+| anything else (`char`, `nchar`, `text`, `ntext`, numbers, …) | refused                 | refused                                                           |
 
-A `varchar(n)` holds at most *n* characters, so `nvarchar(n)` holds every value (UTF-8 collations included); `nvarchar(n)` stops at 4,000, hence `max` above it
-(`PathColumnType.Check` yields that type, or `null` for `nvarchar`, and the statements are built from it afterwards). A `varchar` column stores only the characters of its
-collation's code page: anything else was changed when the row was written, to a near equivalent where SQL Server has one (`Ł` → `L`) and to `?` otherwise. The conversion cannot
-undo that, so such a path may name a different file, which may exist, or none. A path holding `?` is reported by the Missing Files audit under *Unverified — Invalid characters
-in path* (§6.3), and never matches a file in the Unindexed Files audit. The rule is the same for both audits. The ID column is unrestricted and is still read as text. Two
-errors, both shown in the ordinary error dialogue, no report written, no row read (`PathColumnType.Check`):
+`PathColumnType.Check` yields `null` for `nvarchar` and `nvarchar(4000)` for any `varchar`, whatever its length; only the Unindexed folder filter uses that target (§6.5.2), and the
+Missing Files audit converts nothing. A `varchar` column stores only the characters of its collation's code page: anything else was changed when the row was written, to a near
+equivalent where SQL Server has one (`Ł` → `L`) and to `?` otherwise. Nothing can undo that, so such a path may name a different file, which may exist, or none. A path holding `?`
+is reported by the Missing Files audit under *Unverified — Invalid characters in path* (§6.3), and never matches a file in the Unindexed Files audit. The rule is the same for both
+audits. The ID column is unrestricted and is still read as text. Two errors, both shown in the ordinary error dialogue, no report written, no row read (`PathColumnType.Check`):
 
 - `The path column '<column>' is <type>. The File Auditor expects an nvarchar or varchar column.` (`Sql.PathColumnUnsupported`). `<type>` is the system type in lower case, with
   `(<n>)` for `char`, `binary` and `varbinary` (`n` is `max_length`) and for `nchar` (`n` is `max_length / 2`), `(max)` when `max_length` is -1, and the bare name for any other
@@ -547,22 +550,19 @@ The lookup runs under each audit's existing first status (`Counting files...`, `
 (`sp_describe_first_result_set` raises the real error first and then a wrapper, 11501 or 11529, which is ignored.) A wrong table or path column is thus covered by the two errors
 above; only a bad ID column, which the lookup does not touch, fails later as a plain SQL error.
 
-The stream is `DISTINCT` because many index tables are built around patients rather than files, so one path can sit on many rows; each path is read and checked once. With an ID
-column the distinct unit is the path and ID pair, so the ID column is expected to be **unique to its path** (one ID per file). The app does not check that: an ID that varies
-across the rows of one path brings that path back once per distinct ID, and that expectation is on the user. Duplicates are judged by the column's collation, so under the usual
-case-insensitive collation `U:\A.pdf` and `u:\a.pdf` are one row, as are values that differ only in trailing spaces.
+**The table is assumed not to change during a run.** The count is taken once, before the rows are read; the app does not snapshot the table or reconcile the count with the rows it
+later streams. Changing the index table mid-audit is the user's responsibility, and the sums above hold only for a table that stays as it was counted; *Not checked* is the one
+figure that is clamped (it is never shown below zero).
 
-**The table is assumed not to change during a run.** The counts are taken once, before checking; the app does not snapshot the table, reconcile the counts with the rows it later
-streams or reads, or clamp any figure. Changing the index table mid-audit is the user's responsibility, and the sums above hold only for a table that stays as it was counted.
-
-The counts run first (status `Counting files...`) so progress and remaining time can be shown. Values are read as strings (`NULL` → empty). Command timeouts are long enough for
-large tables. The unindexed direction reads only the path column, in the query of §6.5.2, and is unchanged by row accounting.
+The count runs first (status `Counting files...`) so *Total files*, the progress and the remaining time can be shown. Command timeouts are long enough for large tables. The
+unindexed direction reads only the path column, in the query of §6.5.2, and is unchanged by row accounting.
 
 ### 6.3 Checking a file
 
 Each distinct real path is checked concurrently with bounded parallelism (builder chooses the mechanism and degree; the old app's unbounded `ThreadPool` + 1 million queue cap is
-not a requirement). Empty-path rows and skip markers never reach the checks: SQL classifies and removes them (§6.2), so the checker only ever sees real paths. It keeps its own skip
-and empty tests as a safety net that should never fire; a stray one is recorded as an *Unverified* outcome so the sums of §6.2 still hold. Each file lands in exactly one outcome:
+not a requirement). Empty-path rows, skip markers and duplicates never reach the checks: the audit classifies and removes them as it reads (§6.2), so the checker only ever sees
+real paths. It keeps its own skip and empty tests as a safety net that should never fire; a stray one is recorded as an *Unverified* outcome so the sums of §6.2 still hold. Each
+file lands in exactly one outcome:
 
 | Outcome                                       | When                                                                                |
 |-----------------------------------------------|-------------------------------------------------------------------------------------|
@@ -579,12 +579,12 @@ and empty tests as a safety net that should never fire; a stray one is recorded 
 | Unverified — Path is empty in the index table | The path is `NULL`, empty or whitespace; counted, listed by ID if set, not checked  |
 | Unverified — Other errors                     | Any other I/O failure; the reason and system message are recorded per file          |
 
-**The skip rule (missing-files audit only).** Index rows can carry a marker instead of a path, written by hand or by the tool that builds the index table. Before any other
-check (before the empty-path test and before the path is parsed), the value is trimmed, and it is a **skip marker** when it equals `SKIP` or `SKIPPED`, or starts with `SKIP:` or
-`SKIPPED:`, comparing ASCII letters in either case (§6.2). Nothing else is one: not `SKIP preflight`, not `SKIPPEDX`, not `SKIPPED :x`, and not a path that merely contains the
-word (`C:\SKIPPED\a.txt` is checked as a file). A `NULL` or white-space-only value is not a marker; it is an empty path (§6.2), *Path is empty in the index table*. A skipped row is
-never checked on disk and never listed in the report; it is counted (*Skipped*) in the counts statement, so it is final the moment counting ends, and takes no part in the progress
-bar or *Remaining*. The Unindexed audit is unaffected: it reads the index only to learn which paths exist, and a marker there matches no file.
+**The skip rule (missing-files audit only).** Index rows can carry a marker instead of a path, written by hand or by the tool that builds the index table. Before any other check
+(before the empty-path test and before the path is parsed), the value is trimmed, and it is a **skip marker** when it equals `SKIP` or `SKIPPED`, or starts with `SKIP:` or
+`SKIPPED:`, comparing letters in either case (`StringComparison.OrdinalIgnoreCase`). Nothing else is one: not `SKIP preflight`, not `SKIPPEDX`, not `SKIPPED :x`, and not a path
+that merely contains the word (`C:\SKIPPED\a.txt` is checked as a file). A `NULL` or white-space-only value is not a marker; it is an empty path (§6.2), *Path is empty in the index
+table*. A skipped row is never checked on disk and never listed in the report; it is counted (*Skipped*) when the row is read, and is handled at once for the progress bar and
+*Remaining* (§6.4). The Unindexed audit is unaffected: it reads the index only to learn which paths exist, and a marker there matches no file.
 
 The check must not use `File.Exists` alone, because it returns `false` for every failure and would report unreachable files as missing. Use an API that surfaces the error (e.g.
 `FileInfo` / `File.GetAttributes`) and map exceptions and Win32 error codes to the outcomes above.
@@ -609,28 +609,28 @@ long*, *Invalid characters in path*, *Path is empty in the index table*) never s
 
 This section describes the missing-files audit; §6.5.4 gives the unindexed audit's differences. Closing the window mid-run and the save rule behave the same for both.
 
-- The UI refreshes stats a few times per second. Remaining follows the recent checking speed and Files/second shows the whole-run average with the recent rate beside it (§5.4).
-  The progress bar and Remaining run over D, the distinct real paths; checked files are the only processed rows, since skipped and empty-path rows are counted up front and never
-  checked. With D = 0 (a table with no real paths, or no rows) the run completes, the bar reads 100% and the report is written.
-- **Empty-path IDs.** When E > 0 and an ID column is set, after the checking **completes** one more query reads the ID of every empty-path row (§6.2), with the status
-  `Reading empty paths...`. It never changes the run's result: Stop (or *Stop it and exit? → Yes*) while it runs abandons it and the result stays *Completed*, since every file was
-  checked. Whenever the IDs are not listed the group *[Path is empty in the index table]* keeps its count and holds one line instead (§7).
-- **Stop**: stops reading rows and checking files, then writes the report with `Result: Stopped by user`. Counts reflect only what was checked; *Total files*, *Duplicates*,
-  *Skipped* and the empty-path count are from the up-front counts and so are complete. Each tab's *Stop* button is enabled only on the running audit's tab; the menu item and Esc
-  stop it from either tab (§5.8). If Stop is pressed while the rows are still being counted (before the count query returns), no report is written and the status bar reads
-  `Stopped`: nothing has been checked, so there is nothing to report.
+- The UI refreshes stats a few times per second. Everything but *Total files* is live (§5.4): the rows are read and classified while the files are checked, so *Distinct*,
+  *Duplicates*, *Skipped* and the parenthesised empty-path count grow as the stream advances. The progress bar and Remaining run over the table's rows T: a skipped, empty or
+  duplicate row is handled the moment it is read, a distinct row when its check ends. They are estimated from the recent rate of rows handled, whereas Files/second keeps its own
+  recent rate of distinct files checked (§5.4), so a burst of duplicates moves *Remaining* but not *Files/second*. With T = 0 (a table with no rows) the run completes, the bar
+  reads 100% and the report is written.
+- **Empty-path IDs.** With an ID column, the ID of each empty-path row is collected as the row is read and listed in the group *[Path is empty in the index table]* (§7). There is
+  no separate read and no status of its own. A stopped or part-way failed run lists the IDs read so far, which are the rows its counts reflect.
+- **Stop**: stops reading rows and checking files, then writes the report with `Result: Stopped by user`. Counts reflect what was read and checked so far; *Total files* is the
+  table's rows, and *Not checked* (§7) is what remains. Each tab's *Stop* button is enabled only on the running audit's tab; the menu item and Esc stop it from either tab (§5.8).
+  If Stop is pressed before the count has returned (during the type lookup or the count), no report is written and the status bar reads `Stopped`: nothing has been checked, so
+  there is nothing to report.
 - **SQL failure** (connection, a bad ID column, timeout; a bad table or path column, or a path column that is neither `nvarchar` nor `varchar`, gets the errors of §6.2): error
-  dialog with the message. If no rows were checked, no report is written, even though the up-front counts are known. If it fails mid-run, the report is written with
-  `Result: Failed — <message>` and the counts so far. A failure of the empty-path ID read alone is not a failure of the audit: the report is still written and the group says why
-  the IDs are missing (§7).
+  dialog with the message. If no row had been handled when it failed, no report is written. If it fails mid-run, the report is written with `Result: Failed — <message>`, the counts
+  so far and the empty-path IDs read so far.
 - **Report write failure**: error dialog.
 - **What follows the run.** A run that **completes** shows the finished dialogue, with *The Missing Files audit has finished.*, a figures line `Missing: <m>    Unverified: <u>`
   (four spaces between the two, each value as the Audit group shows it at the end of the run, so *Unverified* keeps its bracket when the group shows one), then `The report was
   saved to:` and the report's full path. *View Report* opens the report the run wrote (the one captured at Start, not the selected tab's) through the same code as the Audit group's
   *View Report*, including its error dialogue; *OK* closes the dialogue. A run that **fails** (a SQL failure or a report write failure; also a path column that is neither
-  `nvarchar` nor `varchar`, or not found, which the run refuses, §6.2) shows its error dialogue, now with the error sound and the flash. A run the user **stops**, before or
-  after checking began, shows nothing new, since they are at the window; that includes a Stop during `Reading empty paths...`, whose result stays *Completed*, and *Stop it and
-  exit?* answered Yes (any stop request skips the finished dialogue). Pre-flight errors, found before the run starts, get neither the sound nor the flash.
+  `nvarchar` nor `varchar`, or not found, which the run refuses, §6.2) shows its error dialogue, now with the error sound and the flash. A run the user **stops**, before or after
+  checking began, shows nothing new, since they are at the window; that includes *Stop it and exit?* answered Yes (any stop request skips the finished dialogue). Pre-flight errors,
+  found before the run starts, get neither the sound nor the flash.
 - **Closing the window mid-run**: a prompt, *"An audit is in progress. Stop it and exit?"*, with **Yes** and **No**. Yes stops the run, writes the report as
   `Stopped by user`, then exits; No carries on. File → Exit and Alt+F4 behave the same. If Yes is chosen before the count query returns, no report is written (as for
   Stop) and the application simply exits.
@@ -683,9 +683,11 @@ and nothing is loaded). Then only the path column is read (never the ID), forwar
 SELECT DISTINCT [PathColumn] AS [Path] FROM [schema].[table] WHERE <prefix filter>;   -- every part bracket-quoted as in §6.2
 ```
 
-The selected value is always the raw column (the app decodes a `varchar` value into the right string and hashes that). A `varchar` column is converted only inside the filter,
-as `CAST([PathColumn] AS <nvarchar type of §6.2>)`, in every `LIKE` clause below (the prefix clauses and the white-space clause), because those clauses carry a `COLLATE` that
-would otherwise be applied to the `varchar` value before it meets the `nvarchar` parameters. With the filter dropped nothing is converted, and an `nvarchar` column never is.
+The selected value is always the raw column (the app decodes a `varchar` value into the right string and hashes that). A `varchar` column is converted only inside the filter, as
+`CAST([PathColumn] AS nvarchar(4000))`, whatever the column's length, in every `LIKE` clause below (the prefix clauses and the white-space clause), because those clauses carry a
+`COLLATE` that would otherwise be applied to the `varchar` value before it meets the `nvarchar` parameters. Both kinds of clause test only the start of the path (a folder prefix,
+or the first character), so characters beyond 4,000 can never change the result, and no `nvarchar(max)` is needed (milestone 6; it was `nvarchar(max)` for a longer
+column before). With the filter dropped nothing is converted, and an `nvarchar` column never is.
 
 - **Prefix filter.** For one to 20 folders the statement asks SQL only for rows under those folders: one case-insensitive `LIKE '<folder>\%'` per folder (`COLLATE
   Latin1_General_100_CI_AS`, so a case-sensitive column collation cannot drop rows), with `|`, `%`, `_` and `[` escaped, joined with `OR`. The filter ignores *Include subfolders*
@@ -779,7 +781,8 @@ Result:          Completed
 
 Summary
 -------
-Total files:     98,200 (124,500)
+Total files:     124,500
+Distinct:        98,200
 Duplicates:      24,750
 Found:           97,820
 Missing:         260
@@ -813,25 +816,24 @@ doc_id 22030   \\fs03\docs\22030.pdf   I/O error   The semaphore timeout period 
 ...
 ```
 
-In the Summary, *Total files* is D, the distinct real paths checked, with the table's rows T in parentheses when they differ; *Unverified* is U, with the empty-path rows E in
-parentheses when there are any. Both mirror the screen (§5.4) and use `ReportFormat.Count` (`N0`, invariant culture).
+In the Summary, *Total files* is T, the table's rows; *Distinct* is D, the different real paths seen; *Duplicates* is the rows that repeated one; *Unverified* is U, with the
+empty-path rows E in parentheses when there are any. All mirror the screen (§5.4) and use `ReportFormat.Count` (`N0`, invariant culture).
 
 Rules:
 
 - Group titles and their counts are wrapped in square brackets, each on its own line, with a blank line between groups.
 - A group with no files is omitted. A section with no groups reads `No missing files.` / `No unverified files.`
-- *[Path is empty in the index table]* is built from the up-front counts, not from the checks, so its count is the empty-path rows E. With an ID column set it holds one line per
-  empty-path row (not per distinct ID, so the count matches the lines), `<IdColumn> <id>`, sorted as the other groups are. Otherwise it holds one line in place of the IDs and
-  never blank lines. The line is, in the order of precedence: `Missing filepaths not listed because no ID column was specified` (no ID column, whatever the result);
-  `Missing filepaths not listed because the audit was stopped`; `Missing filepaths not listed because the audit failed`; or, when the read of the IDs failed,
-  `Missing filepaths not listed because they could not be read: <message>` (an abandoned read, by Stop during `Reading empty paths...`, gives the *stopped* line).
+- *[Path is empty in the index table]* is built from the empty-path count and IDs collected as the rows were read, not from the checks, so its count is the empty-path rows E read.
+  With an ID column set it holds one line per empty-path row (not per distinct ID, so the count matches the lines), `<IdColumn> <id>`, sorted as the other groups are; a stopped or
+  failed run lists the IDs read so far. Without an ID column it holds one line in place of the IDs and never blank lines: `Missing filepaths not listed because no ID column was
+  specified`.
 - `ID column:` reads `(none)` when not set. `Empty files:` reads `Reported as missing` or `Not reported`. The Project folder / stage lines are omitted when a custom location
   is used.
 - Missing groups appear in the order *Empty*, *Does not exist*; Unverified groups in the order of the table in §6.3, *Other errors* last.
-- The Summary lines come in this order: `Total files:`, `Duplicates:`, `Found:`, `Missing:`, `Unverified:`, `Skipped:`, then `Not checked:` for a *Stopped by user* or *Failed*
-  result only. `Duplicates:` and `Skipped:` are always present (`0` when none). `Total files:` is `D`, or `D (T)` when T differs from D; `Unverified:` is `U`, or `U (E)` when E is
-  above zero (§5.4). Skipped rows are counted, never listed. `Not checked:` is D − Found − Missing − U, so Found + Missing + U + Not checked = D, and D + Duplicates + E +
-  Skipped = T (§6.2); the line is omitted for a completed run.
+- The Summary lines come in this order: `Total files:`, `Distinct:`, `Duplicates:`, `Found:`, `Missing:`, `Unverified:`, `Skipped:`, then `Not checked:` for a *Stopped by user* or
+  *Failed* result only. `Distinct:`, `Duplicates:` and `Skipped:` are always present (`0` when none). `Total files:` is T, the table's rows; `Unverified:` is `U`, or `U (E)` when E
+  is above zero (§5.4). Skipped rows are counted, never listed. `Not checked:` is T − (Found + Missing + U + Duplicates + E + Skipped), never below zero, so Found + Missing + U +
+  Duplicates + E + Skipped + Not checked = T (§6.2); the line is omitted for a completed run, where Found + Missing + U = Distinct and Distinct + Duplicates + E + Skipped = T.
 - The *Unverified Files* section's heading count is U + E, since it lists both the checked outcomes and the empty-path rows. There are no blank lines other than the one between
   groups and sections.
 
@@ -1029,18 +1031,20 @@ never drawn in XAML. Each image the app uses is listed as an `AvaloniaResource` 
 - `Services/` — `Settings/` (`SettingsStore`, a static class that maps a settings file to and from `AppSettings` through `ProjectFile`, at a path it is given, and never creates a
   folder; `ProjectSettingsService`, which holds the open project's file path and baseline settings and runs the save rule of §8.2 with its prompts, returning a `SavePointResult`
   that says whether the triggering operation may proceed and whether the checkbox is to be ticked; it also remembers the three file-type warning answers of §6.5.1), `Sql/`
-  (connection strings, SQL identifiers, query builder, which also builds the path-only, prefix-filtered query, and the static `IndexTableReader`, which also reads the paths for the
-  unindexed audit), `Checking/` (file checker, `SkipMarker`, which decides whether a path value is a skip marker, and the Win32 error mapper), `Scanning/` (the unindexed
-  direction's `FileTypeList`, `FileTypePattern` and `FileTypeFilter`, the 128-bit-hash `IndexPathSet`, and the concurrent, static `FolderWalker`; `FileTypeList`, `FileTypePattern`
-  and `IndexPathSet` stay here, not in `Models/`, because they carry logic), `Auditing/` (the static `AuditRunner` and `UnindexedAuditRunner`, pre-flight checker,
-  and the progress types including `UnindexedProgress`, which also keeps the scan clock of §5.4a), `Reporting/` (the two report builders, `ReportFormat` with the formatting
-  they share, writer and path resolver) and `Dialogues/` (dialogue service, which also offers a three-button choice returning a `DialogueChoices`, the finished dialogue and the
-  failed-run error dialogue, the *Open Project* file picker, the File Types dialogue and `WindowAttention`, the static class that plays the end-of-run sound and flashes the main
-  window's taskbar button through `MessageBeep` and `FlashWindowEx`, §5). Stateless services are static classes (§12). Return `ErrorOr<T>` for expected failures.
+  (connection strings, SQL identifiers, query builder, which also builds the path-only, prefix-filtered query, and the static `IndexTableReader`, which counts the table's rows,
+  streams them for the Missing Files audit and also reads the paths for the unindexed audit), `Checking/` (file checker, `SkipMarker`, which decides whether a path value is a skip
+  marker, and the Win32 error mapper), `Scanning/` (the unindexed direction's `FileTypeList`, `FileTypePattern` and `FileTypeFilter`, the 128-bit-hash `IndexPathSet`, and the
+  concurrent, static `FolderWalker`; `FileTypeList`, `FileTypePattern` and `IndexPathSet` stay here, not in `Models/`, because they carry logic), `Auditing/` (the static
+  `AuditRunner` and `UnindexedAuditRunner`, pre-flight checker, `PathKeySet`, the 128-bit-hash set of the Missing Files audit's de-duplication keys (§6.2), and the progress types
+  including `AuditProgress`, whose counters the reader and the checks write while the screen reads them, and `UnindexedProgress`, which also keeps the scan clock of §5.4a),
+  `Reporting/` (the two report builders, `ReportFormat` with the formatting they share, writer and path resolver) and `Dialogues/` (dialogue service, which also offers a
+  three-button choice returning a `DialogueChoices`, the finished dialogue and the failed-run error dialogue, the *Open Project* file picker, the File Types dialogue and
+  `WindowAttention`, the static class that plays the end-of-run sound and flashes the main window's taskbar button through `MessageBeep` and `FlashWindowEx`, §5). Stateless
+  services are static classes (§12). Return `ErrorOr<T>` for expected failures.
 - `Models/` — plain data, with no behaviour worth a service. `Settings/` (`AppSettings`, the settings record with no nullable members; `ProjectFile` and `ProjectFileFolder`, the
-  nullable JSON shape of §8; `ScanFolder`; and `SavePointResult`), `Auditing/` (`AuditQuery`, `PathQuery`, `IndexRow`, `CheckResult`, `MappedOutcome`, `AuditRequest`,
-  `PreflightResult`, `ScannedFile` and `UnverifiedFolder`), `Dialogues/` (`ProjectFilePick`, the *Open Project* picker's result) and `Reporting/` (`AuditReport`,
-  `UnindexedReport` and `ReportPath`).
+  nullable JSON shape of §8; `ScanFolder`; and `SavePointResult`), `Auditing/` (`AuditQuery`, `PathQuery`, `IndexRow`, `RowCounts`, `CheckResult`, `MappedOutcome`, `AuditRequest`,
+  `PreflightResult`, `ScannedFile` and `UnverifiedFolder`), `Dialogues/` (`ProjectFilePick`, the *Open Project* picker's result) and `Reporting/` (`AuditReport`, `UnindexedReport`
+  and `ReportPath`).
 - `Common/` — `GlobalUsings.cs`; `Constants/` (every enum, one file each, in a folder named for the area it serves and with a plural type name: `Auditing/` `AuditDirections`, the
   directions `Missing` and `Unindexed`, whose member names the report file names are tied to, and `CheckOutcomes`; `Dialogues/` `DialogueChoices` and `DialogueIcons`; `Reporting/`
   `AuditResultKinds`; `Settings/` `ProjectStages` and `AuditStages`); `Errors/` (the custom `Error` definitions: audit, query, report, settings, SQL); `Extensions/`
@@ -1105,23 +1109,26 @@ so ordinary builds and `dotnet run` are unchanged.
 - The set of Unverified reasons and their wording (§6.3).
 - Status bar messages and keyboard shortcuts.
 - Extra report header lines (Empty files, Project folder, stages).
-- `Total files` stays the distinct real-path count D on Stop or failure, with a `Not checked:` line (§7).
+- `Total files` stays the distinct real-path count D on Stop or failure, with a `Not checked:` line (§7). *(Superseded for the Missing Files audit by milestone 6, below: *Total
+  files* is the table's rows.)*
 - Distinct paths (from user feedback, after milestone 5; commit `b22d63c`, the groundwork of Epic 2's milestone 1): both directions' queries are `DISTINCT`, so a path on many rows
   is checked once; with an ID column the unit is the path and ID pair, and the ID's uniqueness per path is the user's to keep, not checked (§6.2). The unindexed direction already
-  kept one hash per path, so there `DISTINCT` only cuts the rows sent.
+  kept one hash per path, so there `DISTINCT` only cuts the rows sent. *(The Missing Files direction's `DISTINCT` is superseded by milestone 6, below: the app de-duplicates; the
+  Unindexed query is still `DISTINCT`.)*
 - Row accounting (Epic 2, milestone 1), settled with the user: the table's rows, empty-path rows and skip-marker rows are counted up front, so Duplicates, Skipped and the empty
   count are final when counting ends, and `DISTINCT` no longer hides them; *Total files* is `D (T)` when they differ; a *Duplicates* statistic sits between *Total files* and
   *Checked*; *Found* is added on screen; empty paths stay under *Unverified*, with their count in parentheses on *Unverified*; skipped rows are counted by query, not one by one,
   and non-ASCII case folding in skip markers is not handled; the table is assumed not to change during a run, so the app does not reconcile drift; without an ID column the empty
-  group shows its count and `Missing filepaths not listed because no ID column was specified`; the report's Summary mirrors the screen.
+  group shows its count and `Missing filepaths not listed because no ID column was specified`; the report's Summary mirrors the screen. *(Its SQL classification, its up-front
+  counts, the `D (T)` form of *Total files* and the empty-ID read are superseded by milestone 6, below; the statistics and the rule that the Summary mirrors the screen stay.)*
 - Row accounting, decided by Claude (for the user to check): *Unverified* hides its parentheses when E = 0, by analogy with *Total files*; the empty-path IDs are read only after a
   completed check, Stop abandons that read without changing the result, and its status is `Reading empty paths...`; the lines that replace the IDs when they were not read (§7) are
-  worded after the user's no-ID line; a failure with nothing checked still writes no report; empty-path rows are listed one line per row, not per distinct ID; the old `max(count,
-  processed)` guard on *Total files* is dropped, since the table is assumed unchanged; the window grows to 640 × 668 for the fourth statistics row, with the grid columns of §5.4;
-  on screen *Checked* is Found + Missing + U with each counter read once per refresh, because reading a separate Checked counter gave a torn snapshot mid-run (Checked below
-  Missing); the checker keeps its skip and empty tests as an unreachable safety net, and a stray one is recorded as *Unverified — Other errors* with the reason `Skip marker not
-  recognised by the database` (reachable, because the checker's `OrdinalIgnoreCase` folds `ſkip` to `SKIP` where the database does not), so it is counted and listed; a failure of
-  the empty-path ID read alone keeps the completed audit's report.
+  worded after the user's no-ID line *(the read, its status and those lines are superseded by milestone 6, below)*; a failure with nothing checked still writes no report;
+  empty-path rows are listed one line per row, not per distinct ID; the old `max(count, processed)` guard on *Total files* is dropped, since the table is assumed unchanged; the
+  window grows to 640 × 668 for the fourth statistics row, with the grid columns of §5.4; on screen *Checked* is Found + Missing + U with each counter read once per refresh,
+  because reading a separate Checked counter gave a torn snapshot mid-run (Checked below Missing); the checker keeps its skip and empty tests as an unreachable safety net, and a
+  stray one is recorded as *Unverified — Other errors* with the reason `Skip marker not recognised by the database` (reachable, because the checker's `OrdinalIgnoreCase` folds
+  `ſkip` to `SKIP` where the database does not), so it is counted and listed; a failure of the empty-path ID read alone keeps the completed audit's report.
 - The nvarchar path column (Epic 2, milestone 1.1; **its requirement that the column be `nvarchar` is superseded by milestone 4**, below, which accepts `varchar` too; the history
   stays as it was), settled with the user: the cast of the path column to `nvarchar(max)`, which made the classification type-agnostic but is the costliest type to work on, is
   removed; the app expects an `nvarchar` path column, checked before any row is read, for both audits, with the two errors of §6.2; the ID column stays unrestricted. Decided by
@@ -1160,14 +1167,14 @@ so ordinary builds and `dotnet run` are unchanged.
 
 - Skipped rows and run statistics (milestone 5, from the user's five requests): the skip rule is exact and checked before every other check (§6.3); a skipped row is never listed,
   and the report's `Skipped:` line is always present on the missing-files report; on-screen *Total files* was `max(count, processed)` so the numbers agreed with the report if the
-  table grew (dropped in Epic 2's milestone 1, §6.2); the processed count (checked plus skipped) drove the progress bar and Remaining (since then checked rows only, §6.4).
-  Remaining is the 30-second recent rate seeded from the warm-up's second half (the whole-warm-up average included the start-up ramp, so Remaining fell 1.4 to 1.9 s per second for
-  the first half-minute), eased with a 3-second constant, and held once the processed count has stood still for about 1 second; the display is clamped to 36,000,000 seconds. The
-  recent rate sits in parentheses after the whole-run Files/second, not after a middot (Win9x convention). The Missing figures have two bases (checked over wall time; processed
-  over checking time, the rate behind Remaining) and the Unindexed recent rate runs on a scan clock that starts with the walk, so the index load does not use up its warm-up. `N
-  (0)` after a stall is shown as it is. The statistics became three columns on both tabs, which took the Audit group from four rows to three and the window from 668 to 651 pixels
-  high (it is 668 again since Epic 2's milestone 1, which added a fourth row). The Unindexed columns (Total files and Indexed; Unindexed and Unverified; Elapsed and Files/second)
-  followed the user's Missing layout by analogy (regrouped in Epic 2's milestone 2, below). `Esc` was not changed.
+  table grew (dropped in Epic 2's milestone 1, §6.2); the processed count (checked plus skipped) drove the progress bar and Remaining (then checked rows only, and rows handled
+  since Epic 2's milestone 6, §6.4). Remaining is the 30-second recent rate seeded from the warm-up's second half (the whole-warm-up average included the start-up ramp, so
+  Remaining fell 1.4 to 1.9 s per second for the first half-minute), eased with a 3-second constant, and held once the processed count has stood still for about 1 second; the
+  display is clamped to 36,000,000 seconds. The recent rate sits in parentheses after the whole-run Files/second, not after a middot (Win9x convention). The Missing figures have
+  two bases (checked over wall time; processed over checking time, the rate behind Remaining) and the Unindexed recent rate runs on a scan clock that starts with the walk, so the
+  index load does not use up its warm-up. `N (0)` after a stall is shown as it is. The statistics became three columns on both tabs, which took the Audit group from four rows to
+  three and the window from 668 to 651 pixels high (it is 668 again since Epic 2's milestone 1, which added a fourth row). The Unindexed columns (Total files and Indexed; Unindexed
+  and Unverified; Elapsed and Files/second) followed the user's Missing layout by analogy (regrouped in Epic 2's milestone 2, below). `Esc` was not changed.
 
 - Unindexed audit statistics (Epic 2, milestone 2, design `Docs/Specs/Epic-2-Audit-Optimisation/milestone-2-unindexed-stats-design.md`), settled with the user: the Unindexed
   Audit group gains *Excluded* and *Index paths*, in the user's layout of three columns and three rows (Total files, Excluded, Index paths; Indexed, Unindexed, Unverified;
@@ -1183,31 +1190,49 @@ so ordinary builds and `dotnet run` are unchanged.
 - The finished dialogue (Epic 2, milestone 3, design `Docs/Specs/Epic-2-Audit-Optimisation/milestone-3-finished-dialogue-design.md`), settled with the user: approach A (the
   dialogue, a taskbar flash and a sound), chosen over bringing the window to the front (which could take the keyboard while the user types elsewhere) and over the dialogue alone
   (which opens behind other windows and goes unseen); the dialogue appears for a completed run only, a failed run keeps its error dialogue and gains the attention, and a stopped
-  run, a pre-flight error and a close mid-run show nothing new; the dialogue's content is the audit's name, the final figures, the report's full path and *View Report* beside
-  *OK* (§5, §6.4, §6.5.4). Decided by Claude (for the user to check): *View Report* carries the access key `V`, since the other dialogues' action buttons have one (*Create
-  Folder*, *Yes*) and *OK* has none; the flash happens only when the main window is not active, and never activates it; both Win32 calls (`MessageBeep`, `FlashWindowEx`) are best
-  effort, so a failure is ignored and the dialogue still shows; the dialogue's *View Report* opens the report of the run that finished (captured at Start), not the selected
-  tab's; any stop request skips the finished dialogue, including a Stop during `Reading empty paths...` whose result stays *Completed*;
+  run, a pre-flight error and a close mid-run show nothing new; the dialogue's content is the audit's name, the final figures, the report's full path and *View Report* beside *OK*
+  (§5, §6.4, §6.5.4). Decided by Claude (for the user to check): *View Report* carries the access key `V`, since the other dialogues' action buttons have one (*Create Folder*,
+  *Yes*) and *OK* has none; the flash happens only when the main window is not active, and never activates it; both Win32 calls (`MessageBeep`, `FlashWindowEx`) are best effort, so
+  a failure is ignored and the dialogue still shows; the dialogue's *View Report* opens the report of the run that finished (captured at Start), not the selected tab's; any stop
+  request skips the finished dialogue, including a Stop during `Reading empty paths...` whose result stays *Completed* (that phase is gone since milestone 6);
   `Assets\Win95Icons\information32.png`, already in the project folder, gained its `AvaloniaResource` entry in the `.csproj`, as every image the app uses must have (§9).
 - The varchar path column (Epic 2, milestone 4, design `Docs/Specs/Epic-2-Audit-Optimisation/milestone-4-varchar-path-column-design.md`), settled with the user: `varchar(n)` and
   `varchar(max)` path columns are accepted on both tabs and converted to `nvarchar` where the statements need it, which supersedes milestone 1.1's requirement of an `nvarchar`
   column; only `varchar` is added (`char`, `nchar`, `text`, `ntext`, numbers and the rest stay refused); approach A, an explicit conversion once per statement, chosen over letting
-  SQL Server convert implicitly and over converting in the app (impossible for the counts); the reasoning behind converting inside the Unindexed folder filter (§6.5.2) is
-  recorded in the design and was not measured, by the user's decision (the final review's spot check in LocalDB agreed: a `Greek_CI_AS` path matched its folder only with the
-  conversion); the version stays 2.0.0, since the app is not published (the `v2.0.0` tag's position is the user's
-  call). Decided by Claude (for the user to check): the refusal's wording is `... expects an nvarchar or varchar column.`; its code is renamed `Sql.PathColumnUnsupported`
-  (from `Sql.PathColumnNotNvarchar`) to match the rule; on the Missing tab the conversion is computed in one apply (`[fa_p]`, column `[FaPath]`) and everything else uses it, and
-  on the Unindexed tab it appears only in the folder filter, so the selected value stays the raw column and with no filter nothing is converted.
+  SQL Server convert implicitly and over converting in the app (impossible for the counts); the reasoning behind converting inside the Unindexed folder filter (§6.5.2) is recorded
+  in the design and was not measured, by the user's decision (the final review's spot check in LocalDB agreed: a `Greek_CI_AS` path matched its folder only with the conversion);
+  the version stays 2.0.0, since the app is not published (the `v2.0.0` tag's position is the user's call). Decided by Claude (for the user to check): the refusal's wording is `...
+  expects an nvarchar or varchar column.`; its code is renamed `Sql.PathColumnUnsupported` (from `Sql.PathColumnNotNvarchar`) to match the rule; on the Missing tab the conversion
+  is computed in one apply (`[fa_p]`, column `[FaPath]`) and everything else uses it, and on the Unindexed tab it appears only in the folder filter, so the selected value stays the
+  raw column and with no filter nothing is converted. *(Superseded by milestone 6, below, for the Missing tab: it converts nothing and reads the column as it is, and the folder
+  filter converts to `nvarchar(4000)` whatever the column's length.)*
 - The varchar warning (Epic 2, milestone 5, design `Docs/Specs/Epic-2-Audit-Optimisation/milestone-5-varchar-warning-design.md`), settled with the user: a *Continue* / *Cancel*
   warning on Start, on both tabs, before a `varchar` path column is audited, remembered like the file-type warnings (until *Close project*, *Open project...* or a fresh launch,
   never saved in the project file); approach A, the type read in pre-flight, chosen over asking from inside the run (which needs a question opened mid-run, plumbing from the
-  background run to the window, a clock that counts while the user reads, and a new way for a run to end); a user guide section on `varchar` path columns (§8.4 of the guide).
-  Decided by Claude (for the user to check): the remembered answer is keyed to server, database, table and path column (trimmed, ignoring case), so a different column is asked
-  about again; the silent cases (`nvarchar`, a refused type, a missing column or table, any SQL error, any exception except out-of-memory, or a lookup that takes longer than 30
-  seconds) defer to the run, which reports them as before; the warning is the last pre-flight step, after the existing-report check and before the save rule, so a Start that fails
-  for another reason never reaches the database; and `PathColumnType.Format` is public so the warning can write `<type>` as the refusal does. Settled with the user after the
-  final review: an unreachable server is waited for once, so the lookup's result (a type, not found, or a SQL error) is handed to the run, which uses it instead of connecting
-  again (`PreflightResult`, `AuditRequest.PathColumnType`).
+  background run to the window, a clock that counts while the user reads, and a new way for a run to end); a user guide section on `varchar` path columns (§8.4 of the guide;
+  rewritten by milestone 6, as is the warning's middle sentence). Decided by Claude (for the user to check): the remembered answer is keyed to server, database, table and path
+  column (trimmed, ignoring case), so a different column is asked about again; the silent cases (`nvarchar`, a refused type, a missing column or table, any SQL error, any exception
+  except out-of-memory, or a lookup that takes longer than 30 seconds) defer to the run, which reports them as before; the warning is the last pre-flight step, after the
+  existing-report check and before the save rule, so a Start that fails for another reason never reaches the database; and `PathColumnType.Format` is public so the warning can
+  write `<type>` as the refusal does. Settled with the user after the final review: an unreachable server is waited for once, so the lookup's result (a type, not found, or a SQL
+  error) is handed to the run, which uses it instead of connecting again (`PreflightResult`, `AuditRequest.PathColumnType`).
+- The streaming Missing Files audit (Epic 2, milestone 6, design `Docs/Specs/Epic-2-Audit-Optimisation/milestone-6-streaming-missing-audit-design.md`), settled with the user. On a
+  real 1,570,465-row `varchar(8000)` table 2.0.0 spent about 85 seconds in SQL before checking began (the counts 45 s, the `DISTINCT` select 38 s to its first row, on the user's
+  server), against 0.2 s for 1.0.0's count; the swings between runs were the file server, not the app. Four ways to remove that wait were measured in LocalDB on the same shape of
+  table, as seconds before checking can start (the user's server was about 4.7 times slower): 2.0.0's statements 18 s; A, one `DISTINCT` into a temporary table, 10 s; B, 2.0.0's
+  statements with `nvarchar(4000)` for `max`, 8 s; C, a classification-only count with the app de-duplicating, 3 s; the **chosen** approach, the user's refinement of C, with
+  nothing classified in SQL at all, **1.0.0's two statements** (`COUNT_BIG(*)` and a plain select), under half a second. This supersedes milestone 1's SQL classification, up-front
+  counts, `DISTINCT` stream and empty-ID read, and milestone 4's conversion on the Missing tab (all kept above as history). The user's calls: the statistics stay but are counted
+  live as the rows stream; a new *Distinct* statistic sits between *Total files* and *Duplicates*, and *Total files* is the table's rows (the `D (T)` form is gone); *Duplicates*
+  keeps its **rows** meaning (each extra row once, so a path listed three times is one *Distinct* and two *Duplicates*), which is what makes the figures add up to *Total files*;
+  the Missing Files audit converts nothing; the Unindexed folder filter converts a `varchar` column to `nvarchar(4000)`, not `max` (it tests only the start of the path); the
+  varchar warning's middle sentence no longer says the audit converts the column. Decided by Claude (for the user to check): the de-duplication key is the path with trailing spaces
+  (U+0020) only removed and upper-cased with `ToUpperInvariant`, with the ID joined to it unambiguously (the path's length and an ID flag hashed ahead of the text), hashed with MD5
+  to 128 bits as `IndexPathSet` is, so `ß` is not `ss` and a leading space or trailing tab is its own path (`IndexPathSet` trims both ends, so it is not reused); *Distinct* is
+  counted when a key is first seen and shown no lower than *Checked*; *Remaining* and the progress bar run on rows handled, *Files/second* on its own recent rate of files checked,
+  so the two estimators differ; *Not checked* is the larger of zero and T − (Checked + Duplicates + empty + Skipped); the empty-path IDs are collected during the stream, so a
+  stopped or failed run lists those read so far, and the three explanatory notes and the `Reading empty paths...` phase are gone; the diagnostic that reported a skip marker the
+  database did not recognise is removed (the app and the checker now use the same test); the milestone's branch was cut from `9c6d5ce`, not from local `main`.
 
 Settled with the user after the builder check: roots checked once with a *Drive or share not found* group; unreachable locations short-circuit at the directory level
 that failed, found by walking the path (§6.3); the close-mid-run prompt.
