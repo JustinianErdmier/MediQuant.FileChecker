@@ -54,8 +54,8 @@ public sealed class RemainingEstimator
     }
 
     /// <summary>Takes a sample and returns the Remaining text.</summary>
-    /// <param name="processed">The distinct paths checked so far.</param>
-    /// <param name="total">The distinct paths to check, the audit's <c>Total files</c> figure.</param>
+    /// <param name="processed">The rows handled so far.</param>
+    /// <param name="total">The rows to handle, the audit's <c>Total files</c> figure.</param>
     /// <param name="checkingElapsed">The time spent checking, which excludes counting the rows.</param>
     /// <param name="hasTotal">Whether the row count is known yet.</param>
     /// <param name="isFinished">Whether the run has ended.</param>

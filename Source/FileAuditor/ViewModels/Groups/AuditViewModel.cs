@@ -3,8 +3,11 @@ namespace FileAuditor.ViewModels.Groups;
 /// <summary>The Audit group and status bar: read-only run statistics as display strings, blank before the first run.</summary>
 public sealed partial class AuditViewModel : AuditStatusBase
 {
-    /// <summary>Works out the Remaining time and the recent rate behind it.</summary>
+    /// <summary>Works out the Remaining time from the rows handled.</summary>
     private readonly RemainingEstimator _remainingEstimator = new();
+
+    /// <summary>The recent rate of files checked, the bracketed figure of Files/second; separate from the rate behind Remaining, which counts every row handled.</summary>
+    private readonly RecentRate _filesRate = new();
 
     /// <summary>Gets or sets the number of files checked so far, formatted with thousands separators.</summary>
     [ ObservableProperty ]
@@ -16,12 +19,16 @@ public sealed partial class AuditViewModel : AuditStatusBase
 
     /// <summary>
     ///     Gets or sets the files checked per second over the whole run, as a whole number with thousands separators, followed while the run is under way and the warm-up has passed
-    ///     by the recent figure in parentheses; blank until a full second has elapsed. The recent figure is the rate behind Remaining, which counts checked rows only.
+    ///     by the recent figure in parentheses; blank until a full second has elapsed. Both count distinct files checked.
     /// </summary>
     [ ObservableProperty ]
     public partial string FilesPerSecond { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the number of duplicate rows, formatted with thousands separators; blank until the counting ends.</summary>
+    /// <summary>Gets or sets the number of different real paths first seen so far, formatted with thousands separators; blank until the counting ends.</summary>
+    [ ObservableProperty ]
+    public partial string Distinct { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the number of duplicate rows read so far, formatted with thousands separators; blank until the counting ends.</summary>
     [ ObservableProperty ]
     public partial string Duplicates { get; set; } = string.Empty;
 
@@ -41,18 +48,18 @@ public sealed partial class AuditViewModel : AuditStatusBase
     [ ObservableProperty ]
     public partial string Remaining { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the number of skipped rows, formatted with thousands separators; blank until the counting ends.</summary>
+    /// <summary>Gets or sets the number of skipped rows read so far, formatted with thousands separators; blank until the counting ends.</summary>
     [ ObservableProperty ]
     public partial string Skipped { get; set; } = string.Empty;
 
     /// <summary>
-    ///     Gets or sets the number of distinct files the audit checks, followed by the table's row count in parentheses when the two differ; blank until the counting ends.
+    ///     Gets or sets the table's row count, fixed once the counting ends; blank until then.
     /// </summary>
     [ ObservableProperty ]
     public partial string TotalFiles { get; set; } = string.Empty;
 
     /// <summary>
-    ///     Gets or sets the number of unverified files, followed by the number of empty paths in parentheses when there are any; the empty paths are known when the counting ends.
+    ///     Gets or sets the number of unverified files, followed by the number of empty paths read so far in parentheses when there are any.
     /// </summary>
     [ ObservableProperty ]
     public partial string Unverified { get; set; } = string.Empty;
@@ -61,8 +68,10 @@ public sealed partial class AuditViewModel : AuditStatusBase
     public override void Reset()
     {
         _remainingEstimator.Reset();
+        _filesRate.Reset();
 
         TotalFiles     = string.Empty;
+        Distinct       = string.Empty;
         Duplicates     = string.Empty;
         Checked        = string.Empty;
         Found          = string.Empty;
@@ -82,35 +91,40 @@ public sealed partial class AuditViewModel : AuditStatusBase
     /// <param name="isFinished">Whether the run has ended, which makes an empty table read 100%.</param>
     public void Update(AuditProgress progress, TimeSpan elapsed, bool isFinished)
     {
-        // Each counter is read once and Checked is their sum, so that everything shown from this refresh agrees even while the workers are still recording.
-        long       found      = progress.Found;
-        long       missing    = progress.Missing;
-        long       unverified = progress.Unverified;
-        long       done       = found + missing + unverified;
-        long       total      = progress.TotalRows;
-        bool       hasCounts  = progress.HasTotal;
-
-        // The displayed rate is over the whole run, the span the Elapsed box shows; Remaining uses the recent checking-time rate, which excludes the counting phase.
-        double wholeRunSeconds = elapsed.TotalSeconds;
-
-        // Minimal compile fix for Task 1: the figures come from the live counters; Task 2 rebuilds this view model (Distinct, progress by rows handled).
+        // The workers record an outcome before they count the file as checked, and the reader counts a path as distinct before it is checked. Found, Missing and Unverified are
+        // therefore read once and Checked is their sum, and Distinct is read last (it only grows) and never shown below Checked, so that everything shown from this refresh agrees.
+        long found      = progress.Found;
+        long missing    = progress.Missing;
+        long unverified = progress.Unverified;
+        long done       = found + missing + unverified;
+        long duplicates = progress.Duplicates;
         long emptyPaths = progress.EmptyPaths;
+        long skipped    = progress.Skipped;
+        long distinct   = Math.Max(progress.Distinct, done);
+        long total      = progress.TotalRows;
+        bool hasCounts  = progress.HasTotal;
+        long handled    = done + duplicates + emptyPaths + skipped;
+
+        // The displayed rate is over the whole run, the span the Elapsed box shows; both recent rates use the checking-time clock, which excludes the counting phase.
+        double wholeRunSeconds = elapsed.TotalSeconds;
+        double? recentFiles = hasCounts && !isFinished ? _filesRate.Next(done, progress.CheckingElapsed) : null;
 
         TotalFiles = hasCounts ? Format(total) : string.Empty;
-        Duplicates = hasCounts ? Format(progress.Duplicates) : string.Empty;
-        Skipped    = hasCounts ? Format(progress.Skipped) : string.Empty;
+        Distinct   = hasCounts ? Format(distinct) : string.Empty;
+        Duplicates = hasCounts ? Format(duplicates) : string.Empty;
+        Skipped    = hasCounts ? Format(skipped) : string.Empty;
         Checked    = Format(done);
         Found      = Format(found);
         Missing    = Format(missing);
         Unverified = WithParenthesis(unverified, emptyPaths, show: emptyPaths > 0);
         Elapsed    = TimeText.Format(elapsed.TotalSeconds);
-        Remaining  = _remainingEstimator.Next(progress.RowsHandled, total, progress.CheckingElapsed, progress.HasTotal, isFinished);
-        FilesPerSecond = wholeRunSeconds >= 1 ? RecentRate.Format(done / wholeRunSeconds, isFinished ? null : _remainingEstimator.RecentRate) : string.Empty;
+        Remaining  = _remainingEstimator.Next(handled, total, progress.CheckingElapsed, hasCounts, isFinished);
 
-        Percent       = total > 0 ? progress.RowsHandled * 100.0 / total : isFinished && progress.HasTotal ? 100 : 0;
-        StatusPercent = progress.HasTotal ? $"{Percent:0}%" : string.Empty;
+        FilesPerSecond = wholeRunSeconds >= 1 ? RecentRate.Format(done / wholeRunSeconds, recentFiles) : string.Empty;
+
+        Percent       = total > 0 ? Math.Min(100, handled * 100.0 / total) : isFinished && hasCounts ? 100 : 0;
+        StatusPercent = hasCounts ? $"{Percent:0}%" : string.Empty;
     }
-
     /// <summary>Formats a count with thousands separators.</summary>
     private static string Format(long value) => value.ToString(format: "N0", CultureInfo.CurrentCulture);
 

@@ -102,14 +102,14 @@ Before Task 1 the controller creates branch `feat/milestone-6-streaming-missing-
 
 **Interfaces:** Consumes Task 1's `AuditProgress` members.
 
-- [ ] **Step 1: View model.** `Distinct` property; every figure live; progress and percentage by `RowsHandled / TotalRows`; *Remaining* from rows handled; *Files/second*
+- [x] **Step 1: View model.** `Distinct` property; every figure live; progress and percentage by `RowsHandled / TotalRows`; *Remaining* from rows handled; *Files/second*
   from files checked with its own recent rate; `Reset` blanks *Distinct*; the finished dialogue's figures line unchanged in form.
-- [ ] **Step 2: View and mock-up.** The four-row grid per Global Constraints (keep the column widths unless *Distinct* does not fit); the Missing Files panel of the mock-up
+- [x] **Step 2: View and mock-up.** The four-row grid per Global Constraints (keep the column widths unless *Distinct* does not fit); the Missing Files panel of the mock-up
   updated to the new layout.
-- [ ] **Step 3: Verify.** Clean build. In the app (UI Automation; project files opened through *File > Open project...*), against a LocalDB table of about 200,000 rows with
+- [x] **Step 3: Verify.** Clean build. In the app (UI Automation; project files opened through *File > Open project...*), against a LocalDB table of about 200,000 rows with
   duplicates, empty and skipped rows and local files: the figures move during the run, *Total files* stays fixed, the bar and *Remaining* move steadily, the final screen
   and report satisfy the sums; one stopped run. Close the app; drop the database.
-- [ ] **Step 4: Commit** — `feat(✨): show live row accounting with a Distinct statistic`.
+- [x] **Step 4: Commit** — `feat(✨): show live row accounting with a Distinct statistic`.
 
 ### Task 3: SDD, user guide and changelog
 
