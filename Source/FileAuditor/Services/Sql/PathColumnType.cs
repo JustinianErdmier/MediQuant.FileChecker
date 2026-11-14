@@ -3,17 +3,16 @@ namespace FileAuditor.Services.Sql;
 /// <summary>Checks that the path column is <c>nvarchar</c> or <c>varchar</c> and says what the audit statements convert it to.</summary>
 public static class PathColumnType
 {
-    /// <summary>The longest <c>nvarchar(n)</c>; a <c>varchar</c> column longer than this converts to <c>nvarchar(max)</c>.</summary>
-    private const int MaxNvarcharLength = 4000;
+    /// <summary>The type a <c>varchar</c> column is converted to in the Unindexed folder filter, whatever the column's length: the filter tests only the start of the path.</summary>
+    private const string FilterTarget = "nvarchar(4000)";
 
     /// <summary>Checks the type found for the path column.</summary>
     /// <param name="table">The table, as the user typed it.</param>
     /// <param name="column">The path column, as the user typed it.</param>
     /// <param name="found">The system type name and <c>max_length</c> of the column, or <see langword="null" /> when the column (or table) does not exist.</param>
     /// <returns>
-    ///     <see langword="null" /> for <c>nvarchar(n)</c> and <c>nvarchar(max)</c> (used as they are); <c>nvarchar(n)</c> for <c>varchar(n)</c> up to 4,000 characters and
-    ///     <c>nvarchar(max)</c> for a longer <c>varchar(n)</c> and for <c>varchar(max)</c> (the type to convert to); otherwise <c>Sql.PathColumnNotFound</c> or
-    ///     <c>Sql.PathColumnUnsupported</c>.
+    ///     <see langword="null" /> for <c>nvarchar</c> (used as it is); <c>nvarchar(4000)</c> for any <c>varchar</c> (the type the Unindexed folder filter converts to; the Missing
+    ///     Files audit converts nothing); otherwise <c>Sql.PathColumnNotFound</c> or <c>Sql.PathColumnUnsupported</c>.
     /// </returns>
     public static ErrorOr<string?> Check(string table, string column, (string TypeName, short MaxLength)? found)
     {
@@ -31,8 +30,7 @@ public static class PathColumnType
 
         if (string.Equals(typeName, "varchar", StringComparison.OrdinalIgnoreCase))
         {
-            // max_length is in bytes, at least the number of characters (UTF-8 collations included); -1 is max.
-            return maxLength is >= 1 and <= MaxNvarcharLength ? $"nvarchar({maxLength})" : "nvarchar(max)";
+            return FilterTarget;
         }
 
         return SqlErrors.PathColumnUnsupported(column, Format(typeName, maxLength));

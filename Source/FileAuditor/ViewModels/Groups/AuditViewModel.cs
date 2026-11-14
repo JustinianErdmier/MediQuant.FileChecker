@@ -87,24 +87,27 @@ public sealed partial class AuditViewModel : AuditStatusBase
         long       missing    = progress.Missing;
         long       unverified = progress.Unverified;
         long       done       = found + missing + unverified;
-        RowCounts? counts     = progress.Counts;
-        long       total      = counts?.Distinct ?? 0;
+        long       total      = progress.TotalRows;
+        bool       hasCounts  = progress.HasTotal;
 
         // The displayed rate is over the whole run, the span the Elapsed box shows; Remaining uses the recent checking-time rate, which excludes the counting phase.
         double wholeRunSeconds = elapsed.TotalSeconds;
 
-        TotalFiles = counts is null ? string.Empty : WithParenthesis(counts.Distinct, counts.TableRows, show: counts.TableRows != counts.Distinct);
-        Duplicates = counts is null ? string.Empty : Format(counts.Duplicates);
-        Skipped    = counts is null ? string.Empty : Format(counts.Skipped);
+        // Minimal compile fix for Task 1: the figures come from the live counters; Task 2 rebuilds this view model (Distinct, progress by rows handled).
+        long emptyPaths = progress.EmptyPaths;
+
+        TotalFiles = hasCounts ? Format(total) : string.Empty;
+        Duplicates = hasCounts ? Format(progress.Duplicates) : string.Empty;
+        Skipped    = hasCounts ? Format(progress.Skipped) : string.Empty;
         Checked    = Format(done);
         Found      = Format(found);
         Missing    = Format(missing);
-        Unverified = WithParenthesis(unverified, counts?.EmptyPaths ?? 0, show: counts is { EmptyPaths: > 0 });
+        Unverified = WithParenthesis(unverified, emptyPaths, show: emptyPaths > 0);
         Elapsed    = TimeText.Format(elapsed.TotalSeconds);
-        Remaining  = _remainingEstimator.Next(done, total, progress.CheckingElapsed, progress.HasTotal, isFinished);
+        Remaining  = _remainingEstimator.Next(progress.RowsHandled, total, progress.CheckingElapsed, progress.HasTotal, isFinished);
         FilesPerSecond = wholeRunSeconds >= 1 ? RecentRate.Format(done / wholeRunSeconds, isFinished ? null : _remainingEstimator.RecentRate) : string.Empty;
 
-        Percent       = total > 0 ? done * 100.0 / total : isFinished && progress.HasTotal ? 100 : 0;
+        Percent       = total > 0 ? progress.RowsHandled * 100.0 / total : isFinished && progress.HasTotal ? 100 : 0;
         StatusPercent = progress.HasTotal ? $"{Percent:0}%" : string.Empty;
     }
 

@@ -23,7 +23,7 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
     /// </returns>
     public async Task<PreflightResult?> RunAsync(AppSettings settings, AuditDirections direction)
     {
-        ErrorOr<AuditQuery> query = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn, convertTo: null);
+        ErrorOr<AuditQuery> query = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn);
 
         if (query.IsError)
         {
@@ -159,7 +159,6 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         string                                       column = settings.PathColumn.Trim();
         ErrorOr<(string TypeName, short MaxLength)?> read;
         (string TypeName, short MaxLength)           found;
-        string                                       target;
 
         try
         {
@@ -196,8 +195,6 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
             {
                 return (true, read);
             }
-
-            target = convertTo.Value;
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
@@ -206,8 +203,8 @@ public sealed class PreflightChecker(DialogueService dialogues, ProjectSettingsS
         }
 
         if (!await dialogues.ConfirmAsync($"The path column '{column}' is {PathColumnType.Format(found.TypeName, found.MaxLength)}.\n"
-                                          + $"The File Auditor prefers an nvarchar column. It can convert this one to {target} and audit it, but a varchar column may have changed "
-                                          + "some characters in its paths when they were stored. See \"varchar Path Columns\" in the user guide.\n\nDo you want to continue?",
+                                          + "The File Auditor prefers an nvarchar column. A varchar column may have changed some characters in its paths when they were stored. "
+                                          + "See \"varchar Path Columns\" in the user guide.\n\nDo you want to continue?",
                                           confirmText: "_Continue"))
         {
             return (false, null);

@@ -76,14 +76,14 @@ Before Task 1 the controller creates branch `feat/milestone-6-streaming-missing-
 - Produces: the report record carries the final counts (rows, distinct, duplicates, skipped, empty paths, found, checked) and the empty-path IDs (or the no-ID note).
 - Consumes (unchanged): `SkipMarker.IsSkipped`, `FileChecker.Check`, the type check and pre-flight's handed-over lookup.
 
-- [ ] **Step 1: Statements.** `QueryBuilder.Build(table, pathColumn, idColumn)` returns the two plain statements; the classification SQL, `@ws` and the empty-ID statement go.
+- [x] **Step 1: Statements.** `QueryBuilder.Build(table, pathColumn, idColumn)` returns the two plain statements; the classification SQL, `@ws` and the empty-ID statement go.
   `PathColumnType.Check` keeps accepting `nvarchar` and `varchar` (same errors); the Unindexed filter's target for `varchar` is `nvarchar(4000)`. `IndexTableReader` keeps a
   count and a stream; the counts-statement and empty-ID readers go.
-- [ ] **Step 2: The runner.** Count → `SetTotal`; stream; classify per Global Constraints in the reader; only distinct real paths enter the channel; the 32-way checking is
+- [x] **Step 2: The runner.** Count → `SetTotal`; stream; classify per Global Constraints in the reader; only distinct real paths enter the channel; the 32-way checking is
   unchanged; empty IDs collected; no `Reading empty paths...` phase.
-- [ ] **Step 3: The report.** Summary order and *Not checked* per Global Constraints; the empty-path group from the collected IDs; the notes as specified.
-- [ ] **Step 4: The warning.** The new copy in `PreflightChecker`.
-- [ ] **Step 5: Verify.** Clean build. With a harness in the scratchpad calling the real runner against LocalDB:
+- [x] **Step 3: The report.** Summary order and *Not checked* per Global Constraints; the empty-path group from the collected IDs; the notes as specified.
+- [x] **Step 4: The warning.** The new copy in `PreflightChecker`.
+- [x] **Step 5: Verify.** Clean build. With a harness in the scratchpad calling the real runner against LocalDB:
     - milestone 1's boundary seed (milestone 1's plan, Task 1 Step 3) with and without an ID column: the final figures and empty IDs, compared with 2.0.0's (build the
       `v2.0.0` runner in the harness from `git show v2.0.0:…`, or use the figures milestone 1's ledger records);
     - a table with the Review Focus 2 cases (case, trailing spaces, leading space, trailing tab, `ß`, the same path with two IDs): the exact *Distinct* / *Duplicates*;
@@ -93,7 +93,7 @@ Before Task 1 the controller creates branch `feat/milestone-6-streaming-missing-
       read, against the `v2.0.0` runner, three runs each;
     - Unindexed: a `varchar(8000)` table with one path over 4,000 characters under the chosen folder, with a filter: matched as indexed.
   Drop any scratch database you created (not `FileAuditorPerf`).
-- [ ] **Step 6: Commit** — `perf(⚡): stream the Missing Files audit and classify rows in the app`.
+- [x] **Step 6: Commit** — `perf(⚡): stream the Missing Files audit and classify rows in the app`.
 
 ### Task 2: The Audit group
 

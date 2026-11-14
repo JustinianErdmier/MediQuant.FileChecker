@@ -75,13 +75,12 @@ public static class ReportBuilder
         long missing    = report.Problems.Count(result => result.Outcome is CheckOutcomes.MissingEmpty or CheckOutcomes.MissingDoesNotExist);
         long unverified = report.Problems.Count - missing;
 
-        string total = counts.TableRows != counts.Distinct ? $"{Count(counts.Distinct)} ({Count(counts.TableRows)})" : Count(counts.Distinct);
-
         string unverifiedText = counts.EmptyPaths > 0 ? $"{Count(unverified)} ({Count(counts.EmptyPaths)})" : Count(unverified);
 
         lines.Add(item: "Summary");
         lines.Add(item: "-------");
-        lines.Add(Labelled(label: "Total files:", total));
+        lines.Add(Labelled(label: "Total files:", Count(counts.TableRows)));
+        lines.Add(Labelled(label: "Distinct:", Count(counts.Distinct)));
         lines.Add(Labelled(label: "Duplicates:", Count(counts.Duplicates)));
         lines.Add(Labelled(label: "Found:", Count(report.FoundCount)));
         lines.Add(Labelled(label: "Missing:", Count(missing)));
@@ -90,7 +89,10 @@ public static class ReportBuilder
 
         if (report.Result is not AuditResultKinds.Completed)
         {
-            lines.Add(Labelled(label: "Not checked:", Count(counts.Distinct - report.FoundCount - report.Problems.Count)));
+            // The rows never read plus the distinct rows read but not checked; never shown below zero (a table that changes during the run is out of scope).
+            long notChecked = counts.TableRows - (report.FoundCount + report.Problems.Count + counts.Duplicates + counts.EmptyPaths + counts.Skipped);
+
+            lines.Add(Labelled(label: "Not checked:", Count(Math.Max(val1: 0, notChecked))));
         }
     }
 
@@ -118,7 +120,7 @@ public static class ReportBuilder
                select (outcome, results)
         ];
 
-        // The empty-path group sits in the Unverified order but is built from the counts, not from the problems.
+        // The empty-path group sits in the Unverified order but is built from the empty-path count and IDs, not from the problems.
         bool hasEmptyGroup = order.Contains(CheckOutcomes.UnverifiedPathEmpty) && report.Counts.EmptyPaths > 0;
 
         long   total   = groups.Sum(group => (long)group.Results.Count) + (hasEmptyGroup ? report.Counts.EmptyPaths : 0);
@@ -172,7 +174,7 @@ public static class ReportBuilder
         }
     }
 
-    /// <summary>Adds the Path is empty in the index table group: one line per ID, or the single note that says why they are not listed.</summary>
+    /// <summary>Adds the Path is empty in the index table group: one line per ID read, or the single note that says there is no ID column.</summary>
     /// <param name="lines">The report's lines.</param>
     /// <param name="report">The audit to report on.</param>
     private static void AddEmptyPathGroup(List<string> lines, AuditReport report)
@@ -181,7 +183,7 @@ public static class ReportBuilder
 
         if (report.EmptyPathIds is null)
         {
-            lines.Add(report.EmptyPathNote ?? string.Empty);
+            lines.Add(item: "Missing filepaths not listed because no ID column was specified");
 
             return;
         }

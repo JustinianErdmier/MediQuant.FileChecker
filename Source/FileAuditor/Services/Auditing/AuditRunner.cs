@@ -35,8 +35,8 @@ public static class AuditRunner
 
         progress.Phase = "Counting files...";
 
-        AuditQuery         query;
-        ErrorOr<RowCounts> counted;
+        AuditQuery   query;
+        ErrorOr<long> counted;
 
         try
         {
@@ -52,14 +52,15 @@ public static class AuditRunner
                 return columnType.Errors;
             }
 
-            ErrorOr<string?> convertTo = PathColumnType.Check(settings.Table, settings.PathColumn, columnType.Value);
+            // The type check only; the Missing Files audit converts nothing.
+            ErrorOr<string?> typeCheck = PathColumnType.Check(settings.Table, settings.PathColumn, columnType.Value);
 
-            if (convertTo.IsError)
+            if (typeCheck.IsError)
             {
-                return convertTo.Errors;
+                return typeCheck.Errors;
             }
 
-            ErrorOr<AuditQuery> built = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn, convertTo.Value);
+            ErrorOr<AuditQuery> built = QueryBuilder.Build(settings.Table, settings.PathColumn, settings.IdColumn);
 
             if (built.IsError)
             {
@@ -80,14 +81,16 @@ public static class AuditRunner
             return counted.Errors;
         }
 
-        RowCounts counts = counted.Value;
-
-        progress.SetCounts(counts);
+        progress.SetTotal(counted.Value);
         progress.Phase = "Checking files...";
 
         FileChecker checker = new(settings.ReportEmptyFiles);
 
         ConcurrentBag<CheckResult> problems = [];
+
+        // Written by the reader only (one thread); read after the reader has finished.
+        PathKeySet   seen         = new();
+        List<string> emptyPathIds = [];
 
         Channel<IndexRow> channel = Channel.CreateBounded<IndexRow>(new BoundedChannelOptions(ChannelCapacity)
         {
@@ -107,7 +110,7 @@ public static class AuditRunner
                                          // ReSharper disable AccessToDisposedClosure
                                          readResult = await IndexTableReader.ReadAsync(connectionString,
                                                                                        query,
-                                                                                       row => channel.Writer.WriteAsync(row, linkedSource.Token),
+                                                                                       row => Classify(row, query.HasIdColumn, seen, emptyPathIds, progress, channel.Writer, linkedSource.Token),
                                                                                        linkedSource.Token);
 
                                          // ReSharper restore AccessToDisposedClosure
@@ -131,19 +134,8 @@ public static class AuditRunner
                                         },
                                         (row, _) =>
                                         {
+                                            // The reader has already excluded skip markers with the same SkipMarker test the checker uses, so a Skipped outcome cannot arrive.
                                             CheckResult result = checker.Check(row);
-
-                                            // The database classified this row as a real path, so a Skipped outcome here means the two skip tests disagree (the checker folds
-                                            // some non-ASCII letters that SQL does not). List it with the other errors rather than counting it nowhere.
-                                            if (result.Outcome is CheckOutcomes.Skipped)
-                                            {
-                                                result = result with
-                                                         {
-                                                             Outcome       = CheckOutcomes.UnverifiedOther,
-                                                             Reason        = "Skip marker not recognised by the database",
-                                                             SystemMessage = "The path looks like a skip marker to the checker but not to the database, so it was not skipped."
-                                                         };
-                                            }
 
                                             if (result.Outcome is not CheckOutcomes.Found)
                                             {
@@ -182,7 +174,6 @@ public static class AuditRunner
             readResult = AuditErrors.ReadFailed(exception.Message);
         }
 
-        long             checkedCount   = progress.Checked;
         AuditResultKinds result         = AuditResultKinds.Completed;
         string?          failureMessage = null;
 
@@ -192,7 +183,9 @@ public static class AuditRunner
         }
         else if (readResult.IsError)
         {
-            if (checkedCount is 0)
+            // Nothing read before the failure: report it as a plain error rather than as an empty run.
+            if (progress.Distinct is 0
+                && progress.RowsHandled is 0)
             {
                 return readResult.Errors;
             }
@@ -201,53 +194,10 @@ public static class AuditRunner
             failureMessage = readResult.FirstError.Description;
         }
 
-        IReadOnlyList<string>? emptyPathIds  = null;
-        string?                emptyPathNote = null;
-
-        if (counts.EmptyPaths > 0)
-        {
-            if (query.EmptyIdsSql is null)
-            {
-                emptyPathNote = "Missing filepaths not listed because no ID column was specified";
-            }
-            else if (result is AuditResultKinds.StoppedByUser)
-            {
-                emptyPathNote = "Missing filepaths not listed because the audit was stopped";
-            }
-            else if (result is AuditResultKinds.Failed)
-            {
-                emptyPathNote = "Missing filepaths not listed because the audit failed";
-            }
-            else
-            {
-                progress.Phase = "Reading empty paths...";
-
-                try
-                {
-                    ErrorOr<IReadOnlyList<string>> read = await IndexTableReader.ReadEmptyIdsAsync(connectionString, query, cancellationToken);
-
-                    if (read.IsError)
-                    {
-                        emptyPathNote = $"Missing filepaths not listed because they could not be read: {read.FirstError.Description}";
-                    }
-                    else
-                    {
-                        emptyPathIds = read.Value;
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    emptyPathNote = "Missing filepaths not listed because the audit was stopped";
-                }
-                catch (Exception exception)
-                {
-                    // Anything but a user stop or a SQL error: the audit is done, so keep its report and say why the IDs are missing.
-                    emptyPathNote = $"Missing filepaths not listed because they could not be read: {exception.Message}";
-                }
-            }
-        }
-
         progress.Phase = "Writing report...";
+
+        // The reader and the checks have all ended, so the counters are final and agree with one another.
+        RowCounts counts = new(progress.TotalRows, progress.Distinct, progress.Duplicates, progress.Skipped, progress.EmptyPaths);
 
         AuditReport report = new(settings,
                                  startedUtc,
@@ -257,8 +207,7 @@ public static class AuditRunner
                                  counts,
                                  progress.Found,
                                  problems.ToArray(),
-                                 emptyPathIds,
-                                 emptyPathNote);
+                                 query.HasIdColumn ? emptyPathIds : null);
 
         ErrorOr<Success> written = ReportWriter.Write(request.ReportPath.FullPath, ReportBuilder.Build(report));
 
@@ -268,5 +217,51 @@ public static class AuditRunner
         }
 
         return report;
+    }
+
+    /// <summary>Classifies one row as it is read and passes a new real path on to be checked.</summary>
+    /// <remarks>
+    ///     In this order: a skip marker is counted as Skipped; an empty path is counted (and its ID kept when there is an ID column); any other path is looked up in
+    ///     <paramref name="seen" />, where a key seen before is a Duplicate and a new key is Distinct and written to the channel. Only the reader calls this, one row at a time.
+    /// </remarks>
+    /// <param name="row">The row as read.</param>
+    /// <param name="hasIdColumn">Whether the audit has an ID column.</param>
+    /// <param name="seen">The keys of the real paths seen so far.</param>
+    /// <param name="emptyPathIds">Receives the ID of each empty-path row.</param>
+    /// <param name="progress">Receives the counts.</param>
+    /// <param name="writer">The channel that feeds the file checks.</param>
+    /// <param name="cancellationToken">Stops the wait for room in the channel.</param>
+    /// <returns>A task that ends when the row has been handled, which for a new real path is when it has a place in the channel.</returns>
+    private static ValueTask Classify(IndexRow row, bool hasIdColumn, PathKeySet seen, List<string> emptyPathIds, AuditProgress progress, ChannelWriter<IndexRow> writer, CancellationToken cancellationToken)
+    {
+        if (SkipMarker.IsSkipped(row.Path))
+        {
+            progress.AddSkipped();
+
+            return ValueTask.CompletedTask;
+        }
+
+        if (string.IsNullOrWhiteSpace(row.Path))
+        {
+            if (hasIdColumn)
+            {
+                emptyPathIds.Add(row.Id ?? string.Empty);
+            }
+
+            progress.AddEmptyPath();
+
+            return ValueTask.CompletedTask;
+        }
+
+        if (!seen.Add(row.Path, row.Id, hasIdColumn))
+        {
+            progress.AddDuplicate();
+
+            return ValueTask.CompletedTask;
+        }
+
+        progress.AddDistinct();
+
+        return writer.WriteAsync(row, cancellationToken);
     }
 }
